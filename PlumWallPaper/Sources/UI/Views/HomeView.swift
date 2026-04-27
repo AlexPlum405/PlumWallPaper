@@ -3,6 +3,7 @@ import SwiftData
 
 struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(AppViewModel.self) private var viewModel
     @Query(sort: \Wallpaper.importDate, order: .reverse) private var wallpapers: [Wallpaper]
     
     @State private var activeId: UUID? = nil
@@ -141,7 +142,7 @@ struct HomeView: View {
     
     // --- 逻辑 ---
     func setWallpaper(_ wallpaper: Wallpaper) {
-        // TODO: 调用后端 WallpaperEngine
+        viewModel.smartSetWallpaper(wallpaper)
     }
     
     func toggleFavorite(_ wallpaper: Wallpaper) {
