@@ -114,129 +114,314 @@
       );
     };
 
-    const MonitorSelector = ({ onCancel, onApply, wallpaper }) => (
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
-        <div className="animate-in" style={{ background: '#1a1b1e', width: '100%', maxWidth: 700, borderRadius: 24, border: '1px solid var(--glass-border)', overflow: 'hidden', boxShadow: '0 40px 100px rgba(0,0,0,0.5)' }}>
-          <div style={{ padding: '32px 40px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h2 style={{ fontSize: 24, fontStyle: 'italic', fontWeight: 500, fontFamily: 'var(--font-display)' }}>选择显示器</h2>
-              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>检测到 {MONITORS.length} 个显示器可用</p>
+    const MonitorSelector = ({ onCancel, onApply, wallpaper, monitors }) => {
+      const [selectedMonitor, setSelectedMonitor] = useState(monitors[0].id);
+
+      return (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(40px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+          <div className="animate-in" style={{ background: '#1a1b1e', width: '100%', maxWidth: 740, borderRadius: 32, border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', boxShadow: '0 50px 100px rgba(0,0,0,0.6)' }}>
+            <div style={{ padding: '32px 40px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontSize: 26, fontStyle: 'italic', fontWeight: 600, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>选择目标显示器</h2>
+                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>点击设备卡片以分配壁纸资源</p>
+              </div>
+              <button onClick={onCancel} className="btn" style={{ borderRadius: '50%', width: 40, height: 40, padding: 0, justifyContent: 'center' }}><Icon name="close" /></button>
             </div>
-            <button onClick={onCancel} className="btn" style={{ borderRadius: '50%', width: 36, height: 36, padding: 0, justifyContent: 'center' }}><Icon name="close" /></button>
-          </div>
-          
-          <div style={{ padding: 40 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24, marginBottom: 40 }}>
-              {MONITORS.map(m => (
-                <div key={m.id} style={{ border: '2px solid var(--glass-border)', borderRadius: 16, padding: 16, background: 'rgba(255,255,255,0.02)', cursor: 'pointer', position: 'relative' }}>
-                  <div style={{ aspectRatio: '16/9', background: '#000', borderRadius: 8, marginBottom: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
-                     <img src={wallpaper.img} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 15 }}>{m.name}</div>
-                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{m.res} {m.main && '· 主显示器'}</div>
+            
+            <div style={{ padding: '48px 60px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 32, marginBottom: 40 }}>
+                {monitors.map(m => (
+                  <div key={m.id} 
+                    onClick={() => setSelectedMonitor(m.id)}
+                    className="screen-card-v2"
+                    style={{ 
+                      border: '2px solid ' + (selectedMonitor === m.id ? 'var(--accent)' : 'rgba(255,255,255,0.05)'), 
+                      borderRadius: 24, padding: 24, background: selectedMonitor === m.id ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)', 
+                      cursor: 'pointer', position: 'relative', transition: '0.4s cubic-bezier(0.2, 1, 0.3, 1)',
+                      textAlign: 'center'
+                    }}>
+                    
+                    {/* Aura Glow */}
+                    {selectedMonitor === m.id && (
+                      <div style={{ position: 'absolute', inset: -15, background: 'radial-gradient(circle, var(--accent) 0%, transparent 70%)', opacity: 0.15, zIndex: -1, filter: 'blur(20px)' }} />
+                    )}
+
+                    <div style={{ aspectRatio: '16/10', background: '#000', borderRadius: 12, marginBottom: 20, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', position: 'relative' }}>
+                       <img src={wallpaper.img} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: selectedMonitor === m.id ? 1 : 0.4, transition: '0.6s' }} />
+                       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: selectedMonitor === m.id ? 0 : 0.4 }}>
+                         <Icon name="monitor" size={48} />
+                       </div>
                     </div>
-                    <div style={{ width: 24, height: 24, borderRadius: '50%', border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#fff' }} />
-                    </div>
+                    
+                    <div style={{ fontSize: 16, fontWeight: 700, color: selectedMonitor === m.id ? '#fff' : 'rgba(255,255,255,0.6)' }}>{m.name}</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 6 }}>{m.res} {m.main && '· 主屏幕'}</div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-              <button className="btn-primary btn" style={{ height: 48, justifyContent: 'center' }} onClick={() => onApply('all')}>应用到所有</button>
-              <button className="btn" style={{ height: 48, justifyContent: 'center' }} onClick={() => onApply('one')}>只应用到当前</button>
-              <button className="btn" style={{ height: 48, justifyContent: 'center' }} onClick={() => onApply('separate')}>分别为每个设置</button>
+            <div style={{ padding: '32px 48px', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <button className="btn" style={{ background: 'transparent', color: 'var(--accent)', fontSize: 13, fontWeight: 600 }} onClick={() => onApply('all')}>应用于所有显示器</button>
+               <div style={{ display: 'flex', gap: 16 }}>
+                 <button className="btn" style={{ padding: '10px 24px' }} onClick={onCancel}>取消</button>
+                 <button className="btn-primary btn" style={{ padding: '10px 32px' }} onClick={() => onApply(selectedMonitor)}>确认分配</button>
+               </div>
             </div>
+            
+            <style>{`
+              .screen-card-v2:hover { transform: translateY(-8px); background: rgba(255,255,255,0.06); }
+              .screen-card-v2:hover img { opacity: 0.8 !important; }
+            `}</style>
           </div>
         </div>
-      </div>
-    );
+      );
+    };
 
-    const TopNav = ({ currentView, setView }) => (
+    const TopNav = ({ currentView, setView, onSearchClick, onImportClick }) => (
       <nav style={{ 
-        position: 'absolute', top: 0, left: 0, right: 0, height: 100, padding: '0 56px', 
-        display: 'flex', alignItems: 'center', gap: 16, zIndex: 1000,
-        background: 'transparent'
+        position: 'absolute', top: 0, left: 0, right: 0, height: 110, padding: '0 56px', 
+        display: 'flex', alignItems: 'center', gap: 32, zIndex: 1000,
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.4), transparent)'
       }}>
-        <div className="branding" onClick={() => setView('home')} style={{ display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}>
+        <div className="branding" onClick={() => setView('home')} style={{ display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', transition: '0.4s cubic-bezier(0.2, 1, 0.3, 1)' }}>
           <div style={{
-            width: 48, height: 48, background: '#16181c', borderRadius: 14,
+            width: 44, height: 44, background: '#16181c', borderRadius: 12,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 10px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05)'
+            boxShadow: '0 10px 25px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.1)',
+            position: 'relative'
           }}>
-            <svg viewBox="0 0 40 40" width="32" height="32"><path d="M20 36C28 36 34 30 34 22C34 14 20 6 20 6C20 6 6 14 6 22C6 30 12 36 20 36Z" fill="#E03E3E"/><path d="M20 2V8" stroke="#2ECC71" strokeWidth="4" strokeLinecap="round"/></svg>
+            <svg viewBox="0 0 40 40" width="30" height="30"><path d="M20 36C28 36 34 30 34 22C34 14 20 6 20 6C20 6 6 14 6 22C6 30 12 36 20 36Z" fill="#E03E3E"/><path d="M20 2V8" stroke="#2ECC71" strokeWidth="4" strokeLinecap="round"/></svg>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0, lineHeight: 1 }}>
-            <span style={{ 
-              fontSize: 32, 
-              fontWeight: 700, 
-              fontFamily: 'var(--font-display)', 
-              fontStyle: 'italic',
-              color: '#fff',
-              letterSpacing: '-0.04em'
-            }}>Plum</span>
-            <span style={{ 
-              fontSize: 10, 
-              fontWeight: 300, 
-              fontFamily: 'var(--font-ui)', 
-              textTransform: 'uppercase',
-              color: 'rgba(255,255,255,0.4)',
-              letterSpacing: '0.45em',
-              marginTop: 2
-            }}>WallPaper</span>
+          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+            <span style={{ fontSize: 28, fontWeight: 700, fontFamily: 'var(--font-display)', fontStyle: 'italic', color: '#fff', letterSpacing: '-0.02em' }}>Plum</span>
+            <span style={{ fontSize: 9, fontWeight: 300, textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.4em', marginTop: 2 }}>WallPaper</span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: 4, marginLeft: 32 }}>
+        {/* 灵动分段控制器：去容器边框 */}
+        <div style={{ display: 'flex', position: 'relative', padding: 2, marginLeft: 16 }}>
           {['home', 'library'].map(v => (
             <button key={v} onClick={() => setView(v)} style={{ 
-              padding: '6px 20px', borderRadius: 10, border: 'none', background: currentView === v ? 'rgba(255,255,255,0.08)' : 'transparent', 
-              color: currentView === v ? '#fff' : 'rgba(255,255,255,0.4)', fontSize: 15, fontWeight: 500, cursor: 'pointer', transition: '0.3s'
+              position: 'relative', zIndex: 1, padding: '10px 24px', borderRadius: 12, border: 'none', 
+              background: 'transparent', color: currentView === v ? '#fff' : 'rgba(255,255,255,0.4)', 
+              fontSize: 14, fontWeight: 600, cursor: 'pointer', transition: '0.4s', display: 'flex', alignItems: 'center', gap: 8
             }}>
+              {currentView === v && (
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)', borderRadius: 12, zIndex: -1, boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }} className="animate-in" />
+              )}
+              <Icon name={v === 'home' ? 'monitor' : 'image'} size={14} />
               {v === 'home' ? '首页' : '壁纸库'}
             </button>
           ))}
         </div>
 
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-          <button className="topbar-btn" style={{ width: 44, height: 44, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--glass)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', transition: '0.3s' }}><Icon name="search" /></button>
-          <button className="topbar-btn" style={{ width: 44, height: 44, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--glass)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', transition: '0.3s' }}><Icon name="plus" /></button>
-          <button className="topbar-btn" onClick={() => setView('settings')} style={{ width: 44, height: 44, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: currentView === 'settings' ? 'rgba(255,255,255,0.1)' : 'var(--glass)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', cursor: 'pointer', color: currentView === 'settings' ? '#fff' : 'rgba(255,255,255,0.4)', transition: '0.3s' }}>
-            <Icon name="settings" />
-          </button>
+        {/* 简洁功能按钮组：去圆形框 */}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          {[
+            { id: 'search', icon: 'search', action: onSearchClick },
+            { id: 'import', icon: 'plus', action: onImportClick },
+            { id: 'settings', icon: 'settings', action: () => setView('settings'), active: currentView === 'settings' }
+          ].map(btn => (
+            <button 
+              key={btn.id}
+              onClick={btn.action} 
+              className="topbar-btn-v3"
+              style={{ 
+                width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                background: btn.active ? 'rgba(255,255,255,0.08)' : 'transparent', 
+                border: 'none', cursor: 'pointer', color: btn.active ? '#fff' : 'rgba(255,255,255,0.4)', 
+                transition: '0.3s cubic-bezier(0.2, 1, 0.3, 1)'
+              }}
+            >
+              <Icon name={btn.icon} size={20} />
+            </button>
+          ))}
         </div>
+
+        <style>{`
+          .topbar-btn-v3:hover { background: rgba(255,255,255,0.08); color: #fff; }
+          .branding:hover { transform: scale(1.02); }
+        `}</style>
       </nav>
     );
 
     // --- Pages ---
 
-    const HomePage = ({ onSetWallpaper, wallpapers }) => {
-      const [heroIndex, setHeroIndex] = useState(0);
-      const hero = wallpapers[heroIndex];
+    const ImportModal = ({ onClose, onStartImport }) => {
+      const fileInputRef = useRef(null);
+      const folderInputRef = useRef(null);
+      const [step, setStep] = useState(1); // 1: Select, 2: Metadata
+      const [meta, setMeta] = useState({ name: 'Ethereal Peaks (Imported)', tag: '自然', fav: false });
 
-      const handleCardClick = (targetWallpaper) => {
-        const globalIdx = wallpapers.findIndex(w => w.id === targetWallpaper.id);
-        if (globalIdx !== -1) {
-          setHeroIndex(globalIdx);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+      return (
+        <div className="animate-in" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(30px)', zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: step === 1 ? 640 : 520, background: '#1a1b1e', borderRadius: 28, border: '1px solid var(--glass-border)', overflow: 'hidden', boxShadow: '0 50px 100px rgba(0,0,0,0.6)', transition: '0.4s cubic-bezier(0.2, 1, 0.3, 1)' }}>
+            <div style={{ padding: '28px 40px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontSize: 22, fontWeight: 600, fontFamily: 'var(--font-display)', fontStyle: 'italic' }}>
+                  {step === 1 ? '导入壁纸资源' : '完善壁纸信息'}
+                </h2>
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>
+                  {step === 1 ? '支持 Apple ProRAW, HEIC 及 8K 视频' : '为新资源配置分类与元数据'}
+                </p>
+              </div>
+              <button onClick={onClose} className="btn" style={{ borderRadius: '50%', width: 36, height: 36, padding: 0, justifyContent: 'center' }}><Icon name="close" /></button>
+            </div>
+            
+            <div style={{ padding: 40 }}>
+              {step === 1 ? (
+                <div className="animate-in">
+                  <div 
+                    onClick={() => fileInputRef.current.click()}
+                    style={{ 
+                      height: 240, border: '2px dashed rgba(255,255,255,0.1)', borderRadius: 24, 
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      gap: 20, cursor: 'pointer', transition: '0.4s', background: 'rgba(255,255,255,0.02)'
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
+                  >
+                    <div style={{ width: 80, height: 80, background: 'rgba(255,255,255,0.05)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                      <Icon name="plus" size={40} />
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 18, fontWeight: 500 }}>在此处添加您的资源</div>
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', marginTop: 8 }}>或者拖拽文件到窗口内</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 32 }}>
+                    <button onClick={() => setStep(2)} className="btn" style={{ height: 50, justifyContent: 'center' }}><Icon name="image" size={18} /> 批量文件</button>
+                    <button onClick={() => setStep(2)} className="btn" style={{ height: 50, justifyContent: 'center' }}><Icon name="monitor" size={18} /> 整包导入</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                  <div>
+                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 8 }}>资源名称</div>
+                    <input value={meta.name} onChange={e => setMeta({...meta, name: e.target.value})} style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: 12, padding: '12px 16px', color: '#fff', outline: 'none' }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 12 }}>所属分类标签</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {['自然', '城市', '动漫', '极简', '暗色', '4K'].map(t => (
+                        <div key={t} onClick={() => setMeta({...meta, tag: t})} style={{ 
+                          padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer', transition: '0.2s',
+                          background: meta.tag === t ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
+                          color: meta.tag === t ? '#fff' : 'rgba(255,255,255,0.4)',
+                          border: '1px solid ' + (meta.tag === t ? 'var(--accent)' : 'var(--glass-border)')
+                        }}>{t}</div>
+                      ))}
+                      <div style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'var(--accent)' }}>+ 新增分类</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '16px 20px', borderRadius: 16 }}>
+                    <div style={{ fontSize: 14 }}>加入我的收藏</div>
+                    <div onClick={() => setMeta({...meta, fav: !meta.fav})} style={{ width: 44, height: 24, background: meta.fav ? 'var(--accent)' : 'rgba(255,255,255,0.1)', borderRadius: 12, position: 'relative', cursor: 'pointer', transition: '0.3s' }}>
+                      <div style={{ width: 18, height: 18, background: '#fff', borderRadius: '50%', position: 'absolute', top: 3, [meta.fav ? 'right' : 'left']: 3, transition: '0.3s' }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+              <input type="file" ref={fileInputRef} style={{ display: 'none' }} multiple onChange={() => setStep(2)} />
+              <input type="file" ref={folderInputRef} style={{ display: 'none' }} webkitdirectory="true" onChange={() => setStep(2)} />
+            </div>
+
+            <div style={{ padding: '24px 40px', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
+                {step === 1 ? '存储路径: /Documents/WallPapers/Library' : '即将导入 1 个资源'}
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button onClick={step === 1 ? onClose : () => setStep(1)} className="btn" style={{ padding: '10px 24px' }}>
+                  {step === 1 ? '取消' : '返回上一步'}
+                </button>
+                <button onClick={onStartImport} className="btn-primary btn" style={{ padding: '10px 32px' }}>
+                  {step === 1 ? '开始分析' : '确认并导入'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const PreviewPage = ({ wallpaper, onClose }) => (
+      <div className="animate-in" style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 5000, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ position: 'absolute', top: 40, left: 40, right: 40, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', zIndex: 10 }}>
+          <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(20px)', padding: '8px 24px', borderRadius: 100, border: '1px solid rgba(255,255,255,0.1)', fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>Immersive Preview</div>
+          <button onClick={onClose} className="btn" style={{ borderRadius: '50%', width: 44, height: 44, justifyContent: 'center', background: 'rgba(255,255,255,0.1)', border: 'none', backdropFilter: 'blur(10px)' }}><Icon name="close" /></button>
+        </div>
+        <img src={wallpaper.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 280, background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 40px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <span style={{ padding: '4px 12px', background: 'var(--accent)', borderRadius: 6, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{wallpaper.tag}</span>
+            {wallpaper.fav && <Icon name="heart" size={14} />}
+          </div>
+          <h2 style={{ fontSize: 48, fontFamily: 'var(--font-display)', fontStyle: 'italic', marginBottom: 12, letterSpacing: '-0.02em' }}>{wallpaper.name}</h2>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14, fontWeight: 300, letterSpacing: '0.05em' }}>
+            {wallpaper.res} · {wallpaper.type} · {wallpaper.size} {wallpaper.duration !== '-' && `· ${wallpaper.duration}`}
+          </p>
+        </div>
+      </div>
+    );
+
+    const HomePage = ({ onSetWallpaper, wallpapers, fitMode, onPreview, onEditColor }) => {
+      const [heroIndex, setHeroIndex] = useState(0);
+      const [contextMenu, setContextMenu] = useState(null);
+      const hero = wallpapers[heroIndex];
+      const scrollContainerRef = useRef(null);
+      
+      const [dragState, setDragState] = useState({ isDragging: false, startX: 0, scrollLeft: 0, moved: false });
+
+      const handleHeroThumbClick = (index) => {
+        if (!dragState.moved) setHeroIndex(index);
+      };
+
+      const handleContextMenu = (e, w) => {
+        e.preventDefault();
+        setContextMenu({ x: e.clientX, y: e.clientY, w });
+      };
+
+      useEffect(() => {
+        const hide = () => setContextMenu(null);
+        window.addEventListener('click', hide);
+        return () => window.removeEventListener('click', hide);
+      }, []);
+
+      const onMouseDown = (e) => {
+        const el = e.currentTarget;
+        setDragState({ isDragging: true, startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft, moved: false });
+      };
+
+      const onMouseMove = (e) => {
+        if (!dragState.isDragging) return;
+        e.preventDefault();
+        const el = e.currentTarget;
+        const x = e.pageX - el.offsetLeft;
+        const walk = (x - dragState.startX) * 1.5;
+        el.scrollLeft = dragState.scrollLeft - walk;
+        if (Math.abs(walk) > 5) setDragState(prev => ({ ...prev, moved: true }));
+      };
+
+      const onMouseUp = () => {
+        if (dragState.isDragging) {
+          setTimeout(() => setDragState({ isDragging: false, startX: 0, scrollLeft: 0, moved: false }), 50);
         }
       };
 
+      const fitStyles = { '填充': 'cover', '适应': 'contain', '拉伸': 'fill', '居中': 'none', '平铺': 'repeat' };
+
       return (
-        <div className="no-scrollbar" style={{ overflowY: 'auto', height: 'calc(100vh)' }}>
+        <div ref={scrollContainerRef} className="no-scrollbar" style={{ height: '100vh', overflowY: 'auto', overflowX: 'hidden', scrollBehavior: 'smooth', background: '#0d0e12' }}>
           {/* Hero Section */}
-          <section style={{ height: '80vh', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', inset: 0 }}>
-              <img src={hero.img} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: '1s cubic-bezier(0.2, 1, 0.3, 1)' }} />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(13,14,18,0) 40%, #0d0e12 100%)' }} />
+          <section style={{ height: '85vh', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
+              <img src={hero.img} style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover', transition: '1.2s cubic-bezier(0.2, 1, 0.3, 1)' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(13,14,18,0) 50%, #0d0e12 100%)' }} />
             </div>
             
-            <div className="animate-in" style={{ position: 'relative', zIndex: 10, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '0 80px 120px' }}>
+            <div className="animate-in" style={{ position: 'relative', zIndex: 10, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '0 80px 140px' }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: 16 }}>Jewel Curated · {hero.tag}</div>
-              <h1 style={{ fontSize: 84, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500, marginBottom: 24, letterSpacing: -2 }}>{hero.name}</h1>
+              <h1 style={{ fontSize: 84, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500, marginBottom: 24, letterSpacing: -2, lineHeight: 1.1 }}>{hero.name}</h1>
               
               <div style={{ display: 'flex', gap: 40, marginBottom: 40, color: 'rgba(255,255,255,0.4)', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                 <div>Type: {hero.type}</div>
@@ -246,42 +431,83 @@
               </div>
 
               <div style={{ display: 'flex', gap: 16 }}>
-                <button className="btn-primary btn" style={{ padding: '12px 32px' }} onClick={() => onSetWallpaper(hero)}>设为壁纸</button>
-                <button className="btn" style={{ padding: '12px 20px' }}><Icon name="heart" /> 收藏</button>
+                <button className="btn-primary btn" style={{ padding: '14px 36px' }} onClick={() => onSetWallpaper(hero)}>设为壁纸</button>
+                <button className="btn" style={{ padding: '14px 24px' }}><Icon name="heart" /> 收藏</button>
               </div>
             </div>
 
-            {/* Thumb Strip */}
-            <div className="no-scrollbar" style={{ position: 'absolute', bottom: 40, left: 80, right: 0, display: 'flex', gap: 12, overflowX: 'auto', paddingRight: 80 }}>
-              {wallpapers.map((w, i) => (
-                <div key={w.id} onClick={() => setHeroIndex(i)} style={{ 
-                  flexShrink: 0, width: 140, aspectRatio: '16/9', borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
-                  border: heroIndex === i ? '2px solid #fff' : '1px solid rgba(255,255,255,0.1)', opacity: heroIndex === i ? 1 : 0.4, transition: '0.3s'
-                }}>
-                  <img src={w.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
-              ))}
+            <div onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} className="no-scrollbar" style={{ position: 'absolute', bottom: 40, left: 80, right: 0, overflowX: 'auto', zIndex: 20, cursor: dragState.isDragging ? 'grabbing' : 'grab', userSelect: 'none' }}>
+              <div style={{ display: 'flex', gap: 16, paddingRight: 80 }}>
+                {wallpapers.map((w, i) => (
+                  <div key={w.id} onClick={() => handleHeroThumbClick(i)} style={{ flexShrink: 0, width: 160, aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden', cursor: 'pointer', border: heroIndex === i ? '2px solid #fff' : '1px solid rgba(255,255,255,0.1)', opacity: heroIndex === i ? 1 : 0.4, transition: '0.3s' }}>
+                    <img src={w.img} style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
 
           {/* Scrolling Sections */}
-          <div style={{ padding: '40px 80px 140px' }}>
-            {['收藏', '最近添加', '自然', '城市'].map(title => (
-              <div key={title} style={{ marginBottom: 60 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 24 }}>
-                  <h2 style={{ fontSize: 32, fontFamily: 'var(--font-display)', fontStyle: 'italic' }}>{title}</h2>
-                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.2)', cursor: 'pointer' }}>查看全部 →</span>
+          <div style={{ padding: '80px 80px 140px', background: '#0d0e12', position: 'relative', zIndex: 30 }}>
+            {['收藏', '最近添加', '自然', '城市'].map((title, sectionIdx) => (
+              <div key={title} style={{ marginBottom: 100 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+                  <h2 style={{ fontSize: 38, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500, letterSpacing: '-0.02em' }}>{title}</h2>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', transition: '0.3s' }} className="view-all">
+                    <span>查看全部</span>
+                    <Icon name="play" size={10} />
+                  </div>
                 </div>
-                <div className="no-scrollbar" style={{ display: 'flex', gap: 24, overflowX: 'auto', paddingBottom: 10 }}>
-                  {wallpapers.slice(0, 6).map(w => (
-                    <div key={w.id} onClick={() => handleCardClick(w)} style={{ flexShrink: 0, width: 280, cursor: 'pointer' }}>
-                      <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: 16, overflow: 'hidden', position: 'relative', border: '1px solid var(--glass-border)', background: 'var(--glass)' }}>
-                        <img src={w.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        {title === '最近添加' && <div style={{ position: 'absolute', top: 12, left: 12, background: 'var(--accent)', color: '#fff', fontSize: 10, fontWeight: 900, padding: '2px 8px', borderRadius: 4 }}>NEW</div>}
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
+                  {wallpapers.slice(0, 4).map((w, i) => (
+                    <div 
+                      key={`${title}-${w.id}`} 
+                      className="card-v2" 
+                      onClick={() => onPreview(w)} 
+                      onContextMenu={(e) => handleContextMenu(e, w)} 
+                      style={{ 
+                        cursor: 'pointer',
+                        animation: `fadeIn 0.8s forwards ${sectionIdx * 0.1 + i * 0.05}s`,
+                        opacity: 0,
+                        position: 'relative'
+                      }}
+                    >
+                      {/* Aura Glow Layer */}
+                      <div className="aura-glow" style={{
+                        position: 'absolute', inset: -24, background: `radial-gradient(circle at center, var(--accent) 0%, transparent 70%)`,
+                        opacity: 0, transition: '0.6s cubic-bezier(0.2, 1, 0.3, 1)', zIndex: -1, filter: 'blur(40px)'
+                      }} />
+
+                      <div style={{ 
+                        width: '100%', aspectRatio: '16/9', borderRadius: 24, overflow: 'hidden', 
+                        position: 'relative', border: '1px solid rgba(255,255,255,0.08)', 
+                        background: '#16181c', marginBottom: 18,
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+                        transition: '0.5s cubic-bezier(0.2, 1, 0.3, 1)'
+                      }} className="card-container">
+                        <img src={w.img} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: '0.8s cubic-bezier(0.2, 1, 0.3, 1)' }} className="card-img" />
+                        
+                        {title === '最近添加' && (
+                          <div style={{ 
+                            position: 'absolute', top: 16, left: 16, background: 'var(--accent)', 
+                            color: '#fff', fontSize: 9, fontWeight: 900, padding: '4px 10px', 
+                            borderRadius: 6, letterSpacing: '0.1em', boxShadow: '0 4px 10px rgba(224,62,62,0.4)' 
+                          }}>NEW</div>
+                        )}
+                        
+                        <div style={{ position: 'absolute', bottom: 16, right: 16, display: 'flex', gap: 6 }}>
+                           <div style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '5px 10px', borderRadius: 10, fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>{w.size}</div>
+                           {w.duration !== '-' && <div style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '5px 10px', borderRadius: 10, fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>{w.duration}</div>}
+                        </div>
                       </div>
-                      <div style={{ marginTop: 12 }}>
-                        <div style={{ fontWeight: 500, fontSize: 15 }}>{w.name}</div>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>{w.res} · {w.type}</div>
+                      <div style={{ padding: '0 4px' }}>
+                        <div style={{ fontWeight: 600, fontSize: 17, marginBottom: 4, color: 'rgba(255,255,255,0.9)' }}>{w.name}</div>
+                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span>{w.res}</span>
+                          <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'rgba(255,255,255,0.2)' }} />
+                          <span>{w.type}</span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -289,12 +515,61 @@
               </div>
             ))}
           </div>
+
+          <style>{`
+            .card-v2:hover .card-container { 
+              transform: translateY(-12px) scale(1.03); 
+              box-shadow: 0 40px 80px rgba(0,0,0,0.6);
+              border-color: rgba(255,255,255,0.25);
+            }
+            .card-v2:hover .aura-glow { opacity: 0.3; transform: scale(1.2); }
+            .card-v2:hover .card-img { transform: scale(1.1); }
+            .view-all:hover { color: #fff !important; }
+            .no-scrollbar::-webkit-scrollbar { display: none; }
+            .menu-item:hover { background: var(--accent); color: #fff; }
+          `}</style>
+
+          {contextMenu && (
+            <div style={{ 
+              position: 'fixed', top: contextMenu.y, left: contextMenu.x, width: 200, 
+              background: 'rgba(28,28,32,0.85)', backdropFilter: 'blur(40px)', 
+              borderRadius: 14, border: '1px solid rgba(255,255,255,0.12)', 
+              padding: '6px', zIndex: 9000, 
+              boxShadow: '0 30px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)' 
+            }}>
+              <div style={{ padding: '8px 12px 10px', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: 6 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>资源操作</div>
+              </div>
+              {[
+                { l: '设为壁纸', i: 'monitor', a: () => onSetWallpaper(contextMenu.w) },
+                { l: '进入色彩调节', i: 'sliders', a: () => onEditColor(contextMenu.w) },
+                { l: '全屏预览', i: 'search', a: () => onPreview(contextMenu.w) },
+                { l: '收藏该壁纸', i: 'heart', a: () => {} },
+                { type: 'sep' },
+                { l: '在访达中显示', i: 'monitor', a: () => {} },
+                { l: '移除该资源', i: 'close', a: () => {}, c: '#ff4d4d' },
+              ].map((it, idx) => it.type === 'sep' ? (
+                <div key={idx} style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '4px 8px' }} />
+              ) : (
+                <div key={it.l} onClick={(e) => { e.stopPropagation(); it.a(); }} style={{ 
+                  padding: '10px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+                  display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', transition: '0.15s', 
+                  color: it.c || 'rgba(255,255,255,0.85)' 
+                }} className="menu-item">
+                  <Icon name={it.i} size={14} />
+                  <span>{it.l}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       );
     };
 
     const LibraryPage = ({ wallpapers, setView, onSetWallpaper }) => {
       const [contextMenu, setContextMenu] = useState(null);
+      const [showTagManager, setShowTagManager] = useState(false);
+      const [activeFilter, setActiveFilter] = useState('全部');
 
       const handleContextMenu = (e, w) => {
         e.preventDefault();
@@ -308,134 +583,351 @@
       }, []);
 
       return (
-        <div className="no-scrollbar" style={{ height: 'calc(100vh - 80px)', overflowY: 'auto', padding: '40px 80px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 40 }}>
-            <div>
-              <h1 style={{ fontSize: 48, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500 }}>壁纸库</h1>
-              <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+        <div className="no-scrollbar" style={{ height: 'calc(100vh)', overflowY: 'auto', padding: '160px 80px 80px', background: '#0d0e12' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 60 }}>
+            <div style={{ flex: 1 }}>
+              <h1 style={{ fontSize: 64, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500, letterSpacing: '-0.03em', marginBottom: 32 }}>壁纸库</h1>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                 {['全部', '视频', 'HEIC', '自然', '城市', '动漫'].map(tag => (
-                  <div key={tag} style={{ padding: '4px 12px', borderRadius: 6, background: tag === '全部' ? 'rgba(255,255,255,0.1)' : 'var(--glass)', fontSize: 13, cursor: 'pointer' }}>{tag}</div>
+                  <div 
+                    key={tag} 
+                    onClick={() => setActiveFilter(tag)}
+                    style={{ 
+                      padding: '8px 24px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: '0.3s cubic-bezier(0.2, 1, 0.3, 1)',
+                      background: activeFilter === tag ? '#fff' : 'rgba(255,255,255,0.03)',
+                      color: activeFilter === tag ? '#000' : 'rgba(255,255,255,0.3)',
+                      boxShadow: activeFilter === tag ? '0 10px 20px rgba(255,255,255,0.1)' : 'none'
+                    }}
+                  >
+                    {tag}
+                  </div>
                 ))}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
-              <select style={{ background: 'var(--glass)', border: '1px solid var(--glass-border)', color: '#fff', padding: '8px 16px', borderRadius: 8, fontSize: 13 }}>
-                <option>按时间排序</option>
-                <option>按名称排序</option>
-                <option>按使用频率排序</option>
-              </select>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,0.3)', fontSize: 13, cursor: 'pointer', padding: '8px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', transition: '0.3s' }} onMouseOver={(e) => e.currentTarget.style.color = '#fff'}>
+                <span>按导入时间排序</span>
+                <Icon name="play" size={8} style={{ transform: 'rotate(90deg)', opacity: 0.5 }} />
+              </div>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 32 }}>
-            {wallpapers.map(w => (
-              <div key={w.id} className="animate-in" 
-                onDoubleClick={() => setView('color')} 
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 32 }}>
+            {wallpapers.map((w, i) => (
+              <div key={w.id} className="library-card-v2" 
+                onDoubleClick={() => setView(w)} 
                 onContextMenu={(e) => handleContextMenu(e, w)}
-                style={{ cursor: 'pointer', transition: '0.3s' }}>
-                <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: 16, overflow: 'hidden', position: 'relative', border: '1px solid var(--glass-border)', background: 'var(--glass)', marginBottom: 12 }}>
-                   <img src={w.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                   <div style={{ position: 'absolute', bottom: 12, right: 12, opacity: 0.6 }}><Icon name="heart" size={16} /></div>
-                   {w.type === '视频' && <div style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)', width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="play" size={12} /></div>}
+                style={{ 
+                  cursor: 'pointer', transition: '0.4s',
+                  animation: `fadeIn 0.8s forwards ${i * 0.03}s`,
+                  opacity: 0,
+                  position: 'relative'
+                }}>
+                {/* Aura Glow Layer */}
+                <div className="aura-glow" style={{
+                  position: 'absolute', inset: -20, background: `radial-gradient(circle at center, var(--accent) 0%, transparent 70%)`,
+                  opacity: 0, transition: '0.6s cubic-bezier(0.2, 1, 0.3, 1)', zIndex: -1, filter: 'blur(40px)'
+                }} />
+
+                <div style={{ 
+                  width: '100%', aspectRatio: '16/9', borderRadius: 22, overflow: 'hidden', 
+                  position: 'relative', border: '1px solid rgba(255,255,255,0.06)', 
+                  background: '#16181c', marginBottom: 16,
+                  boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+                  transition: '0.5s cubic-bezier(0.2, 1, 0.3, 1)'
+                }} className="card-container">
+                   <img src={w.img} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: '0.8s' }} className="card-img" />
+
+                   {/* 悬浮覆盖层 */}
+                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.4), transparent)', opacity: 0, transition: '0.3s' }} className="card-overlay" />
+
+                   <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: 8, fontSize: 10, color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>{w.size}</div>
+
+                   {w.type === '视频' && (
+                     <div style={{ position: 'absolute', top: 12, right: 12, background: 'var(--accent)', color: '#fff', width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}>
+                       <Icon name="play" size={14} />
+                     </div>
+                   )}
                 </div>
-                <div style={{ fontWeight: 500, fontSize: 16 }}>{w.name}</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
-                  <span>{w.res} · {w.size}</span>
-                  <span>{w.tag}</span>
+                <div style={{ padding: '0 4px' }}>
+                  <div style={{ fontWeight: 600, fontSize: 16, color: 'rgba(255,255,255,0.9)' }}>{w.name}</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>{w.res} · {w.type}</span>
+                    <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4 }}>{w.tag}</span>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
 
           {contextMenu && (
-            <div style={{ position: 'fixed', top: contextMenu.y, left: contextMenu.x, width: 180, background: 'rgba(20,20,24,0.95)', backdropFilter: 'blur(20px)', borderRadius: 12, border: '1px solid var(--glass-border)', padding: 6, zIndex: 3000, boxShadow: '0 20px 50px rgba(0,0,0,0.4)' }}>
+            <div style={{ 
+              position: 'fixed', top: contextMenu.y, left: contextMenu.x, width: 200, 
+              background: 'rgba(28,28,32,0.85)', backdropFilter: 'blur(40px)', 
+              borderRadius: 14, border: '1px solid rgba(255,255,255,0.12)', 
+              padding: '6px', zIndex: 9000, 
+              boxShadow: '0 30px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)' 
+            }}>
+              <div style={{ padding: '8px 12px 10px', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: 6 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>资源管理</div>
+              </div>
               {[
                 { l: '设为壁纸', i: 'monitor', a: () => onSetWallpaper(contextMenu.w) },
-                { l: '色彩调节', i: 'sliders', a: () => setView('color') },
-                { l: '管理标签', i: 'plus', a: () => {} },
-                { l: '收藏', i: 'heart', a: () => {} },
-                { l: '删除', i: 'close', a: () => {}, c: 'var(--accent)' },
-              ].map(it => (
-                <div key={it.l} onClick={it.a} style={{ padding: '8px 12px', borderRadius: 6, fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', color: it.c || '#fff' }} className="menu-item">
-                  <Icon name={it.i} size={14} /> {it.l}
+                { l: '进入色彩调节', i: 'sliders', a: () => setView(contextMenu.w) },
+                { l: '编辑分类标签', i: 'plus', a: () => setShowTagManager(true) },
+                { type: 'sep' },
+                { l: '设为收藏', i: 'heart', a: () => {} },
+                { l: '移至回收站', i: 'close', a: () => {}, c: '#ff4d4d' },
+              ].map((it, idx) => it.type === 'sep' ? (
+                <div key={idx} style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '4px 8px' }} />
+              ) : (
+                <div key={it.l} onClick={(e) => { e.stopPropagation(); it.a(); }} style={{ 
+                  padding: '10px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+                  display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', transition: '0.15s', 
+                  color: it.c || 'rgba(255,255,255,0.85)' 
+                }} className="menu-item">
+                  <Icon name={it.i} size={14} />
+                  <span>{it.l}</span>
                 </div>
               ))}
             </div>
           )}
-          <style>{`.menu-item:hover { background: rgba(255,255,255,0.1); }`}</style>
+
+          <style>{`
+            .library-card-v2:hover .card-container { transform: scale(1.03) translateY(-8px); border-color: rgba(255,255,255,0.2); }
+            .library-card-v2:hover .aura-glow { opacity: 0.3; transform: scale(1.2); }
+            .library-card-v2:hover .card-img { transform: scale(1.05); }
+            .library-card-v2:hover .card-overlay { opacity: 1; }
+            .menu-item:hover { background: var(--accent); color: #fff; }
+          `}</style>
+
+          {showTagManager && (
+            <div style={{ position: 'fixed', inset: 0, zIndex: 4000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowTagManager(false)}>
+              <div className="animate-in" style={{ width: 340, background: '#1a1b1e', borderRadius: 24, border: '1px solid var(--glass-border)', padding: 32, boxShadow: '0 40px 100px rgba(0,0,0,0.6)' }} onClick={e => e.stopPropagation()}>
+                <div style={{ fontSize: 22, marginBottom: 24, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 600 }}>管理壁纸标签</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 32 }}>
+                  {['自然', '城市', '动漫', '4K', '极简', '暗色'].map(t => (
+                    <div key={t} style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', fontSize: 12, cursor: 'pointer', transition: '0.2s' }}>{t}</div>
+                  ))}
+                  <div style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.1)', border: '1px dashed var(--accent)', fontSize: 12, cursor: 'pointer', color: 'var(--accent)' }}>+ 新标签</div>
+                </div>
+                <button className="btn-primary btn" style={{ width: '100%', justifyContent: 'center', height: 48 }} onClick={() => setShowTagManager(false)}>保存修改</button>
+              </div>
+            </div>
+          )}
         </div>
       );
     };
 
-    const ColorPage = ({ wallpaper, setView }) => {
+    const ColorPage = ({ wallpaper, setView, onSave }) => {
       const [hue, setHue] = useState(0);
       const [sat, setSat] = useState(100);
       const [bri, setBri] = useState(100);
       const [con, setCon] = useState(100);
-      const [temp, setTemp] = useState(0);
+      const [blur, setBlur] = useState(0);
+      const [gray, setGray] = useState(0);
+      const [inv, setInv] = useState(0);
+      const [expo, setExpo] = useState(100);
+      const [grain, setGrain] = useState(0);
+      const [vignette, setVignette] = useState(0);
+      
+      const [showSavePopup, setShowSavePopup] = useState(false);
+      const [presetName, setPresetName] = useState('我的自定义色调');
 
-      const filter = `hue-rotate(${hue}deg) saturate(${sat}%) brightness(${bri}%) contrast(${con}%) sepia(${temp}%)`;
+      const reset = () => {
+        setHue(0); setSat(100); setBri(100); setCon(100); setBlur(0);
+        setGray(0); setInv(0); setExpo(100); setGrain(0); setVignette(0);
+      };
+
+      const filterString = `
+        hue-rotate(${hue}deg) 
+        saturate(${sat}%) 
+        brightness(${bri}%) 
+        contrast(${con}%) 
+        blur(${blur}px)
+        grayscale(${gray}%)
+        invert(${inv}%)
+        brightness(${expo}%)
+      `;
 
       return (
-        <div style={{ height: '100vh', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', inset: 0, transition: '0.1s' }}>
-            <img src={wallpaper.img} style={{ width: '100%', height: '100%', objectFit: 'cover', filter }} />
+        <div className="animate-in" style={{ height: '100vh', background: '#000', position: 'relative', overflow: 'hidden' }}>
+          {/* 实时预览容器 */}
+          <div style={{ width: '100%', height: '100%', position: 'relative', transition: '0.1s' }}>
+            <img src={wallpaper.img} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: filterString }} />
+            
+            {/* 叠加效果层：暗角 */}
+            <div style={{ 
+              position: 'absolute', inset: 0, 
+              background: `radial-gradient(circle, transparent ${100 - vignette}%, rgba(0,0,0,${vignette/100}))`,
+              pointerEvents: 'none'
+            }} />
+            
+            {/* 叠加效果层：颗粒感 */}
+            {grain > 0 && (
+              <div style={{ 
+                position: 'absolute', inset: 0, opacity: grain / 100, pointerEvents: 'none',
+                backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
+              }} />
+            )}
           </div>
 
-          <div style={{ position: 'absolute', top: 32, left: 32 }}>
+          <div style={{ position: 'absolute', top: 32, left: 32, zIndex: 100 }}>
             <button onClick={() => setView('home')} className="btn" style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(20px)', borderRadius: '50%', width: 44, height: 44, padding: 0, justifyContent: 'center' }}><Icon name="close" /></button>
           </div>
 
-          <div className="animate-in" style={{ position: 'absolute', top: 32, right: 32, width: 320, background: 'rgba(13,14,18,0.7)', backdropFilter: 'blur(30px)', border: '1px solid var(--glass-border)', borderRadius: 24, padding: 32, boxShadow: '0 40px 100px rgba(0,0,0,0.5)' }}>
-            <div style={{ marginBottom: 32 }}>
+          {/* 调节面板 */}
+          <div className="animate-in no-scrollbar" style={{ 
+            position: 'absolute', top: 32, right: 32, bottom: 32, width: 360, 
+            background: 'rgba(13,14,18,0.7)', backdropFilter: 'blur(30px)', 
+            border: '1px solid var(--glass-border)', borderRadius: 24, padding: 0, 
+            boxShadow: '0 40px 100px rgba(0,0,0,0.5)', overflowY: 'auto', display: 'flex', flexDirection: 'column'
+          }}>
+            <div style={{ padding: '32px 32px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <span style={{ padding: '2px 8px', background: 'rgba(255,255,255,0.1)', borderRadius: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(255,255,255,0.5)' }}>{wallpaper.tag}</span>
+                {wallpaper.fav && <Icon name="heart" size={12} />}
+              </div>
               <h2 style={{ fontSize: 24, fontFamily: 'var(--font-display)', fontStyle: 'italic', marginBottom: 8 }}>{wallpaper.name}</h2>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>{wallpaper.res} · {wallpaper.type} · {wallpaper.duration}</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>专业色彩调节</div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginBottom: 40 }}>
-              {[
-                { label: '色调', val: hue, set: setHue, min: -180, max: 180 },
-                { label: '饱和度', val: sat, set: setSat, min: 0, max: 200 },
-                { label: '亮度', val: bri, set: setBri, min: 50, max: 150 },
-                { label: '对比度', val: con, set: setCon, min: 50, max: 150 },
-                { label: '色温', val: temp, set: setTemp, min: 0, max: 100 },
-              ].map(item => (
-                <div key={item.label}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 8 }}>
-                    <span>{item.label}</span>
-                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>{item.val}</span>
-                  </div>
-                  <input type="range" min={item.min} max={item.max} value={item.val} onChange={e => item.set(e.target.value)} style={{ width: '100%', accentColor: 'var(--accent)' }} />
+            <div style={{ padding: '0 32px 32px' }}>
+              <div style={{ marginBottom: 32 }}>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20, fontWeight: 600 }}>基础校正</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  <Slider label="曝光度" val={expo} set={setExpo} min={0} max={200} />
+                  <Slider label="对比度" val={con} set={setCon} min={50} max={150} />
+                  <Slider label="饱和度" val={sat} set={setSat} min={0} max={200} />
+                  <Slider label="色调" val={hue} set={setHue} min={-180} max={180} />
                 </div>
-              ))}
-            </div>
+              </div>
 
-            <div style={{ marginBottom: 40 }}>
-              <div style={{ fontSize: 13, marginBottom: 12 }}>预设</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                {['复古', '冷色', '暖色', '黑白', '通透', '梦幻'].map(p => (
-                  <button key={p} className="btn" style={{ fontSize: 11, padding: '4px 8px', justifyContent: 'center' }}>{p}</button>
-                ))}
+              <div style={{ marginBottom: 32 }}>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20, fontWeight: 600 }}>艺术效果</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  <Slider label="模糊" val={blur} set={setBlur} min={0} max={20} unit="px" />
+                  <Slider label="颗粒感" val={grain} set={setGrain} min={0} max={100} />
+                  <Slider label="暗角" val={vignette} set={setVignette} min={0} max={100} />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 32 }}>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20, fontWeight: 600 }}>风格转换</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  <Slider label="灰度" val={gray} set={setGray} min={0} max={100} />
+                  <Slider label="反转" val={inv} set={setInv} min={0} max={100} />
+                </div>
+              </div>
+
+              <div style={{ marginTop: 24, padding: '24px 0', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500 }}>常用预设</div>
+                  <button onClick={() => setShowSavePopup(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 11, cursor: 'pointer' }}>+ 保存当前</button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  {[
+                    { n: '胶片', h: 0, s: 80, b: 90, c: 110, bl: 0, g: 10, i: 0, e: 105, gr: 15, v: 20 },
+                    { n: '冷色', h: 10, s: 70, b: 105, c: 105, bl: 0, g: 0, i: 0, e: 100, gr: 0, v: 10 },
+                    { n: '黑白', h: 0, s: 0, b: 100, c: 120, bl: 0, g: 100, i: 0, e: 110, gr: 20, v: 40 },
+                    { n: '通透', h: 0, s: 120, b: 110, c: 115, bl: 0, g: 0, i: 0, e: 115, gr: 0, v: 0 },
+                    { n: '梦幻', h: -10, s: 130, b: 105, c: 90, bl: 8, g: 0, i: 0, e: 110, gr: 0, v: 15 },
+                    { n: '深夜', h: 20, s: 60, b: 70, c: 130, bl: 2, g: 0, i: 0, e: 80, gr: 5, v: 60 }
+                  ].map(p => (
+                    <button 
+                      key={p.n} 
+                      className="btn" 
+                      style={{ fontSize: 11, padding: '8px', justifyContent: 'center' }}
+                      onClick={() => {
+                        setHue(p.h); setSat(p.s); setBri(p.b); setCon(p.c);
+                        setBlur(p.bl); setGray(p.g); setInv(p.i); setExpo(p.e);
+                        setGrain(p.gr); setVignette(p.v);
+                      }}
+                    >
+                      {p.n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+                <button className="btn-primary btn" style={{ flex: 1, justifyContent: 'center' }} onClick={() => { onSave(); setView('home'); }}>应用更改</button>
+                <button className="btn" style={{ flex: 1, justifyContent: 'center' }} onClick={reset}>重置</button>
               </div>
             </div>
-
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button className="btn-primary btn" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setView('home')}>应用保存</button>
-              <button className="btn" style={{ flex: 1, justifyContent: 'center' }} onClick={() => { setHue(0); setSat(100); setBri(100); setCon(100); setTemp(0); }}>重置</button>
-            </div>
           </div>
+
+          {showSavePopup && (
+            <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="animate-in" style={{ width: 340, background: '#1a1b1e', borderRadius: 28, border: '1px solid var(--glass-border)', padding: 32, boxShadow: '0 50px 100px rgba(0,0,0,0.6)' }}>
+                <div style={{ fontSize: 20, fontFamily: 'var(--font-display)', fontStyle: 'italic', marginBottom: 8 }}>保存预设</div>
+                <input 
+                  autoFocus
+                  placeholder="预设名称..."
+                  value={presetName}
+                  onChange={e => setPresetName(e.target.value)}
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: 12, padding: '14px 18px', color: '#fff', marginBottom: 24, outline: 'none' }}
+                />
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <button className="btn-primary btn" style={{ flex: 1, justifyContent: 'center' }} onClick={() => { setShowSavePopup(false); onSave(); }}>保存配置</button>
+                  <button className="btn" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setShowSavePopup(false)}>取消</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     };
 
-    const SettingsPage = () => {
-      const tabs = ['轮播设置', '显示设置', '性能与省电', '库管理', '外观', '快捷键', '关于'];
-      const [activeTab, setActiveTab] = useState(tabs[0]);
+    const Slider = ({ label, val, set, min, max, unit = '%' }) => (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 10 }}>
+          <span>{label}</span>
+          <span style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>{val}{unit}</span>
+        </div>
+        <input type="range" min={min} max={max} value={val} onChange={e => set(e.target.value)} style={{ width: '100%', accentColor: 'var(--accent)' }} />
+      </div>
+    );
+
+    const SettingsPage = ({ fitMode, setFitMode, monitors }) => {
+      const [activeTab, setActiveTab] = useState('通用');
+      
+      const navItems = [
+        { id: '通用', icon: 'monitor' },
+        { id: '外观', icon: 'image' },
+        { id: '性能', icon: 'sliders' },
+        { id: '库管理', icon: 'plus' },
+        { id: '快捷键', icon: 'settings' },
+        { id: '关于', icon: 'check' }
+      ];
+
+      const ShortcutRow = ({ label, keys }) => (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>{label}</span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {keys.map((k, i) => (
+              <React.Fragment key={i}>
+                <kbd style={{ 
+                  minWidth: 32, height: 32, padding: '0 10px', borderRadius: 8,
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 12, fontWeight: 700, color: '#fff'
+                }}>
+                  {k}
+                </kbd>
+                {i < keys.length - 1 && <span style={{ alignSelf: 'center', opacity: 0.3, fontSize: 10 }}>+</span>}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      );
 
       const SettingRow = ({ title, desc, children }) => (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
           <div style={{ flex: 1, paddingRight: 40 }}>
-            <div style={{ fontSize: 16, fontWeight: 500 }}>{title}</div>
+            <div style={{ fontSize: 16, fontWeight: 600 }}>{title}</div>
             {desc && <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>{desc}</div>}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>{children}</div>
@@ -443,163 +935,269 @@
       );
 
       const Switch = ({ active }) => (
-        <div style={{ width: 44, height: 24, background: active ? 'var(--accent)' : 'rgba(255,255,255,0.1)', borderRadius: 12, position: 'relative', cursor: 'pointer' }}>
-          <div style={{ width: 18, height: 18, background: '#fff', borderRadius: '50%', position: 'absolute', top: 3, [active ? 'right' : 'left']: 3 }} />
+        <div style={{ width: 44, height: 24, background: active ? 'var(--accent)' : 'rgba(255,255,255,0.1)', borderRadius: 12, position: 'relative', cursor: 'pointer', transition: '0.3s' }}>
+          <div style={{ width: 18, height: 18, background: '#fff', borderRadius: '50%', position: 'absolute', top: 3, [active ? 'right' : 'left']: 3, transition: '0.3s cubic-bezier(0.2, 1, 0.3, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
         </div>
       );
 
       return (
-        <div style={{ height: 'calc(100vh)', display: 'flex', paddingTop: 100 }}>
-          <div style={{ width: 280, borderRight: '1px solid var(--glass-border)', padding: '40px 32px' }}>
-            {tabs.map(t => (
-              <div key={t} onClick={() => setActiveTab(t)} style={{ 
-                padding: '12px 20px', borderRadius: 12, cursor: 'pointer', marginBottom: 4, transition: '0.2s',
-                background: activeTab === t ? 'rgba(255,255,255,0.05)' : 'transparent',
-                color: activeTab === t ? '#fff' : 'rgba(255,255,255,0.4)',
-                fontSize: 14, fontWeight: 500
-              }}>
-                {t}
+        <div className="animate-in" style={{ 
+          height: '100vh', padding: '0 80px', background: '#0d0e12', 
+          display: 'flex', gap: 40, overflow: 'hidden', alignItems: 'flex-start' 
+        }}>
+          {/* Pro 级侧边导航 - 采用稳健材质杜绝分裂 Bug */}
+          <div style={{ 
+            width: 240, 
+            background: '#14151a', // 改用实体色定义，杜绝 backdrop-filter 产生的分裂线
+            borderRight: '1px solid rgba(255,255,255,0.05)',
+            padding: '140px 12px 32px', // 基准线对齐点
+            display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0,
+            height: '100%'
+          }}>
+            {navItems.map(item => (
+              <div 
+                key={item.id} 
+                onClick={() => setActiveTab(item.id)}
+                style={{ 
+                  padding: '12px 16px', borderRadius: 14, cursor: 'pointer', transition: '0.2s',
+                  display: 'flex', alignItems: 'center', gap: 14,
+                  background: activeTab === item.id ? 'rgba(255,255,255,0.06)' : 'transparent',
+                  color: activeTab === item.id ? '#fff' : 'rgba(255,255,255,0.35)',
+                }}
+                className="settings-nav-item"
+              >
+                <Icon name={item.icon} size={18} />
+                <span style={{ fontSize: 14, fontWeight: 700 }}>{item.id}</span>
               </div>
             ))}
           </div>
-          <div className="no-scrollbar" style={{ flex: 1, padding: '60px 80px', overflowY: 'auto' }}>
-            <h2 style={{ fontSize: 36, fontFamily: 'var(--font-display)', fontStyle: 'italic', marginBottom: 48 }}>{activeTab}</h2>
-            
-            {activeTab === '轮播设置' && (
-              <div className="animate-in">
-                <SettingRow title="启用自动轮播" desc="开启后，壁纸将按照设定规则自动切换"><Switch active /></SettingRow>
-                <SettingRow title="切换间隔" desc="设定自动切换的时间频率">
-                   {['15分钟', '1小时', '每天', '启动时'].map(v => <button key={v} className="btn" style={{ padding: '8px 16px', fontSize: 13 }}>{v}</button>)}
-                </SettingRow>
-                <SettingRow title="播放顺序">
-                  {['随机播放', '顺序播放'].map(v => <button key={v} className="btn" style={{ padding: '8px 16px', fontSize: 13 }}>{v}</button>)}
-                </SettingRow>
-                <SettingRow title="过渡方式">
-                  {['淡入淡出', '平移', '无'].map(v => <button key={v} className="btn" style={{ padding: '8px 16px', fontSize: 13 }}>{v}</button>)}
-                </SettingRow>
-              </div>
-            )}
 
-            {activeTab === '显示设置' && (
+          {/* 设置主内容区 - 物理对齐 Content Area */}
+          <div className="no-scrollbar" style={{ 
+            flex: 1, height: '100%', background: 'rgba(255,255,255,0.01)', backdropFilter: 'blur(60px)', 
+            borderRadius: 0, padding: '140px 72px 80px', overflowY: 'auto'
+          }}>
+            <h2 style={{ 
+              fontSize: 42, fontFamily: 'var(--font-display)', fontStyle: 'italic', 
+              marginBottom: 56, letterSpacing: '-0.02em', marginTop: 0,
+              lineHeight: 1, color: '#fff'
+            }}>{activeTab}</h2>
+
+            {activeTab === '通用' && (
               <div className="animate-in">
-                <SettingRow title="多显示器配置" desc="检测到 2 个显示器已连接">
-                  <button className="btn">重新排列</button>
-                  <button className="btn">识别显示器</button>
-                </SettingRow>
-                <div style={{ background: 'var(--glass)', borderRadius: 16, padding: 24, border: '1px solid var(--glass-border)', marginBottom: 40 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>每屏绑定壁纸</div>
-                  {MONITORS.map(m => (
-                    <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
-                      <div style={{ width: 100, height: 56, background: '#000', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)' }}></div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13 }}>{m.name} {m.main && '(主)'}</div>
-                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{m.res}</div>
-                      </div>
-                      <button className="btn" style={{ fontSize: 11 }}>更换</button>
-                    </div>
-                  ))}
+                {/* 物理拓扑编辑器 */}
+                <div style={{ marginBottom: 56 }}>
+                   <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.3)', marginBottom: 24, textTransform: 'uppercase', letterSpacing: '0.15em' }}>显示器拓扑布局</div>
+                   <div style={{ 
+                     background: 'rgba(0,0,0,0.3)', borderRadius: 28, padding: '60px 40px', 
+                     display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 40,
+                     border: '1px solid rgba(255,255,255,0.03)', position: 'relative',
+                     boxShadow: 'inset 0 20px 40px rgba(0,0,0,0.4)'
+                   }}>
+                      {monitors.map(d => (
+                        <div key={d.id} style={{ textAlign: 'center' }} className="topology-card">
+                          <div style={{ 
+                            width: d.main ? 220 : 160, aspectRatio: '16/10', background: '#000', 
+                            borderRadius: 14, border: '2px solid ' + (d.main ? 'var(--accent)' : 'rgba(255,255,255,0.1)'),
+                            boxShadow: d.main ? '0 0 40px rgba(224,62,62,0.25)' : '0 10px 30px rgba(0,0,0,0.5)',
+                            marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            position: 'relative', cursor: 'pointer', transition: '0.4s'
+                          }}>
+                            <Icon name="monitor" size={d.main ? 48 : 32} style={{ opacity: 0.3 }} />
+                            <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 10, background: 'rgba(255,255,255,0.08)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>P3</div>
+                            {d.main && <div style={{ position: 'absolute', bottom: -12, left: '50%', transform: 'translateX(-50%)', width: 40, height: 4, background: 'var(--accent)', borderRadius: 2 }} />}
+                          </div>
+                          <div style={{ fontSize: 14, fontWeight: 600 }}>{d.name}</div>
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 6 }}>{d.res} · {d.main ? '主屏幕' : '扩展'}</div>
+                        </div>
+                      ))}
+                      <div style={{ position: 'absolute', bottom: 20, width: '100%', textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>拖拽显示器以排列其物理位置</div>
+                   </div>
                 </div>
-                <SettingRow title="适配模式" desc="设定壁纸在屏幕上的填充方式">
-                  <select style={{ background: 'var(--glass)', border: '1px solid var(--glass-border)', color: '#fff', padding: '8px 16px', borderRadius: 8, fontSize: 13 }}>
-                    {['填充', '适应', '拉伸', '平铺', '居中'].map(v => <option key={v}>{v}</option>)}
-                  </select>
-                </SettingRow>
+                
+                <SettingRow title="启动时自动运行" desc="开机即刻呈现沉浸式桌面体验"><Switch active /></SettingRow>
+                <SettingRow title="菜单栏快捷入口" desc="在顶部菜单栏显示实时状态图标"><Switch active /></SettingRow>
               </div>
             )}
 
-            {activeTab === '性能与省电' && (
+            {activeTab === '性能' && (
               <div className="animate-in">
-                <SettingRow title="模式选择" desc="智能平衡壁纸质量与系统资源消耗">
-                   {['始终播放', '智能', '省电', '自定义'].map(v => <button key={v} className="btn" style={{ padding: '8px 16px', fontSize: 13 }}>{v}</button>)}
-                </SettingRow>
-                <div style={{ marginBottom: 40 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 20 }}>触发条件 (自动暂停)</div>
+                {/* 实时性能仪表盘 */}
+                <div style={{ 
+                  display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32, marginBottom: 56 
+                }}>
                   {[
-                    { l: '电池供电时', a: true }, { l: '全屏时', a: true }, { l: '最大化时', a: false },
-                    { l: '低电量时', a: true }, { l: '锁屏时', a: true }, { l: '当应用获取焦点时', a: false }
-                  ].map(c => (
-                    <div key={c.l} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>{c.l}</span>
-                      <Switch active={c.a} />
+                    { label: 'GPU 渲染压力', value: '12.4%', color: 'var(--accent)', unit: 'LOAD' },
+                    { label: '动态帧率', value: '120', color: '#2ECC71', unit: 'FPS' },
+                    { label: '系统内存占用', value: '420', color: '#3498DB', unit: 'MB' }
+                  ].map(stat => (
+                    <div key={stat.label} style={{ 
+                      background: 'rgba(255,255,255,0.02)', padding: 28, borderRadius: 24,
+                      border: '1px solid rgba(255,255,255,0.05)'
+                    }}>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 16, textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.1em' }}>{stat.label}</div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                        <div style={{ fontSize: 36, fontWeight: 800, color: stat.color, fontFamily: 'monospace' }}>{stat.value}</div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.2)' }}>{stat.unit}</div>
+                      </div>
+                      <div style={{ height: 40, display: 'flex', alignItems: 'flex-end', gap: 3, marginTop: 24 }}>
+                        {[...Array(24)].map((_, i) => (
+                          <div key={i} style={{ flex: 1, background: stat.color, opacity: 0.15 + (Math.random() * 0.4), height: (25 + Math.random() * 75) + '%' }} />
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
-                <SettingRow title="帧率限制" desc="限制动态壁纸的最高刷新率 (当前: 60fps)">
-                  <input type="range" style={{ width: 120, accentColor: 'var(--accent)' }} />
-                </SettingRow>
-                <SettingRow title="视频质量" desc="设定视频壁纸的渲染清晰度">
-                  {['极高', '高', '中', '低'].map(v => <button key={v} className="btn" style={{ padding: '8px 16px', fontSize: 13 }}>{v}</button>)}
-                </SettingRow>
+
+                <div style={{ marginBottom: 40 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.3)', marginBottom: 24, textTransform: 'uppercase', letterSpacing: '0.1em' }}>智能暂停策略 (Smart Pause)</div>
+                  <SettingRow title="电池供电时暂停" desc="切换到电池模式时自动停止动态渲染"><Switch active /></SettingRow>
+                  <SettingRow title="处于全屏应用时暂停" desc="当有任何应用处于全屏状态时"><Switch active /></SettingRow>
+                  <SettingRow title="壁纸被完全遮挡时休眠" desc="当桌面窗口完全覆盖壁纸表面时自动休眠"><Switch active /></SettingRow>
+                  <SettingRow title="低电量模式开启时暂停" desc="配合 macOS 系统低电量模式自动触发"><Switch active /></SettingRow>
+                  <SettingRow title="屏幕共享或录制时暂停" desc="保护隐私并确保演示流程顺畅"><Switch active={false} /></SettingRow>
+                  <SettingRow title="笔记本盖子关闭时暂停" desc="在翻盖模式下连接外屏时可选暂停"><Switch active={false} /></SettingRow>
+                  <SettingRow title="运行高负载应用时暂停" desc="如 Final Cut Pro, Blender 等开启时"><Switch active={false} /></SettingRow>
+                  <SettingRow title="失去焦点时自动暂停" desc="只要当前活跃窗口不是桌面，即停止渲染"><Switch active={false} /></SettingRow>
+                  <SettingRow title="系统锁定/进入睡眠前" desc="提前停止渲染以加快系统待机速度"><Switch active /></SettingRow>
+                </div>
               </div>
             )}
 
             {activeTab === '库管理' && (
               <div className="animate-in">
-                <SettingRow title="默认导入目录" desc="/Users/Alex/Pictures/PlumWallPaper">
-                  <button className="btn">修改路径</button>
-                </SettingRow>
-                <SettingRow title="缓存大小" desc="当前占用: 2.4 GB / 限制: 10 GB">
-                  <button className="btn">清理缓存</button>
-                  <button className="btn">限制设置</button>
-                </SettingRow>
-                <SettingRow title="支持格式" desc="视频: mp4, mov / 静态: heic, jpg, png">
-                   <Icon name="check" size={16} />
-                </SettingRow>
-                <SettingRow title="标签管理" desc="当前共有 12 个自定义标签">
-                  <button className="btn">编辑标签库</button>
-                </SettingRow>
+                <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 28, padding: 40, border: '1px solid rgba(255,255,255,0.05)', marginBottom: 48 }}>
+                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+                     <div style={{ fontSize: 15, fontWeight: 700 }}>资源库存储占用</div>
+                     <div style={{ fontSize: 28, fontWeight: 800 }}>2.45 GB <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.2)', fontWeight: 400 }}>/ 25 GB</span></div>
+                   </div>
+                   <div style={{ height: 12, background: 'rgba(255,255,255,0.05)', borderRadius: 6, overflow: 'hidden', display: 'flex', marginBottom: 24 }}>
+                     <div style={{ width: '60%', background: 'var(--accent)', boxShadow: '0 0 15px rgba(224,62,62,0.4)' }} />
+                     <div style={{ width: '25%', background: '#3498DB' }} />
+                     <div style={{ width: '15%', background: '#2ECC71' }} />
+                   </div>
+                   <div style={{ display: 'flex', gap: 32 }}>
+                      {[
+                        { l: '视频壁纸', v: '1.5 GB', c: 'var(--accent)' },
+                        { l: '静态/HEIC', v: '620 MB', c: '#3498DB' },
+                        { l: '缩略图缓存', v: '240 MB', c: '#2ECC71' }
+                      ].map(stat => (
+                        <div key={stat.l} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>
+                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: stat.c }} />
+                          {stat.l}: <span style={{ color: '#fff', fontWeight: 600, marginLeft: 4 }}>{stat.v}</span>
+                        </div>
+                      ))}
+                   </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 40 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.3)', marginBottom: 24, textTransform: 'uppercase' }}>全局标签管理</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                    {['自然', '城市', '动漫', '4K', '极简', '暗色', '抽象', '复古'].map(t => (
+                      <div key={t} style={{ 
+                        padding: '10px 20px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', 
+                        borderRadius: 12, fontSize: 14, display: 'flex', alignItems: 'center', gap: 12, transition: '0.2s'
+                      }} className="tag-item">
+                        {t} <span style={{ opacity: 0.2, cursor: 'pointer' }}>×</span>
+                      </div>
+                    ))}
+                    <button className="btn" style={{ padding: '10px 20px', fontSize: 14, color: 'var(--accent)', fontWeight: 700 }}>+ 新增分类</button>
+                  </div>
+                </div>
               </div>
             )}
 
             {activeTab === '外观' && (
               <div className="animate-in">
-                <SettingRow title="主题" desc="随系统外观自动切换">
+                <SettingRow title="配色主题" desc="随 macOS 系统外观自动同步">
                    {['自动', '浅色', '深色'].map(v => <button key={v} className="btn" style={{ padding: '8px 16px', fontSize: 13 }}>{v}</button>)}
                 </SettingRow>
-                <SettingRow title="Accent 配置" desc="全局强调色选择">
+                <SettingRow title="强调色 (Accent)" desc="控制界面全局交互高亮色">
                   <div style={{ display: 'flex', gap: 12 }}>
                     {['#E03E3E', '#2ECC71', '#3498DB', '#F1C40F', '#9B59B6'].map(c => (
                       <div key={c} style={{ width: 24, height: 24, borderRadius: '50%', background: c, border: c === '#E03E3E' ? '2px solid #fff' : 'none', cursor: 'pointer' }}></div>
                     ))}
                   </div>
                 </SettingRow>
-                <SettingRow title="缩略图大小">
+                <SettingRow title="库缩略图尺寸">
                   {['小', '中', '大'].map(v => <button key={v} className="btn" style={{ padding: '8px 16px', fontSize: 13 }}>{v}</button>)}
                 </SettingRow>
-                <SettingRow title="动效开关" desc="界面过渡与悬浮反馈动画"><Switch active /></SettingRow>
+                <SettingRow title="平滑动效" desc="开启后将启用界面过渡与悬浮反馈动画"><Switch active /></SettingRow>
               </div>
             )}
 
             {activeTab === '快捷键' && (
               <div className="animate-in">
-                {[
-                  { l: '下一张壁纸', k: '⌥ →' }, { l: '上一张壁纸', k: '⌥ ←' },
-                  { l: '暂停 / 继续', k: 'Space' }, { l: '收藏当前壁纸', k: '⌘ F' },
-                  { l: '打开主窗口', k: '⌥ P' }, { l: '打开设置页', k: '⌘ ,' }
-                ].map(s => (
-                  <div key={s.l} style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <span style={{ fontSize: 14 }}>{s.l}</span>
-                    <span style={{ background: 'rgba(255,255,255,0.1)', padding: '4px 12px', borderRadius: 6, fontSize: 12, fontFamily: 'monospace' }}>{s.k}</span>
-                  </div>
-                ))}
+                <div style={{ marginBottom: 40 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.3)', marginBottom: 24, textTransform: 'uppercase' }}>播放控制</div>
+                  {[
+                    { l: '切换至下一张壁纸', k: ['⌥', '→'] },
+                    { l: '切换至上一张壁纸', k: ['⌥', '←'] },
+                    { l: '暂停 / 恢复播放', k: ['Space'] },
+                    { l: '静音背景音', k: ['⌥', 'M'] }
+                  ].map(s => (
+                    <ShortcutRow key={s.l} label={s.l} keys={s.k} />
+                  ))}
+                </div>
+
+                <div style={{ marginBottom: 40 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.3)', marginBottom: 24, textTransform: 'uppercase' }}>系统与全局</div>
+                  {[
+                    { l: '呼出主程序窗口', k: ['⌥', 'P'] },
+                    { l: '进入沉浸式预览', k: ['⌘', 'Enter'] },
+                    { l: '收藏当前壁纸', k: ['⌘', 'F'] },
+                    { l: '打开偏好设置', k: ['⌘', ','] }
+                  ].map(s => (
+                    <ShortcutRow key={s.l} label={s.l} keys={s.k} />
+                  ))}
+                </div>
               </div>
             )}
             
             {activeTab === '关于' && (
               <div className="animate-in" style={{ textAlign: 'center', paddingTop: 40 }}>
-                <div style={{ width: 92, height: 92, background: '#16181c', borderRadius: 24, margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
-                   <svg viewBox="0 0 40 40" width="56" height="56"><path d="M20 36C28 36 34 30 34 22C34 14 20 6 20 6C20 6 6 14 6 22C6 30 12 36 20 36Z" fill="#E03E3E"/><path d="M20 2V8" stroke="#2ECC71" strokeWidth="4" strokeLinecap="round"/></svg>
+                <div style={{ position: 'relative', width: 140, height: 140, margin: '0 auto 40px' }}>
+                  <div style={{ 
+                    position: 'absolute', inset: -30, background: 'radial-gradient(circle, var(--accent) 0%, transparent 70%)', 
+                    opacity: 0.2, filter: 'blur(30px)', animation: 'pulse 4s infinite' 
+                  }} />
+                  <div style={{ 
+                    width: '100%', height: '100%', background: '#16181c', borderRadius: 32, 
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                    boxShadow: '0 40px 80px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.15)',
+                    position: 'relative', zIndex: 1
+                  }}>
+                     <svg viewBox="0 0 40 40" width="80" height="80"><path d="M20 36C28 36 34 30 34 22C34 14 20 6 20 6C20 6 6 14 6 22C6 30 12 36 20 36Z" fill="#E03E3E"/><path d="M20 2V8" stroke="#2ECC71" strokeWidth="4" strokeLinecap="round"/></svg>
+                  </div>
                 </div>
-                <h3 style={{ fontSize: 28, fontWeight: 700 }}>PlumWallPaper</h3>
-                <p style={{ color: 'rgba(255,255,255,0.3)', marginTop: 8, fontSize: 14 }}>Version 5.1.0 (Build 2026.04.27)</p>
-                <div style={{ marginTop: 60, display: 'flex', justifyContent: 'center', gap: 32 }}>
-                  <span style={{ color: 'var(--accent)', cursor: 'pointer', fontSize: 14 }}>检查更新</span>
-                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>检查许可证</span>
-                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>反馈入口</span>
+
+                <h3 style={{ fontSize: 48, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 600, marginBottom: 12 }}>PlumWallPaper</h3>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 32 }}>
+                  <span style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: 6, fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Version 5.2.4 (Pro)</span>
+                  <span style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: 6, fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Build 2026.04.28</span>
+                </div>
+                
+                <p style={{ fontSize: 16, lineHeight: 1.8, color: 'rgba(255,255,255,0.6)', maxWidth: 500, margin: '0 auto 48px' }}>
+                  极致纯净的 macOS 壁纸引擎。采用 Apple Metal 框架构建，为您带来兼具美学与效能的桌面体验。
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, maxWidth: 400, margin: '0 auto' }}>
+                  <button className="btn" style={{ justifyContent: 'center', height: 44 }}>检查更新</button>
+                  <button className="btn" style={{ justifyContent: 'center', height: 44 }}>许可协议</button>
                 </div>
               </div>
             )}
           </div>
+
+          <style>{`
+            .settings-nav-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+            .topology-card:hover { transform: scale(1.02); }
+            .tag-item:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
+            @keyframes pulse {
+              0%, 100% { opacity: 0.15; transform: scale(1); }
+              50% { opacity: 0.3; transform: scale(1.15); }
+            }
+          `}</style>
         </div>
       );
     };
@@ -609,11 +1207,47 @@
     const App = () => {
       const [view, setView] = useState('home');
       const [showMonitorPopup, setShowMonitorPopup] = useState(false);
+      const [showImportModal, setShowImportModal] = useState(false);
       const [selectedWallpaper, setSelectedWallpaper] = useState(MOCK_WALLPAPERS[0]);
+      const [searchQuery, setSearchQuery] = useState('');
+      const [isSearching, setIsSearching] = useState(false);
+      const [importProgress, setImportProgress] = useState(null);
+      const [toasts, setToasts] = useState([]);
+      const [fitMode, setFitMode] = useState('填充');
+      const [activeMonitors, setActiveMonitors] = useState(MONITORS);
+
+      const addToast = (msg) => {
+        const id = Date.now();
+        setToasts(prev => [...prev, { id, msg }]);
+        setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
+      };
 
       const handleSetWallpaper = (w) => {
         setSelectedWallpaper(w);
         setShowMonitorPopup(true);
+      };
+
+      const handleImport = () => {
+        setShowImportModal(false);
+        setImportProgress(0);
+        const interval = setInterval(() => {
+          setImportProgress(prev => {
+            if (prev >= 100) {
+              clearInterval(interval);
+              setTimeout(() => {
+                setImportProgress(null);
+                addToast('已成功导入新壁纸');
+              }, 500);
+              return 100;
+            }
+            return prev + 5;
+          });
+        }, 100);
+      };
+
+      const handlePreview = (w) => {
+        if (w) setSelectedWallpaper(w);
+        setView('preview');
       };
 
       const handleGoToColor = (w) => {
@@ -621,30 +1255,186 @@
         setView('color');
       };
 
+      const filteredWallpapers = useMemo(() => {
+        return MOCK_WALLPAPERS.filter(w => 
+          w.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+          w.tag.includes(searchQuery)
+        );
+      }, [searchQuery]);
+
       return (
-        <div style={{ background: 'var(--bg)', height: '100vh', position: 'relative' }}>
-          {view !== 'color' && <TopNav currentView={view} setView={setView} />}
-          
-          <main>
-            {view === 'home' && <HomePage wallpapers={MOCK_WALLPAPERS} onSetWallpaper={handleSetWallpaper} />}
-            {view === 'library' && <LibraryPage wallpapers={MOCK_WALLPAPERS} setView={handleGoToColor} onSetWallpaper={handleSetWallpaper} />}
-            {view === 'color' && <ColorPage wallpaper={selectedWallpaper} setView={setView} />}
-            {view === 'settings' && <SettingsPage />}
+        <div style={{ background: 'var(--bg)', height: '100vh', position: 'relative', overflow: 'hidden' }}>
+          {view !== 'color' && view !== 'preview' && (
+            <TopNav 
+              currentView={view} 
+              setView={setView} 
+              onSearchClick={() => setIsSearching(true)} 
+              onImportClick={() => setShowImportModal(true)}
+            />
+          )}
+
+          <main style={{ height: '100vh' }}>
+            {view === 'home' && (
+              <HomePage 
+                wallpapers={MOCK_WALLPAPERS} 
+                onSetWallpaper={handleSetWallpaper} 
+                fitMode={fitMode}
+                onPreview={handlePreview}
+                onEditColor={handleGoToColor}
+              />
+            )}
+            {view === 'library' && (
+              <LibraryPage 
+                wallpapers={filteredWallpapers} 
+                setView={handlePreview} 
+                onSetWallpaper={handleSetWallpaper} 
+              />
+            )}
+            {view === 'color' && (
+              <ColorPage 
+                wallpaper={selectedWallpaper} 
+                setView={setView} 
+                onSave={() => addToast('色彩配置已保存')}
+              />
+            )}
+            {view === 'preview' && (
+              <PreviewPage 
+                wallpaper={selectedWallpaper} 
+                onClose={() => setView('home')} 
+              />
+            )}
+            {view === 'settings' && (
+              <SettingsPage 
+                fitMode={fitMode} 
+                setFitMode={setFitMode} 
+                monitors={activeMonitors}
+              />
+            )}
           </main>
+
+          {/* Import Modal */}
+          {showImportModal && (
+            <ImportModal 
+              onClose={() => setShowImportModal(false)} 
+              onStartImport={handleImport}
+            />
+          )}
+
+          {/* Search Overlay */}
+          {isSearching && (
+            <div className="animate-in" style={{ 
+              position: 'fixed', inset: 0, 
+              background: 'rgba(0,0,0,0.8)', 
+              backdropFilter: 'blur(80px)', 
+              zIndex: 8000, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 140 
+            }} onClick={() => setIsSearching(false)}>
+               
+               {/* 顶部退出按钮 */}
+               <div style={{ position: 'absolute', top: 40, right: 56 }}>
+                 <button onClick={() => setIsSearching(false)} className="topbar-btn-v2" style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                   <Icon name="close" size={24} />
+                 </button>
+               </div>
+
+               <div style={{ width: '100%', maxWidth: 900, padding: '0 40px' }} onClick={e => e.stopPropagation()}>
+                  <div style={{ position: 'relative', marginBottom: 60 }}>
+                    <input 
+                      autoFocus
+                      placeholder="探索您的资源库..." 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Escape' && setIsSearching(false)}
+                      style={{ 
+                        width: '100%', background: 'transparent', border: 'none', 
+                        borderBottom: '2px solid rgba(255,255,255,0.1)', color: '#fff', 
+                        fontSize: 64, fontFamily: 'var(--font-display)', fontStyle: 'italic',
+                        padding: '24px 0', outline: 'none', transition: '0.3s'
+                      }} 
+                    />
+                    <div style={{ position: 'absolute', right: 0, bottom: 32, display: 'flex', gap: 8, alignItems: 'center', opacity: 0.4 }}>
+                       <kbd style={{ background: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: 4, fontSize: 12 }}>ESC</kbd>
+                       <span style={{ fontSize: 12 }}>退出搜索</span>
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: 24, fontSize: 13, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>
+                    {searchQuery ? `找到 ${filteredWallpapers.length} 个匹配项` : '建议与热门'}
+                  </div>
+
+                  <div style={{ 
+                    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32,
+                    maxHeight: '50vh', overflowY: 'auto', paddingRight: 20
+                  }} className="no-scrollbar">
+                    {filteredWallpapers.map((w, i) => (
+                      <div 
+                        key={w.id} 
+                        onClick={() => { handleSetWallpaper(w); setIsSearching(false); }} 
+                        style={{ 
+                          cursor: 'pointer', transition: '0.4s cubic-bezier(0.2, 1, 0.3, 1)', 
+                          animation: `fadeIn 0.5s forwards ${i * 0.05}s`, opacity: 0 
+                        }} 
+                        className="search-result-v2"
+                      >
+                        <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', marginBottom: 12 }}>
+                          <img src={w.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.2)', transition: '0.3s' }} className="overlay" />
+                        </div>
+                        <div style={{ fontSize: 16, fontWeight: 600 }}>{w.name}</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>{w.tag} · {w.type}</div>
+                      </div>
+                    ))}
+                    {filteredWallpapers.length === 0 && (
+                      <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '100px 0', color: 'rgba(255,255,255,0.2)' }}>
+                        未找到匹配结果
+                      </div>
+                    )}
+                  </div>
+               </div>
+            </div>
+          )}
+
+          <style>{`
+            .search-result-v2:hover { transform: translateY(-8px); }
+            .search-result-v2:hover .overlay { background: rgba(0,0,0,0); }
+            .search-result-v2:hover img { transform: scale(1.05); transition: 0.8s; }
+          `}</style>
+
+          {/* Import Progress Overlay */}
+          {importProgress !== null && (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 400, background: '#1a1b1e', padding: 40, borderRadius: 24, border: '1px solid var(--glass-border)', textAlign: 'center' }}>
+                <div style={{ fontSize: 18, marginBottom: 24, fontFamily: 'var(--font-display)', fontStyle: 'italic' }}>正在解析壁纸资源...</div>
+                <div style={{ height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden', marginBottom: 12 }}>
+                  <div style={{ width: `${importProgress}%`, height: '100%', background: 'var(--accent)', transition: '0.1s' }} />
+                </div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{importProgress}% - 请勿关闭应用</div>
+              </div>
+            </div>
+          )}
 
           {showMonitorPopup && (
             <MonitorSelector 
               wallpaper={selectedWallpaper} 
+              monitors={activeMonitors}
               onCancel={() => setShowMonitorPopup(false)} 
-              onApply={() => setShowMonitorPopup(false)} 
+              onApply={(type) => {
+                setShowMonitorPopup(false);
+                addToast(type === 'all' ? '已应用到所有显示器' : '已成功设为桌面壁纸');
+              }} 
             />
           )}
 
-
-          {/* Toast simulation */}
-          <div style={{ position: 'fixed', bottom: 32, right: 32, background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)', padding: '12px 20px', borderRadius: 12, border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: 12, fontSize: 13, transform: 'translateY(100px)', opacity: 0 }}>
-            <Icon name="check" size={16} /> 已成功导入 4 张新壁纸
+          {/* Toast System */}
+          <div style={{ position: 'fixed', bottom: 32, right: 32, display: 'flex', flexDirection: 'column', gap: 12, zIndex: 7000 }}>
+            {toasts.map(t => (
+              <div key={t.id} className="animate-in" style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)', padding: '12px 24px', borderRadius: 12, border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
+                <div style={{ color: '#2ECC71' }}><Icon name="check" size={16} /></div>
+                {t.msg}
+              </div>
+            ))}
           </div>
+          
+          <style>{`.search-result:hover { transform: scale(1.05); opacity: 1; transition: 0.3s; }`}</style>
         </div>
       );
     };
