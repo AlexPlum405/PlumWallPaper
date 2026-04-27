@@ -10,28 +10,18 @@ import SwiftData
 
 @main
 struct PlumWallPaperApp: App {
-    // SwiftData 容器配置
     let modelContainer: ModelContainer
 
     init() {
         do {
-            // 配置 SwiftData 模型容器
             let schema = Schema([
                 Wallpaper.self,
                 Tag.self,
                 FilterPreset.self,
                 Settings.self
             ])
-
-            let modelConfiguration = ModelConfiguration(
-                schema: schema,
-                isStoredInMemoryOnly: false
-            )
-
-            modelContainer = try ModelContainer(
-                for: schema,
-                configurations: [modelConfiguration]
-            )
+            let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+            modelContainer = try ModelContainer(for: schema, configurations: [configuration])
         } catch {
             fatalError("Could not initialize ModelContainer: \(error)")
         }
@@ -43,31 +33,21 @@ struct PlumWallPaperApp: App {
                 .preferredColorScheme(.dark)
                 .modelContainer(modelContainer)
                 .onAppear {
-                    configureWindow()
+                    if let window = NSApplication.shared.windows.first {
+                        window.titleVisibility = .hidden
+                        window.titlebarAppearsTransparent = true
+                        window.styleMask.insert(.fullSizeContentView)
+                    }
                 }
         }
         .windowStyle(HiddenTitleBarWindowStyle())
-        .commands {
-            // 菜单栏命令
-            CommandGroup(replacing: .newItem) {}
-        }
-    }
-
-    private func configureWindow() {
-        if let window = NSApplication.shared.windows.first {
-            window.titleVisibility = .hidden
-            window.titlebarAppearsTransparent = true
-            window.styleMask.insert(.fullSizeContentView)
-            window.minSize = CGSize(width: 1200, height: 800)
-        }
     }
 }
 
 struct MainView: View {
-    @Environment(\.modelContext) private var modelContext
     @State private var activeTab: String = "home"
     @State private var showSettings = false
-    @State private var showColorAdjust = false
+    @State private var showImport = false
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -80,19 +60,67 @@ struct MainView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // 顶部导航栏
-            TopNavBar(
-                activeTab: $activeTab,
-                showSettings: $showSettings,
-                showColorAdjust: $showColorAdjust
+            HStack(spacing: 0) {
+                HStack(spacing: 12) {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Theme.accent)
+                        .frame(width: 32, height: 32)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(.white)
+                                .frame(width: 12, height: 12)
+                        )
+                    HStack(alignment: .lastTextBaseline, spacing: 6) {
+                        Text("Plum")
+                            .font(Theme.Fonts.display(size: 28))
+                        Text("WALLPAPER")
+                            .font(.system(size: 9, weight: .bold))
+                            .tracking(4)
+                            .opacity(0.4)
+                    }
+                }
+                .onTapGesture { activeTab = "home" }
+
+                Spacer()
+
+                HStack(spacing: 4) {
+                    NavPill(id: "home", label: "首页", icon: "house.fill", activeTab: $activeTab)
+                    NavPill(id: "library", label: "壁纸库", icon: "square.grid.2x2.fill", activeTab: $activeTab)
+                }
+                .padding(4)
+                .background(Theme.glass)
+                .cornerRadius(14)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Theme.border, lineWidth: 1)
+                )
+
+                Spacer()
+
+                HStack(spacing: 16) {
+                    NavActionBtn(icon: "magnifyingglass")
+                    NavActionBtn(icon: "plus", isPrimary: true)
+                        .onTapGesture { showImport = true }
+                    NavActionBtn(icon: "gearshape.fill")
+                        .onTapGesture { showSettings = true }
+                }
+            }
+            .padding(.horizontal, 80)
+            .frame(height: 80)
+            .background(
+                LinearGradient(
+                    colors: [Theme.bg.opacity(0.8), .clear],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
             )
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()
                 .frame(minWidth: 900, minHeight: 600)
         }
-        .fullScreenCover(isPresented: $showColorAdjust) {
-            ColorAdjustView()
+        .sheet(isPresented: $showImport) {
+            ImportModalView()
         }
     }
 }

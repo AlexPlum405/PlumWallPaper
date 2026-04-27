@@ -180,12 +180,13 @@ enum TransitionEffect: String, Codable {
 enum DisplayTopology: String, Codable {
     case independent = "independent"
     case mirror = "mirror"
+    case mirrored = "mirrored"
     case panorama = "panorama"
 
     var displayName: String {
         switch self {
         case .independent: return "独立显示"
-        case .mirror: return "镜像"
+        case .mirror, .mirrored: return "镜像"
         case .panorama: return "全景拼接"
         }
     }
@@ -207,12 +208,13 @@ enum ColorSpace: String, Codable {
 
 enum ThemeMode: String, Codable {
     case auto = "auto"
+    case system = "system"
     case light = "light"
     case dark = "dark"
 
     var displayName: String {
         switch self {
-        case .auto: return "自动"
+        case .auto, .system: return "自动"
         case .light: return "浅色"
         case .dark: return "深色"
         }
