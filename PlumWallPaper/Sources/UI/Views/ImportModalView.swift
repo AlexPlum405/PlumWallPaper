@@ -2,11 +2,11 @@ import SwiftUI
 
 struct ImportModalView: View {
     @Environment(\.dismiss) var dismiss
-    
+    @Environment(AppViewModel.self) private var viewModel
+    @Environment(\.modelContext) private var modelContext
+
     @State private var isDragging = false
-    @State private var importProgress: Double = 0.0
-    @State private var isImporting = false
-    @State private var currentFileName = ""
+    @State private var showDuplicateConfirm = false
     
     var body: some View {
         VStack(spacing: 32) {
@@ -20,7 +20,7 @@ struct ImportModalView: View {
                     .foregroundColor(.white.opacity(0.3))
             }
             
-            if !isImporting {
+            if !viewModel.isImporting {
                 // 拖拽导入区
                 ZStack {
                     RoundedRectangle(cornerRadius: 24)
@@ -81,19 +81,19 @@ struct ImportModalView: View {
                             .frame(width: 120, height: 120)
                         
                         Circle()
-                            .trim(from: 0, to: importProgress)
+                            .trim(from: 0, to: viewModel.importProgress)
                             .stroke(Theme.accent, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                             .frame(width: 120, height: 120)
                             .rotationEffect(.degrees(-90))
-                        
-                        Text("\(Int(importProgress * 100))%")
+
+                        Text("\(Int(viewModel.importProgress * 100))%")
                             .font(.system(size: 24, weight: .black, design: .monospaced))
                     }
                     
                     VStack(spacing: 12) {
                         Text("正在处理资源...")
                             .font(.system(size: 16, weight: .bold))
-                        Text(currentFileName)
+                        Text(viewModel.currentImportFileName)
                             .font(.system(size: 13, design: .monospaced))
                             .foregroundColor(.white.opacity(0.3))
                     }
@@ -108,48 +108,93 @@ struct ImportModalView: View {
         .padding(48)
         .frame(width: 500)
         .background(Theme.bg)
+        .confirmationDialog(
+            "检测到 \(viewModel.pendingDuplicates.count) 个重复文件",
+            isPresented: $showDuplicateConfirm
+        ) {
+            Button("仍要导入（自动加 (2) 后缀）") {
+                Task {
+                    await viewModel.confirmDuplicates(context: modelContext)
+                    dismiss()
+                }
+            }
+            Button("跳过重复", role: .cancel) {
+                viewModel.cancelDuplicates()
+                dismiss()
+            }
+        } message: {
+            Text("库中已有相同文件。要不要仍然导入它们？")
+        }
     }
     
     // --- 逻辑 ---
-    
+
     func handleDrop(_ providers: [NSItemProvider]) {
-        // TODO: 解析 URL 并调用后端导入
-        simulateImport()
+        Task {
+            var urls: [URL] = []
+            for provider in providers {
+                if let url = await loadURL(from: provider) {
+                    urls.append(url)
+                }
+            }
+            await runImport(urls: urls)
+        }
     }
-    
+
     func selectFiles() {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
-        panel.allowedContentTypes = [.video, .movie, .image]
+        panel.allowedContentTypes = [.movie, .image]
         if panel.runModal() == .OK {
-            simulateImport()
+            Task { await runImport(urls: panel.urls) }
         }
     }
-    
+
     func selectFolder() {
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         if panel.runModal() == .OK {
-            simulateImport()
+            guard let folderURL = panel.urls.first else { return }
+            let urls = collectMediaFiles(in: folderURL)
+            Task { await runImport(urls: urls) }
         }
     }
-    
-    func simulateImport() {
-        isImporting = true
-        currentFileName = "nebula_8k_vfx.mp4"
-        
-        Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { timer in
-            withAnimation {
-                importProgress += 0.01
-                if importProgress >= 1.0 {
-                    timer.invalidate()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        dismiss()
-                    }
+
+    private func runImport(urls: [URL]) async {
+        await viewModel.importFiles(urls: urls, context: modelContext)
+        if !viewModel.pendingDuplicates.isEmpty {
+            showDuplicateConfirm = true
+        } else if !viewModel.isImporting {
+            dismiss()
+        }
+    }
+
+    private func loadURL(from provider: NSItemProvider) async -> URL? {
+        await withCheckedContinuation { continuation in
+            provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
+                if let data = item as? Data,
+                   let url = URL(dataRepresentation: data, relativeTo: nil) {
+                    continuation.resume(returning: url)
+                } else {
+                    continuation.resume(returning: nil)
                 }
             }
         }
+    }
+
+    private func collectMediaFiles(in folder: URL) -> [URL] {
+        let exts = ["mp4", "mov", "m4v", "heic", "heif"]
+        guard let enumerator = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: nil) else {
+            return []
+        }
+        var urls: [URL] = []
+        for case let fileURL as URL in enumerator {
+            if exts.contains(fileURL.pathExtension.lowercased()) {
+                urls.append(fileURL)
+            }
+        }
+        return urls
     }
 }
