@@ -6,6 +6,7 @@ import AppKit
 /// 滤镜引擎
 final class FilterEngine {
     static let shared = FilterEngine()
+    private let context = CIContext()
     private init() {}
 
     /// 为视频生成 AVVideoComposition
@@ -20,7 +21,6 @@ final class FilterEngine {
     func applyToImage(at url: URL, preset: FilterPreset) -> NSImage? {
         guard let ciImage = CIImage(contentsOf: url) else { return nil }
         let output = compositeCIImage(ciImage, preset: preset)
-        let context = CIContext()
         guard let cgImage = context.createCGImage(output, from: output.extent) else { return nil }
         return NSImage(cgImage: cgImage, size: NSSize(width: output.extent.width, height: output.extent.height))
     }
@@ -92,7 +92,7 @@ final class FilterEngine {
         if preset.grain > 0 {
             let alpha = preset.grain / 100.0
             if let noiseFilter = CIFilter(name: "CIRandomGenerator"),
-               let noiseImage = noiseFilter.outputImage?.cropped(to: input.extent) {
+               let noiseImage = noiseFilter.outputImage?.cropped(to: output.extent) {
                 if let blendFilter = CIFilter(name: "CISourceOverCompositing") {
                     let grainImage = noiseImage.applyingFilter("CIColorMatrix", parameters: [
                         "inputRVector": CIVector(x: 0, y: 0, z: 0, w: 0),
