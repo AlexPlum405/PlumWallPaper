@@ -54,6 +54,13 @@ final class WallpaperEngine {
         renderers.values.forEach { $0.stop() }
         renderers.removeAll()
     }
+
+    /// 对正在显示的壁纸应用滤镜
+    func applyFilter(_ preset: FilterPreset, to wallpaper: Wallpaper) {
+        for renderer in renderers.values {
+            renderer.applyFilter(preset)
+        }
+    }
 }
 
 /// 视频壁纸渲染器的第一版实现
@@ -64,6 +71,7 @@ final class BasicVideoRenderer: WallpaperRenderer {
     private var playerLayer: AVPlayerLayer?
     private var hostingWindow: NSWindow?
     private var looper: AVPlayerLooper?
+    private var currentItem: AVPlayerItem?
 
     init(wallpaper: Wallpaper, screen: NSScreen) {
         self.wallpaper = wallpaper
@@ -73,6 +81,10 @@ final class BasicVideoRenderer: WallpaperRenderer {
     func start() {
         let asset = AVAsset(url: URL(fileURLWithPath: wallpaper.filePath))
         let item = AVPlayerItem(asset: asset)
+        if let preset = wallpaper.filterPreset {
+            item.videoComposition = FilterEngine.shared.videoComposition(for: asset, preset: preset)
+        }
+        self.currentItem = item
         let queuePlayer = AVQueuePlayer(playerItem: item)
         self.looper = AVPlayerLooper(player: queuePlayer, templateItem: item)
         self.player = queuePlayer
@@ -124,10 +136,12 @@ final class BasicVideoRenderer: WallpaperRenderer {
     }
 
     func applyFilter(_ preset: FilterPreset) {
-        // TODO: 第二版接入 FilterEngine
+        guard let item = currentItem else { return }
+        let asset = item.asset
+        item.videoComposition = FilterEngine.shared.videoComposition(for: asset, preset: preset)
     }
 
     func removeFilter() {
-        // TODO: 第二版接入 FilterEngine
+        currentItem?.videoComposition = nil
     }
 }

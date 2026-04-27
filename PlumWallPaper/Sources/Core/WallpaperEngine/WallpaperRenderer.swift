@@ -107,10 +107,19 @@ final class HEICRenderer: WallpaperRenderer {
     }
 
     func applyFilter(_ preset: FilterPreset) {
-        // TODO: HEIC 滤镜需要先导出处理后的图片
+        let url = URL(fileURLWithPath: wallpaper.filePath)
+        guard let processedImage = FilterEngine.shared.applyToImage(at: url, preset: preset) else { return }
+        let tmpURL = FileManager.default.temporaryDirectory.appendingPathComponent("plum_filter_\(wallpaper.id.uuidString).png")
+        if let tiff = processedImage.tiffRepresentation,
+           let rep = NSBitmapImageRep(data: tiff),
+           let png = rep.representation(using: .png, properties: [:]) {
+            try? png.write(to: tmpURL)
+            try? desktopBridge.setDesktopImage(tmpURL, for: screen)
+        }
     }
 
     func removeFilter() {
-        // TODO: 恢复原始 HEIC
+        let url = URL(fileURLWithPath: wallpaper.filePath)
+        try? desktopBridge.setDesktopImage(url, for: screen)
     }
 }
