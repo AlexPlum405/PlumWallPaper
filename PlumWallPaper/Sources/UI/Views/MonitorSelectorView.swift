@@ -10,12 +10,11 @@ struct ScreenInfo: Identifiable {
 struct MonitorSelectorView: View {
     let wallpaper: Wallpaper
     @Environment(\.dismiss) var dismiss
-    
-    // Mock Screens (后续对接 NSScreen)
-    let screens = [
-        ScreenInfo(id: "1", name: "Studio Display", resolution: "5120×2880", isMain: true),
-        ScreenInfo(id: "2", name: "MacBook Pro Built-in", resolution: "3456×2234", isMain: false)
-    ]
+    @Environment(AppViewModel.self) private var viewModel
+
+    var screens: [ScreenInfo] {
+        viewModel.display.availableScreens
+    }
     
     @State private var selectedScreenId: String? = nil
     
@@ -127,14 +126,16 @@ struct MonitorSelectorView: View {
     }
     
     func applyToSelected() {
-        guard let screenId = selectedScreenId, 
+        guard let screenId = selectedScreenId,
               let screen = screens.first(where: { $0.id == screenId }) else { return }
-        // TODO: 调用后端 WallpaperEngine.shared.setWallpaper(wallpaper, for: screen)
+        viewModel.setWallpaper(wallpaper, for: screen)
+        viewModel.monitorSelectorRequest = nil
         dismiss()
     }
-    
+
     func applyToAll() {
-        // TODO: 调用后端 WallpaperEngine.shared.setWallpaperToAll(wallpaper)
+        viewModel.setWallpaperToAll(wallpaper)
+        viewModel.monitorSelectorRequest = nil
         dismiss()
     }
 }
