@@ -235,15 +235,3 @@ struct NavActionBtn: View {
         .frame(width: 44, height: 44)
     }
 }
-
-// 临时占位视图
-struct LibraryView: View {
-    var body: some View {
-        ZStack {
-            Theme.bg.edgesIgnoringSafeArea(.all)
-            Text("壁纸库建设中")
-                .font(Theme.Fonts.display(size: 48))
-                .italic()
-        }
-    }
-}

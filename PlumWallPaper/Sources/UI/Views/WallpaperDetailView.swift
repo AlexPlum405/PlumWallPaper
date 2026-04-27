@@ -3,18 +3,21 @@ import SwiftUI
 struct WallpaperDetailView: View {
     let wallpaper: Wallpaper
     @Environment(\.dismiss) var dismiss
-
+    
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
-
-            if let img = loadThumbnail() {
-                Image(nsImage: img)
+            Color.black.edgesIgnoringSafeArea(.all)
+            
+            // 全屏背景
+            if let thumbData = try? Data(contentsOf: URL(fileURLWithPath: wallpaper.thumbnailPath)),
+               let nsImage = NSImage(data: thumbData) {
+                Image(nsImage: nsImage)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .edgesIgnoringSafeArea(.all)
             }
-
+            
+            // 覆盖层
             VStack {
                 HStack {
                     Button(action: { dismiss() }) {
@@ -24,45 +27,59 @@ struct WallpaperDetailView: View {
                             .background(Color.black.opacity(0.5))
                             .clipShape(Circle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PlainButtonStyle())
                     .padding(40)
                     Spacer()
                 }
-
+                
                 Spacer()
-
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(wallpaper.name)
-                        .font(Theme.Fonts.display(size: 48))
-                        .italic()
-
-                    Button("设为壁纸") {
-                        // TODO: 调用后端 WallpaperEngine 设置壁纸
+                
+                // 底部信息栏
+                HStack(alignment: .bottom) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(wallpaper.name)
+                            .font(Theme.Fonts.display(size: 48))
+                            .italic()
+                        
+                        HStack(spacing: 20) {
+                            DetailTag(label: wallpaper.resolution)
+                            DetailTag(label: wallpaper.type == .video ? "VIDEO" : "HEIC")
+                            DetailTag(label: ByteCountFormatter.string(fromByteCount: wallpaper.fileSize, countStyle: .file))
+                        }
                     }
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 16)
-                    .background(Color.white)
-                    .foregroundColor(.black)
-                    .cornerRadius(12)
-                    .buttonStyle(.plain)
+                    Spacer()
+                    
+                    Button(action: {}) {
+                        HStack {
+                            Image(systemName: "desktopcomputer")
+                            Text("应用为此屏幕壁纸")
+                        }
+                        .font(.system(size: 14, weight: .bold))
+                        .padding(.horizontal, 32)
+                        .padding(.vertical, 16)
+                        .background(Color.white)
+                        .foregroundColor(.black)
+                        .cornerRadius(12)
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
                 .padding(80)
-                .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
-                    LinearGradient(
-                        colors: [.clear, .black.opacity(0.8)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
+                    LinearGradient(gradient: Gradient(colors: [.clear, .black.opacity(0.8)]), startPoint: .top, endPoint: .bottom)
                 )
             }
         }
     }
+}
 
-    private func loadThumbnail() -> NSImage? {
-        guard let data = try? Data(contentsOf: URL(fileURLWithPath: wallpaper.thumbnailPath)) else {
-            return nil
-        }
-        return NSImage(data: data)
+struct DetailTag: View {
+    let label: String
+    var body: some View {
+        Text(label)
+            .font(.system(size: 12, weight: .black))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.white.opacity(0.1))
+            .cornerRadius(4)
     }
 }
