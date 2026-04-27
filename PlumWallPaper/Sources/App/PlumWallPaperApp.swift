@@ -11,6 +11,7 @@ import SwiftData
 @main
 struct PlumWallPaperApp: App {
     let modelContainer: ModelContainer
+    @State private var viewModel = AppViewModel()
 
     init() {
         do {
@@ -32,6 +33,10 @@ struct PlumWallPaperApp: App {
             MainView()
                 .preferredColorScheme(.dark)
                 .modelContainer(modelContainer)
+                .environment(viewModel)
+                .task {
+                    await viewModel.restoreLastSession(context: modelContainer.mainContext)
+                }
                 .onAppear {
                     if let window = NSApplication.shared.windows.first {
                         window.titleVisibility = .hidden
@@ -45,11 +50,14 @@ struct PlumWallPaperApp: App {
 }
 
 struct MainView: View {
+    @Environment(AppViewModel.self) private var viewModel
     @State private var activeTab: String = "home"
     @State private var showSettings = false
     @State private var showImport = false
 
     var body: some View {
+        @Bindable var vm = viewModel
+
         ZStack(alignment: .top) {
             Group {
                 if activeTab == "home" {
@@ -121,6 +129,9 @@ struct MainView: View {
         }
         .sheet(isPresented: $showImport) {
             ImportModalView()
+        }
+        .sheet(item: $vm.monitorSelectorRequest) { wallpaper in
+            MonitorSelectorView(wallpaper: wallpaper)
         }
     }
 }
