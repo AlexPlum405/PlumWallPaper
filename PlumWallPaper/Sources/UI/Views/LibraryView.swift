@@ -5,11 +5,11 @@ struct LibraryView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Wallpaper.importDate, order: .reverse) private var allWallpapers: [Wallpaper]
     @Query private var tags: [Tag]
-    
+    @Environment(AppViewModel.self) private var viewModel
+
     @State private var searchText = ""
     @State private var selectedTagName: String? = "全部"
     @State private var showingColorAdjust: Wallpaper? = nil
-    @State private var showingMonitorSelector: Wallpaper? = nil
     
     var filteredWallpapers: [Wallpaper] {
         allWallpapers.filter { wallpaper in
@@ -58,7 +58,7 @@ struct LibraryView: View {
                     ForEach(filteredWallpapers) { wallpaper in
                         LibraryCard(wallpaper: wallpaper)
                             .contextMenu {
-                                Button { showingMonitorSelector = wallpaper } label: {
+                                Button { viewModel.smartSetWallpaper(wallpaper) } label: {
                                     Label("设为壁纸", systemImage: "desktopcomputer")
                                 }
                                 Button { showingColorAdjust = wallpaper } label: {
@@ -81,9 +81,6 @@ struct LibraryView: View {
         .background(Theme.bg.edgesIgnoringSafeArea(.all))
         .fullScreenCover(item: $showingColorAdjust) { wallpaper in
             ColorAdjustView(wallpaper: wallpaper)
-        }
-        .sheet(item: $showingMonitorSelector) { wallpaper in
-            MonitorSelectorView(wallpaper: wallpaper)
         }
     }
     
