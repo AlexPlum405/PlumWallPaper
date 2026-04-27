@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlumWallPaper - 设置</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #1a1d23;
+      color: #fff;
+      overflow-x: hidden;
+      overflow-y: scroll;
+      user-select: none;
+    }
+
+    /* 隐藏滚动条 */
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar,
+    *::-webkit-scrollbar {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+    html, body, * {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .settings-window {
+      width: 100vw;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .titlebar {
+      height: 60px;
+      background: #1a1d23;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      align-items: center;
+      padding: 0 32px;
+      flex-shrink: 0;
+    }
+
+    .titlebar-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.95);
+      letter-spacing: -0.03em;
+    }
+
+    .settings-content {
+      flex: 1;
+      padding: 48px 48px 80px;
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .settings-section {
+      margin-bottom: 56px;
+    }
+
+    .section-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.95);
+      margin-bottom: 10px;
+      letter-spacing: -0.04em;
+    }
+
+    .section-description {
+      font-size: 14px;
+      color: rgba(255,255,255,0.25);
+      margin-bottom: 28px;
+      line-height: 1.5;
+      letter-spacing: -0.01em;
+    }
+
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .setting-item:last-child { border-bottom: none; }
+
+    .setting-label { flex: 1; }
+
+    .setting-name {
+      font-size: 15px;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 4px;
+      letter-spacing: -0.02em;
+      font-weight: 500;
+    }
+
+    .setting-hint {
+      font-size: 13px;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: -0.01em;
+    }
+
+    .setting-control {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    /* 开关 */
+    .toggle {
+      position: relative;
+      width: 48px;
+      height: 28px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 14px;
+      cursor: pointer;
+      transition: background 0.25s;
+    }
+
+    .toggle.active { background: rgba(255,255,255,0.2); }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      background: rgba(255,255,255,0.9);
+      border-radius: 50%;
+      transition: transform 0.25s;
+    }
+
+    .toggle.active::after { transform: translateX(20px); }
+
+    /* 输入框 */
+    .input-field {
+      width: 80px;
+      height: 36px;
+      padding: 0 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      font-size: 14px;
+      color: rgba(255,255,255,0.9);
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.06);
+    }
+
+    .input-unit {
+      font-size: 14px;
+      color: rgba(255,255,255,0.3);
+    }
+
+    /* 下拉 */
+    .select-field {
+      min-width: 140px;
+      height: 36px;
+      padding: 0 32px 0 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      font-size: 14px;
+      color: rgba(255,255,255,0.9);
+      cursor: pointer;
+      appearance: none;
+      background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" fill="none"/></svg>');
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      transition: all 0.2s;
+    }
+
+    .select-field:hover {
+      border-color: rgba(255,255,255,0.15);
+      background-color: rgba(255,255,255,0.06);
+    }
+
+    /* 复选框 */
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+
+    .checkbox-item input { display: none; }
+
+    .checkbox {
+      width: 20px;
+      height: 20px;
+      border: 1.5px solid rgba(255,255,255,0.15);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .checkbox-item input:checked + .checkbox {
+      background: rgba(255,255,255,0.15);
+      border-color: rgba(255,255,255,0.3);
+    }
+
+    .checkbox svg { display: none; }
+    .checkbox-item input:checked + .checkbox svg { display: block; }
+
+    .checkbox-label {
+      font-size: 14px;
+      color: rgba(255,255,255,0.8);
+      letter-spacing: -0.01em;
+    }
+
+    /* 显示器列表 */
+    .display-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .display-item {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 20px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      transition: all 0.2s;
+    }
+
+    .display-item:hover {
+      border-color: rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+    }
+
+    .display-icon {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.04);
+      border-radius: 10px;
+    }
+
+    .display-info { flex: 1; }
+
+    .display-name {
+      font-size: 15px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 4px;
+      letter-spacing: -0.02em;
+    }
+
+    .display-resolution {
+      font-size: 13px;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: -0.01em;
+    }
+
+    .display-wallpaper {
+      font-size: 14px;
+      color: rgba(255,255,255,0.8);
+      padding: 8px 18px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .display-wallpaper:hover {
+      border-color: rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="settings-window">
+    <div class="titlebar">
+      <div class="titlebar-title">设置</div>
+    </div>
+
+    <div class="settings-content">
+      <!-- 轮播 -->
+      <div class="settings-section">
+        <div class="section-title">轮播</div>
+        <div class="section-description">自动切换壁纸</div>
+
+        <div class="setting-item">
+          <div class="setting-label">
+            <div class="setting-name">启用轮播</div>
+            <div class="setting-hint">定时自动切换</div>
+          </div>
+          <div class="setting-control">
+            <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">
+            <div class="setting-name">间隔</div>
+            <div class="setting-hint">切换频率</div>
+          </div>
+          <div class="setting-control">
+            <input type="number" class="input-field" value="30" min="1">
+            <span class="input-unit">分钟</span>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">
+            <div class="setting-name">顺序</div>
+            <div class="setting-hint">播放方式</div>
+          </div>
+          <div class="setting-control">
+            <select class="select-field">
+              <option>顺序</option>
+              <option>随机</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 省电 -->
+      <div class="settings-section">
+        <div class="section-title">省电</div>
+        <div class="section-description">在特定情况下暂停播放</div>
+
+        <div class="setting-item">
+          <div class="setting-label">
+            <div class="setting-name">模式</div>
+            <div class="setting-hint">预设或自定义</div>
+          </div>
+          <div class="setting-control">
+            <select class="select-field" id="powerMode" onchange="updatePowerMode(this.value)">
+              <option value="on">始终播放</option>
+              <option value="smart" selected>智能</option>
+              <option value="saver">省电</option>
+              <option value="custom">自定义</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="checkbox-group" id="powerOptions">
+          <label class="checkbox-item">
+            <input type="checkbox" checked>
+            <div class="checkbox">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg>
+            </div>
+            <span class="checkbox-label">电池供电时暂停</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" checked>
+            <div class="checkbox">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg>
+            </div>
+            <span class="checkbox-label">全屏时暂停</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox">
+            <div class="checkbox">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg>
+            </div>
+            <span class="checkbox-label">最大化时暂停</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox">
+            <div class="checkbox">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg>
+            </div>
+            <span class="checkbox-label">低电量时暂停</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox">
+            <div class="checkbox">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg>
+            </div>
+            <span class="checkbox-label">锁屏时暂停</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 多显示器 -->
+      <div class="settings-section">
+        <div class="section-title">多显示器</div>
+        <div class="section-description">为每个显示器独立设置</div>
+
+        <div class="display-list">
+          <div class="display-item">
+            <div class="display-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5">
+                <rect x="2" y="3" width="20" height="14" rx="1"/>
+                <path d="M8 21h8M12 17v4"/>
+              </svg>
+            </div>
+            <div class="display-info">
+              <div class="display-name">内建显示器</div>
+              <div class="display-resolution">2880 × 1800 · 主显示器</div>
+            </div>
+            <div class="display-wallpaper" onclick="alert('选择壁纸')">日落海滩</div>
+          </div>
+
+          <div class="display-item">
+            <div class="display-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5">
+                <rect x="2" y="3" width="20" height="14" rx="1"/>
+                <path d="M8 21h8M12 17v4"/>
+              </svg>
+            </div>
+            <div class="display-info">
+              <div class="display-name">外接显示器</div>
+              <div class="display-resolution">3840 × 2160</div>
+            </div>
+            <div class="display-wallpaper" onclick="alert('选择壁纸')">城市夜景</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function updatePowerMode(mode) {
+      const opts = document.getElementById('powerOptions');
+      const checks = opts.querySelectorAll('input[type="checkbox"]');
+      const presets = {
+        on: [false, false, false, false, false],
+        smart: [true, true, false, false, false],
+        saver: [true, true, true, true, true],
+      };
+      if (presets[mode]) {
+        checks.forEach((c, i) => c.checked = presets[mode][i]);
+      }
+    }
+  </script>
+</body>
+</html>

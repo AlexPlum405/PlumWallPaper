@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlumWallPaper - 本地管理版</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0e12;
+      --fg: #ffffff;
+      --accent: #E03E3E; 
+      --jewel-green: #2ECC71;
+      --glass: rgba(255, 255, 255, 0.04);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --font-main: 'Cormorant Garamond', serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+    html { background: var(--bg); }
+    body {
+      font-family: var(--font-main);
+      color: var(--fg);
+      min-height: 100vh;
+      overflow-x: hidden;
+      overflow-y: auto; /* 确保 body 可滚动 */
+      user-select: none;
+    }
+
+    /* 隐藏滚动条 */
+    html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+    html, body { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .app { width: 100vw; position: relative; }
+
+    /* ===== Hero Section (100vh) ===== */
+    .hero-section {
+      width: 100%;
+      height: 100vh;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .hero-bg { position: absolute; inset: 0; z-index: 0; }
+    .hero-bg img { width: 100%; height: 100%; object-fit: cover; animation: kenBurns 60s infinite alternate ease-in-out; }
+    @keyframes kenBurns { from { transform: scale(1); } to { transform: scale(1.1); } }
+    .hero-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(13,14,18,0) 40%, var(--bg) 100%); }
+
+    /* ===== Topbar & Branding ===== */
+    .topbar {
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 100px; display: flex; align-items: center; padding: 0 56px; gap: 16px;
+      z-index: 100;
+    }
+
+    .branding { display: flex; align-items: center; gap: 16px; cursor: pointer; }
+    .logo-container {
+      width: 48px; height: 48px; background: #16181c; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.05);
+    }
+    .logo-container svg { width: 32px; height: 32px; }
+    .brand-text { display: flex; align-items: baseline; gap: 4px; }
+    .brand-plum { font-size: 28px; font-weight: 700; color: #fff; }
+    .brand-wallpaper { font-size: 28px; font-weight: 300; font-style: italic; color: rgba(255,255,255,0.35); }
+
+    .nav-tabs { display: flex; background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 16px; padding: 4px; margin-left: 32px; }
+    .nav-tab { padding: 6px 20px; font-size: 15px; font-weight: 500; color: rgba(255,255,255,0.4); cursor: pointer; border-radius: 10px; transition: 0.3s; }
+    .nav-tab.active { background: rgba(255,255,255,0.08); color: #fff; }
+
+    .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .topbar-btn { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--glass); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); cursor: pointer; color: rgba(255,255,255,0.4); transition: 0.3s; }
+    .topbar-btn:hover { background: rgba(255,255,255,0.1); color: #fff; transform: translateY(-2px); }
+
+    /* ===== Hero Content ===== */
+    .hero-content { position: relative; z-index: 10; flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 56px 64px; }
+    .hero-label { font-size: 11px; font-weight: 600; letter-spacing: 0.3em; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
+    .hero-title { font-size: 92px; font-weight: 500; letter-spacing: -0.02em; line-height: 0.95; font-style: italic; margin-bottom: 32px; }
+    .hero-actions { display: flex; align-items: center; gap: 20px; }
+
+    .btn-primary { padding: 16px 36px; background: #fff; border: none; border-radius: 100px; color: #000; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.4s; }
+    .btn-primary:hover { background: var(--accent); color: #fff; transform: scale(1.05) translateY(-2px); box-shadow: 0 10px 30px rgba(224, 62, 62, 0.4); }
+
+    /* ===== Thumb Strip ===== */
+    .thumb-strip { position: relative; z-index: 10; padding: 0 56px 56px; display: flex; gap: 16px; overflow-x: auto; }
+    .thumb-item { flex-shrink: 0; width: 160px; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); transition: 0.4s; opacity: 0.3; cursor: pointer; }
+    .thumb-item.active { border-color: var(--accent); opacity: 1; transform: scale(1.05) translateY(-4px); }
+    .thumb-item img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* ===== Content Area ===== */
+    .content-area { background: var(--bg); padding: 100px 56px 140px; position: relative; z-index: 5; }
+    .section { margin-bottom: 80px; }
+    .section-header { margin-bottom: 40px; }
+    .section-title { font-size: 48px; font-weight: 400; font-style: italic; letter-spacing: -0.02em; }
+    .section-desc { font-size: 12px; text-transform: uppercase; letter-spacing: 0.2em; color: rgba(255,255,255,0.2); margin-bottom: 12px; }
+
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 40px; }
+    .card { cursor: pointer; transition: 0.4s cubic-bezier(0.2, 1, 0.3, 1); }
+    .card:hover { transform: translateY(-12px); }
+    .card-thumb { position: relative; width: 100%; aspect-ratio: 16/9; border-radius: 28px; overflow: hidden; border: 1px solid var(--glass-border); background: #1a1a1a; box-shadow: 0 20px 40px rgba(0,0,0,0.3); margin-bottom: 24px; }
+    .card-thumb img { width: 100%; height: 100%; object-fit: cover; transition: 1.2s ease; }
+    .card:hover .card-thumb img { transform: scale(1.15); }
+    .card-fav-btn { position: absolute; top: 18px; right: 18px; width: 40px; height: 40px; background: rgba(0,0,0,0.3); backdrop-filter: blur(15px); border-radius: 50%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: 0.3s; color: #fff; }
+    .card:hover .card-fav-btn { opacity: 1; }
+    .card-fav-btn.active { opacity: 1; color: var(--accent); background: rgba(0,0,0,0.5); }
+    .card-info h3 { font-size: 24px; font-style: italic; font-weight: 400; color: rgba(255,255,255,0.9); margin-bottom: 8px; }
+    .card-info p { font-size: 13px; text-transform: uppercase; color: rgba(255,255,255,0.25); letter-spacing: 0.12em; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <nav class="topbar">
+      <div class="branding" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+        <div class="logo-container">
+          <svg viewBox="0 0 40 40"><path d="M20 36C28 36 34 30 34 22C34 14 20 6 20 6C20 6 6 14 6 22C6 30 12 36 20 36Z" fill="#E03E3E"/><path d="M20 2V8" stroke="#2ECC71" stroke-width="4" stroke-linecap="round"/></svg>
+        </div>
+        <div class="brand-text">Plum<span>WallPaper</span></div>
+      </div>
+      <div class="nav-tabs">
+        <div class="nav-tab active">库管理</div>
+        <div class="nav-tab">画廊</div>
+      </div>
+      <div class="topbar-actions">
+        <button class="topbar-btn" title="本地搜索"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></button>
+        <button class="topbar-btn" title="导入壁纸" onclick="alert('导入本地壁纸')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button class="topbar-btn" title="设置" onclick="location.href='settings-v4.html'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg></button>
+      </div>
+    </nav>
+
+    <div id="hero-mount"></div>
+
+    <div class="content-area">
+      <!-- 收藏分区 -->
+      <section class="section">
+        <div class="section-header">
+          <div class="section-desc">My Favorites</div>
+          <h2 class="section-title">我的收藏</h2>
+        </div>
+        <div class="card-grid" id="favorites-grid"></div>
+      </section>
+
+      <!-- 最近上传 -->
+      <section class="section">
+        <div class="section-header">
+          <div class="section-desc">Recently Imported</div>
+          <h2 class="section-title">最近上传</h2>
+        </div>
+        <div class="card-grid" id="recent-grid"></div>
+      </section>
+
+      <!-- 本地目录 -->
+      <section class="section">
+        <div class="section-header">
+          <div class="section-desc">Local Folders</div>
+          <h2 class="section-title">本地目录</h2>
+        </div>
+        <div style="display:flex; gap:16px;">
+          <button class="btn-primary" style="background:var(--glass); color:#fff; border:1px solid var(--glass-border);">📁 添加同步文件夹</button>
+          <button class="btn-primary" style="background:var(--glass); color:#fff; border:1px solid var(--glass-border);">📂 ~/Pictures/Plum</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const W = [
+      { id:1, name:'日落海滩', tag:'自然', res:'1920×1080', fav:true, img:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDkwMCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJzIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0ZGNkIzNSIvPjxzdG9wIG9mZnNldD0iNDAlIiBzdG9wLWNvbG9yPSIjRkZBNTAwIi8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjRkZENzAwIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3QgZmlsbD0idXJsKCNzKSIgd2lkdGg9IjE2MDAiIGhlaWdodD0iOTAwIi8+PGNpcmNsZSBmaWxsPSIjRkZGNUU2IiBjeD0iMTI4MCIgY3k9IjIwMCIgcj0iMTAwIi8+PGNpcmNsZSBmaWxsPSIjRkZCODREIiBvcGFjaXR5PSIuMyIgY3g9IjEyODAiIGN5PSIyMDAiIHI9IjE0MCIvPjxwYXRoIGZpbGw9IiMwMDAiIG9wYWNpdHk9Ii41IiBkPSJNMCA2MDAgUTQwMCA1NTAgODAwIDYwMCBUMTYwMCA1ODAgTDE2MDAgOTAwIEwwIDkwMFoiLz48ZWxsaXBzZSBmaWxsPSIjMWEwYTAwIiBvcGFjaXR5PSIuNiIgY3g9IjMwMCIgY3k9IjY1MCIgcng9IjYwIiByeT0iMTUwIi8+PGVsbGlwc2UgZmlsbD0iIzFhMGEwMCIgb3BhY2l0eT0iLjUiIGN4PSIxMjAwIiBjeT0iNjcwIiByeD0iNzAiIHJ5PSIxMzAiLz48L3N2Zz4=' },
+      { id:2, name:'城市夜景', tag:'城市', res:'3840×2160', fav:false, img:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDkwMCI+PHJlY3QgZmlsbD0iIzBhMGUyNyIgd2lkdGg9IjE2MDAiIGhlaWdodD0iOTAwIi8+PHJlY3QgZmlsbD0iIzFhMWEyZSIgeT0iNTAwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSI0MDAiLz48cmVjdCBmaWxsPSIjRkZENzAwIiBvcGFjaXR5PSIuNSIgeD0iMjAwIiB5PSIzMDAiIHdpZHRoPSIxMDAiIGhlaWdodD0iMjIwIiByeD0iNCIvPjxyZWN0IGZpbGw9IiNGRkUwNjYiIG9wYWNpdHk9Ii40IiB4PSI0NDAiIHk9IjIyMCIgd2lkdGg9IjE0MCIgaGVpZ2h0PSIzMDAiIHJ4PSI0Ii8+PHJlY3QgZmlsbD0iI0ZGRDcwMCIgb3BhY2l0eT0iLjM1IiB4PSI3MDAiIHk9IjI4MCIgd2lkdGg9IjgwIiBoZWlnaHQ9IjI0MCIgcng9IjQiLz48cmVjdCBmaWxsPSIjRkZFMDY2IiBvcGFjaXR5PSIuNSIgeD0iOTAwIiB5PSIyMDAiIHdpZHRoPSIxMjAiIGhlaWdodD0iMzIwIiByeD0iNCIvPjxyZWN0IGZpbGw9IiNGRkQ3MDAiIG9wYWNpdHk9Ii40IiB4PSIxMTUwIiB5PSIyNjAiIHdpZHRoPSIxMzAiIGhlaWdodD0iMjYwIiByeD0iNCIvPjxyZWN0IGZpbGw9IiNGRkUwNjYiIG9wYWNpdHk9Ii4zNSIgeD0iMTQwMCIgeT0iMzIwIiB3aWR0aD0iOTAiIGhlaWdodD0iMjAwIiByeD0iNCIvPjwvc3ZnPg==' },
+      { id:3, name:'森林晨雾', tag:'自然', res:'3840×2160', fav:false, img:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDkwMCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJmIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI2E4YzRhMCIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzJkNTAxNiIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IGZpbGw9InVybCgjZikiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjkwMCIvPjxwYXRoIGZpbGw9IiMyMzQ1MTAiIGQ9Ik0wIDY0MCBMMjAwIDM0MCBMNDAwIDY0MFoiLz48cGF0aCBmaWxsPSIjMWEzYTBjIiBkPSJNMzAwIDY0MCBMNTUwIDI4MCBMODAwIDY0MFoiLz48cGF0aCBmaWxsPSIjMjM0NTEwIiBkPSJNNzAwIDY0MCBMOTAwIDM2MCBMMTEwMCA2NDBaIi8+PHBhdGggZmlsbD0iIzFhMGEwYyIgZD0iTTEwMDAgNjQwIEwxMjUwIDMwMCBMMTUwMCA2NDBaIi8+PHJlY3QgZmlsbD0iI2E4YzRhMCIgb3BhY2l0eT0iLjIiIHk9IjIwMCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMTAwIi8+PC9zdmc+' },
+      { id:4, name:'极光', tag:'自然', res:'3840×2160', fav:true, img:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDkwMCI+PHJlY3QgZmlsbD0iIzAyMDgxOCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iOTAwIi8+PHBhdGggZmlsbD0iIzAwZmY4OCIgb3BhY2l0eT0iLjI1IiBkPSJNMCAyODAgUTQwMCAxMjAgODAwIDI4MCBUMTYwMCAyODAgTDE2MDAgMCBMMCAwWiIvPjxwYXRoIGZpbGw9IiMwMGNjNjYiIG9wYWNpdHk9Ii4xNSIgZD0iTTAgMzYwIFE2MDAgMjAwIDEyMDAgMzYwIFQxNjAwIDMyMCBMMTYwMCAwIEwwIDBaIi8+PHBhdGggZmlsbD0iIzExMSIgZD0iTTAgNzAwIFE0MDAgNjYwIDgwMCA3MDAgVDE2MDAgNzAwIEwxNjAwIDkwMCBMMCA5MDBaIi8+PGNpcmNsZSBmaWxsPSIjZmZmIiBjeD0iMjAwIiBjeT0iMTAwIiByPSIxLjUiLz48Y2lyY2xlIGZpbGw9IiNmZmYiIGN4PSI1MDAiIGN5PSI2MCIgcj0iMSIvPjxjaXJjbGUgZmlsbD0iI2ZmZiIgY3g9IjkwMCIgY3k9IjgwIiByPSIxLjUiLz48Y2lyY2xlIGZpbGw9IiNmZmYiIGN4PSIxMzAwIiBjeT0iODAiIHI9IjEiLz48L3N2Zz4=' },
+      { id:5, name:'樱花飘落', tag:'自然', res:'1920×1080', fav:false, img:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDkwMCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJzayIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNmZmVlZjgiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNmZmQ2ZTgiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCBmaWxsPSJ1cmwoI3NrKSIgd2lkdGg9IjE2MDAiIGhlaWdodD0iOTAwIi8+PHBhdGggZmlsbD0iI2Q0YTBiMCIgb3BhY2l0eT0iLjI1IiBkPSJNMjAwIDAgUTI1MCAyMDAgMjAwIDUwMCBRMTUwIDIwMCAyMDAgMFoiLz48cGF0aCBmaWxsPSIjZDRhMGIwIiBvcGFjaXR5PSIuMyIgZD0iTTExMDAgMCBRMTE1MCAyNTAgMTEwMCA1MDAgUTEwNTAgMjUwIDExMDAgMFoiLz48Y2lyY2xlIGZpbGw9IiNmZmI3ZDUiIGN4PSIzMjAiIGN5PSIxODAiIHI9IjE2Ii8+PGNpcmNsZSBmaWxsPSIjZmZjOGRlIiBjeD0iODAwIiBjeT0iMTUwIiByPSIxNCIvPjxjaXJjbGUgZmlsbD0iI2ZmYjdkNSIgY3g9IjEzMDAiIGN5PSIyMDAiIHI9IjEyIi8+PC9zdmc+' },
+      { id:6, name:'极简星空', tag:'自然', res:'5120×2880', fav:false, img:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDkwMCI+PHJlY3QgZmlsbD0iIzBkMGUxMiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iOTAwIi8+PGNpcmNsZSBmaWxsPSIjZmZmIiBvcGFjaXR5PSIuNSIgY3g9IjgwMCIgY3k9IjQ1MCIgcj0iMiIvPjxjaXJjbGUgZmlsbD0iI2ZmZiIgb3BhY2l0eT0iLjMiIGN4PSIyMDAiIGN5PSIyMDAiIHI9IjEuNSIvPjxjaXJjbGUgZmlsbD0iI2ZmZiIgb3BhY2l0eT0iLjIiIGN4PSIxMjAwIiBjeT0iNjAwIiByPSIxIi8+PC9zdmc+' },
+      { id:7, name:'海浪', tag:'自然', res:'3840×2160', fav:false, img:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDkwMCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJvNyIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMwMDc3QjYiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwMEI0RDgiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCBmaWxsPSJ1cmwoI283KSIgd2lkdGg9IjE2MDAiIGhlaWdodD0iOTAwIi8+PHBhdGggZmlsbD0iI2ZmZiIgb3BhY2l0eT0iLjEiIGQ9Ik0wIDUwMCBRMjAwIDQ2MCA0MDAgNTAwIFQ4MDAgNTAwIFQxMjAwIDUwMCBUMTYwMCA1MDBMMTYwMCA1NjBRMTIwMCA1MjAgODAwIDU2MFQwIDU2MFoiLz48cGF0aCBmaWxsPSIjZmZmIiBvcGFjaXR5PSIuMDciIGQ9Ik0wIDYyMCBRMzAwIDU4MCA2MDAgNjIwIFQxMjAwIDYyMCBUMTYwMCA2MjBMMTYwMCA2ODBRMTAwMCA2NDAgNDAwIDY4MFQwIDY4MFoiLz48L3N2Zz4=' },
+      { id:8, name:'霓虹街道', tag:'城市', res:'3840×2160', fav:false, img:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDkwMCI+PHJlY3QgZmlsbD0iIzBkMGQxYSIgd2lkdGg9IjE2MDAiIGhlaWdodD0iOTAwIi8+PHJlY3QgZmlsbD0iIzExMSIgeT0iNjAwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIzMDAiLz48cmVjdCBmaWxsPSIjZmYwMDZlIiBvcGFjaXR5PSIuMiIgeD0iMjAwIiB5PSIyMDAiIHdpZHRoPSI4MCIgaGVpZ2h0PSI0MDAiIHJ4PSI2Ii8+PHJlY3QgZmlsbD0iIzAwYjRkOCIgb3BhY2l0eT0iLjE4IiB4PSI2MDAiIHk9IjE2MCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSI0NDAiIHJ4PSI2Ii8+PC9zdmc+' }
+    ];
+
+    let current = 0;
+
+    function render() {
+      const c = W[current];
+      document.getElementById('hero-mount').innerHTML = `
+        <div class="hero-section">
+          <div class="hero-bg"><img src="${c.img}" key="${c.id}"></div>
+          <div class="hero-content">
+            <div class="hero-label">Jewel Curated · 正在预览</div>
+            <h1 class="hero-title">${c.name}</h1>
+            <div class="hero-actions">
+              <button class="btn-primary" onclick="alert('已应用壁纸')">应用当前壁纸</button>
+              <button class="topbar-btn" title="调色" onclick="location.href='color-adjustment-v4.html'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v10M12 17v4M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg></button>
+              <button class="topbar-btn ${c.fav?'active':''}" style="${c.fav?'color:var(--accent)':''}" onclick="toggleFav(${c.id})"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+            </div>
+          </div>
+          <div class="thumb-strip">
+            ${W.map((w, i) => `<div class="thumb-item ${i===current?'active':''}" onclick="current=${i};render()"><img src="${w.img}"></div>`).join('')}
+          </div>
+        </div>
+      `;
+
+      document.getElementById('favorites-grid').innerHTML = W.filter(w => w.fav).map(w => cardHTML(w)).join('') || '<div style="opacity:0.2">暂无收藏壁纸</div>';
+      document.getElementById('recent-grid').innerHTML = W.slice().reverse().map(w => cardHTML(w)).join('');
+    }
+
+    function toggleFav(id) {
+      const w = W.find(x => x.id === id);
+      w.fav = !w.fav;
+      render();
+    }
+
+    function cardHTML(w) {
+      return `
+        <div class="card" onclick="current=${W.indexOf(w)};render();window.scrollTo({top:0,behavior:'smooth'})">
+          <div class="card-thumb">
+            <img src="${w.img}">
+            <div class="card-fav-btn ${w.fav?'active':''}"><svg width="18" height="18" viewBox="0 0 24 24" fill="${w.fav?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+          </div>
+          <div class="card-info">
+            <h3>${w.name}</h3>
+            <p>${w.tag} · ${w.res}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    render();
+  </script>
+</body>
+</html>

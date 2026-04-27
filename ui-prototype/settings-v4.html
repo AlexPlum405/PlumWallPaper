@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlumWallPaper 设置 - Jewel Final</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0e12; --fg: #ffffff; --accent: #E03E3E; --jewel-green: #2ECC71;
+      --glass: rgba(255, 255, 255, 0.04); --glass-border: rgba(255, 255, 255, 0.08);
+      --font-main: 'Cormorant Garamond', serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+    html, body { font-family: var(--font-main); background: var(--bg); color: var(--fg); height: 100vh; overflow: hidden; }
+    .window { display: flex; height: 100vh; width: 100vw; }
+    
+    /* Sidebar */
+    .sidebar { width: 280px; background: rgba(255,255,255,0.015); border-right: 1px solid var(--glass-border); padding: 48px 24px; display: flex; flex-direction: column; gap: 40px; }
+    .logo { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-left: 12px; }
+    .logo-container { width: 40px; height: 40px; background: #16181c; border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 16px rgba(0,0,0,0.3); }
+    .logo-container svg { width: 28px; height: 28px; }
+    .logo-text { font-size: 22px; font-weight: 700; }
+    .nav-item { padding: 12px 16px; border-radius: 12px; font-size: 17px; color: rgba(255,255,255,0.3); cursor: pointer; transition: 0.3s; }
+    .nav-item:hover { color: rgba(255,255,255,0.8); background: var(--glass); }
+    .nav-item.active { color: #fff; background: var(--glass); font-weight: 500; }
+
+    /* Main Content */
+    .content { flex: 1; padding: 80px 100px; overflow-y: auto; scrollbar-width: none; }
+    .content::-webkit-scrollbar { display: none; }
+    .view { display: none; animation: fadeIn 0.4s ease-out; }
+    .view.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .title { font-size: 56px; font-weight: 300; font-style: italic; margin-bottom: 64px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 20px; }
+    .section { margin-bottom: 64px; max-width: 650px; }
+    .section-h { font-size: 28px; font-weight: 500; font-style: italic; color: var(--accent); margin-bottom: 12px; }
+    .item { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .name { font-size: 19px; color: rgba(255,255,255,0.9); margin-bottom: 4px; }
+    .hint { font-size: 15px; color: rgba(255,255,255,0.25); }
+
+    .toggle { width: 48px; height: 26px; background: rgba(255,255,255,0.08); border-radius: 20px; position: relative; cursor: pointer; transition: 0.4s; }
+    .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; background: #fff; border-radius: 50%; transition: 0.4s; }
+    .toggle.active { background: var(--accent); }
+    .toggle.active::after { transform: translateX(22px); }
+    .select { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 8px; color: #fff; padding: 8px 16px; font-size: 15px; font-family: var(--font-main); cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="window">
+    <aside class="sidebar">
+      <div class="logo" onclick="location.href='home-v4.html'" style="cursor:pointer">
+        <div class="logo-container">
+          <svg viewBox="0 0 40 40"><path d="M20 36C28 36 34 30 34 22C34 14 20 6 20 6C20 6 6 14 6 22C6 30 12 36 20 36Z" fill="#E03E3E"/><path d="M20 2V8" stroke="#2ECC71" stroke-width="4" stroke-linecap="round"/></svg>
+        </div>
+        <div class="logo-text">Plum</div>
+      </div>
+      <nav>
+        <div class="nav-item active" onclick="showView('general', this)">常规设置</div>
+        <div class="nav-item" onclick="showView('focus', this)">焦点与性能</div>
+        <div class="nav-item" onclick="showView('display', this)">多显示器</div>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <h1 class="title">Preferences</h1>
+
+      <!-- 常规 -->
+      <div id="v-general" class="view active">
+        <section class="section">
+          <h2 class="section-h">运行基础</h2>
+          <div class="item">
+            <div><div class="name">登录时自动启动</div><div class="hint">在 macOS 登录时静默开启应用</div></div>
+            <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+          </div>
+          <div class="item">
+            <div><div class="name">隐藏菜单栏图标</div><div class="hint">仅保留后台运行进程</div></div>
+            <div class="toggle" onclick="this.classList.toggle('active')"></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 焦点与性能 (新增) -->
+      <div id="v-focus" class="view">
+        <section class="section">
+          <h2 class="section-h">焦点行为</h2>
+          <div class="item">
+            <div><div class="name">应用获得焦点时</div><div class="hint">当用户点击应用窗口时的表现</div></div>
+            <select class="select">
+              <option>恢复满帧播放</option>
+              <option>显示详细参数 HUD</option>
+              <option>不做任何改变</option>
+            </select>
+          </div>
+          <div class="item">
+            <div><div class="name">失去焦点后</div><div class="hint">当用户操作其他软件或全屏游戏时</div></div>
+            <select class="select">
+              <option>立即暂停渲染</option>
+              <option selected>降低至 15 FPS 运行</option>
+              <option>保持背景播放</option>
+            </select>
+          </div>
+          <div class="item">
+            <div><div class="name">自动静音</div><div class="hint">失去焦点时自动关闭视频壁纸声音</div></div>
+            <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 多显示器 -->
+      <div id="v-display" class="view">
+        <section class="section">
+          <h2 class="section-h">独立配置</h2>
+          <div class="item">
+            <div><div class="name">显示器 A (内建)</div><div class="hint">2880 × 1800</div></div>
+            <button class="select">日落海滩</button>
+          </div>
+          <div class="item">
+            <div><div class="name">显示器 B (外接)</div><div class="hint">未连接</div></div>
+            <div style="opacity:0.2">--</div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script>
+    function showView(id, el) {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      el.classList.add('active');
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('v-' + id).classList.add('active');
+    }
+  </script>
+</body>
+</html>
