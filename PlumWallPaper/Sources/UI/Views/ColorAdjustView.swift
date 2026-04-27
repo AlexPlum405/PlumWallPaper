@@ -5,6 +5,7 @@ struct ColorAdjustView: View {
     let wallpaper: Wallpaper
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(AppViewModel.self) private var viewModel
     
     // 滤镜参数状态
     @State private var exposure: Double = 100
@@ -157,8 +158,8 @@ struct ColorAdjustView: View {
         
         wallpaper.filterPreset = preset
         try? modelContext.save()
-        
-        // TODO: 调用后端 FilterEngine.shared.applyFilter(preset, to: wallpaper)
+
+        viewModel.applyFilter(preset, to: wallpaper)
         dismiss()
     }
     
