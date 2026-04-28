@@ -99,18 +99,21 @@ final class BasicVideoRenderer: WallpaperRenderer {
         )
         window.isOpaque = false
         window.backgroundColor = .clear
-        window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)))
+        window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)) - 1)
         window.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         window.ignoresMouseEvents = true
 
-        let contentView = NSView(frame: CGRect(origin: .zero, size: window.frame.size))
+        let contentView = NSView(frame: CGRect(origin: .zero, size: screen.frame.size))
         contentView.wantsLayer = true
+        contentView.autoresizingMask = [.width, .height]
         let layer = AVPlayerLayer(player: queuePlayer)
         layer.frame = contentView.bounds
+        layer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
         layer.videoGravity = .resizeAspectFill
         contentView.layer?.addSublayer(layer)
+        window.setFrame(screen.frame, display: false)
         window.contentView = contentView
-        window.orderBack(nil)
+        window.orderFrontRegardless()
 
         self.playerLayer = layer
         self.hostingWindow = window

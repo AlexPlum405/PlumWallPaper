@@ -33,6 +33,14 @@ struct PlumWallPaperApp: App {
             WebViewContainer(viewModel: viewModel, modelContext: modelContainer.mainContext)
                 .frame(minWidth: 1200, minHeight: 800)
                 .ignoresSafeArea()
+                .onAppear {
+                    if let window = NSApplication.shared.windows.first {
+                        window.titlebarAppearsTransparent = true
+                        window.titleVisibility = .hidden
+                        window.styleMask.insert(.fullSizeContentView)
+                        window.isMovableByWindowBackground = true
+                    }
+                }
                 .task {
                     await viewModel.restoreLastSession(context: modelContainer.mainContext)
                 }
