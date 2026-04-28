@@ -396,7 +396,11 @@
           <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(20px)', padding: '8px 24px', borderRadius: 100, border: '1px solid rgba(255,255,255,0.1)', fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>Immersive Preview</div>
           <button onClick={onClose} className="btn" style={{ borderRadius: '50%', width: 44, height: 44, justifyContent: 'center', background: 'rgba(255,255,255,0.1)', border: 'none', backdropFilter: 'blur(10px)' }}><Icon name="close" /></button>
         </div>
-        <img src={wallpaper.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {wallpaper.type === 'video' ? (
+          <video src={wallpaper.filePath} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <img src={wallpaper.filePath} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        )}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 280, background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <span style={{ padding: '4px 12px', background: 'var(--accent)', borderRadius: 6, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{wallpaper.tags && wallpaper.tags[0] && (wallpaper.tags[0].name || wallpaper.tags[0])}</span>
@@ -461,7 +465,11 @@
           {/* Hero Section */}
           <section style={{ height: '85vh', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
-              <img src={hero.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover', transition: '1.2s cubic-bezier(0.2, 1, 0.3, 1)' }} />
+              {hero.type === 'video' ? (
+                <video key={hero.id} src={hero.filePath} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover' }} />
+              ) : (
+                <img src={hero.filePath} style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover', transition: '1.2s cubic-bezier(0.2, 1, 0.3, 1)' }} />
+              )}
               
               {/* Noise Overlay - Jewel Texture */}
               <div style={{ 
@@ -819,7 +827,11 @@
         <div className="animate-in" style={{ height: '100vh', background: '#000', display: 'flex', overflow: 'hidden' }}>
           {/* 左侧 75%：实时预览 */}
           <div style={{ flex: 0.75, height: '100%', position: 'relative', transition: '0.1s', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
-            <img src={wallpaper.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: filterString }} />
+            {wallpaper.type === 'video' ? (
+              <video src={wallpaper.filePath} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', filter: filterString }} />
+            ) : (
+              <img src={wallpaper.filePath} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: filterString }} />
+            )}
             
             {/* 叠加效果层：暗角 */}
             <div style={{ 
