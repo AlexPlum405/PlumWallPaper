@@ -29,8 +29,17 @@ final class AppViewModel {
 
     // 多屏选择信号
     var monitorSelectorRequest: Wallpaper? = nil
+    
+    // 色彩调节信号
+    var colorAdjustRequest: Wallpaper? = nil
 
     // MARK: - 导入
+    
+    func showColorAdjust(_ wallpaper: Wallpaper) {
+        colorAdjustRequest = wallpaper
+    }
+
+    /// 主导入入口：先扫描重复，再实际导入
 
     /// 主导入入口：先扫描重复，再实际导入
     func importFiles(urls: [URL], context: ModelContext) async {
