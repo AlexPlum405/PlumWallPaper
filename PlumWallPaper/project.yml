@@ -17,6 +17,9 @@ targets:
     platform: macOS
     sources:
       - path: Sources
+    resources:
+      - path: Sources/Resources
+        type: folder
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.plum.PlumWallPaper

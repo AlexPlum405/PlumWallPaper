@@ -9,63 +9,59 @@
 /* Begin PBXBuildFile section */
 		14A5D263475ED4C2B1409136 /* RestoreManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F831A3D8DFBF129BC31B3368 /* RestoreManager.swift */; };
 		1AFC146A2EB65DAF577B34E8 /* FileImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0823F5D57978191B355D159 /* FileImporter.swift */; };
-		1C1F1F6C49F581D0640DEDD1 /* EdgeBorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA373EA0799BA29543D08C55 /* EdgeBorder.swift */; };
-		20A8DB8CB5002455B09C6C85 /* ImportModalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DA999BB9002BB08BEB509A5 /* ImportModalView.swift */; };
 		283D2B2FF747E8F0C39C8E9E /* PlumWallPaperApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0D0A105F06031860E8B5C3 /* PlumWallPaperApp.swift */; };
-		40C249A58D39E6FCC2F229B2 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63BF896F956B8DE0C2AE1363 /* HomeView.swift */; };
+		40F19F1B80946945F402BBFC /* react.production.min.js in Resources */ = {isa = PBXBuildFile; fileRef = 9256B3C39BB1639D8FB6841C /* react.production.min.js */; };
 		57771A5C8A9738B020222518 /* CormorantGaramond-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 86E26610109B5C3DDAA74367 /* CormorantGaramond-Italic.ttf */; };
+		61AA8D7EADD4BE815DF19A8A /* plumwallpaper.html in Resources */ = {isa = PBXBuildFile; fileRef = 2008F380223F64B8EF14B4AB /* plumwallpaper.html */; };
 		665A6C328A895BFF05A5445A /* ThumbnailGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBE5FA06BA9E7ED726E742D2 /* ThumbnailGenerator.swift */; };
 		6FD6A307965E6F262777B41C /* DesktopBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA7A59EE5402C77BB64071F5 /* DesktopBridge.swift */; };
 		71FBC63BEA5F27C41E73CB10 /* WallpaperStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 094BEBCC84E89952400E6597 /* WallpaperStore.swift */; };
 		751AE8DA0570ECF906AF9F12 /* CormorantGaramond-SemiBoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DBBCF7B95A9750898F118A5E /* CormorantGaramond-SemiBoldItalic.ttf */; };
 		7AEC1B68C77B506566F27D60 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94245DA52FDAC92EE0B44D07 /* AppViewModel.swift */; };
 		7CD1F7829CC15AA754C35D33 /* WallpaperEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12EF93D3B27543CA2501881C /* WallpaperEngine.swift */; };
+		83A8F1D434474BC9F3714E89 /* ScreenInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8A48758B89F8163A9B9FF66 /* ScreenInfo.swift */; };
 		965E61C15BDCE3C2A55FC3C4 /* FilterPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62C0ACECCC1562A5452D9243 /* FilterPreset.swift */; };
 		9EB770A81DF47B9F794F27E9 /* FilterEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A261413E16AFB752D01B79 /* FilterEngine.swift */; };
-		A3B9E8902034FB842BC88740 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68FD1249A087B43D5360D439 /* LibraryView.swift */; };
-		ABC3DFF742CD332D51A8928E /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E27B6A9A48389A9CBCAEC83 /* SettingsView.swift */; };
-		B368CE94FDAD07831E473AD7 /* ColorAdjustView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A33010B9FBDBB2E816069C /* ColorAdjustView.swift */; };
+		A6FCC65E1A70E52472F467B1 /* react-dom.production.min.js in Resources */ = {isa = PBXBuildFile; fileRef = 5ACCFDD08004072144D05E29 /* react-dom.production.min.js */; };
+		A8BEAB8E676EDA2DD7E96AFE /* WebViewContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53812788847355C2B1FD5F46 /* WebViewContainer.swift */; };
 		B6B9A75D9D49916C8B03972D /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC71A3853630F86F1CF1A2FA /* Settings.swift */; };
+		B99534CF3E13FFBF1ED3E8F3 /* WebBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 759FFE56B57BE81A7F79CB76 /* WebBridge.swift */; };
 		BA9D1BD24C8FF8FFA0B0EB05 /* Tag.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACF1C1D9BC347E282F5C2F06 /* Tag.swift */; };
 		C03F4C27CCC0F897E002BC6E /* Wallpaper.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5ACA543E101FECACD5CA1D7 /* Wallpaper.swift */; };
 		C2B10CCE260388AE6BE016A3 /* WallpaperRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B057F6896210D905F09D6232 /* WallpaperRenderer.swift */; };
-		CB03EEFF3CF61B5E0B642B6E /* WallpaperDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BCF687F784BF6D89DEE79E /* WallpaperDetailView.swift */; };
-		DCC9B622188F96F0D66BAA70 /* MonitorSelectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37D0A7603EAF8FA9FE4DDD4C /* MonitorSelectorView.swift */; };
-		DDA81C4F27C6B78C2884DC38 /* AdjustComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D72A46B6F183C459421CE447 /* AdjustComponents.swift */; };
-		E8C72A9C265FA2D818F8FDBE /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 129CEDAF6288357D04AC00D7 /* Theme.swift */; };
+		E42BEBA8A8B63C125D83BC97 /* babel.min.js in Resources */ = {isa = PBXBuildFile; fileRef = 1A1237E0F4A5EFB4007419A8 /* babel.min.js */; };
+		E9352CBB698585F6211516E8 /* bridge.js in Resources */ = {isa = PBXBuildFile; fileRef = DE9247489F0710A84087B5C2 /* bridge.js */; };
 		F334E4A5ADD5FF1A64363891 /* DisplayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ADB412413EAC0832E173D7D /* DisplayManager.swift */; };
 		F43FDE1B9A058397730912A9 /* PreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C772358D777023DF5DDA0881 /* PreferencesStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		094BEBCC84E89952400E6597 /* WallpaperStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperStore.swift; sourceTree = "<group>"; };
-		129CEDAF6288357D04AC00D7 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		12EF93D3B27543CA2501881C /* WallpaperEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperEngine.swift; sourceTree = "<group>"; };
-		2E27B6A9A48389A9CBCAEC83 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		37D0A7603EAF8FA9FE4DDD4C /* MonitorSelectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonitorSelectorView.swift; sourceTree = "<group>"; };
-		3DA999BB9002BB08BEB509A5 /* ImportModalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportModalView.swift; sourceTree = "<group>"; };
-		54BCF687F784BF6D89DEE79E /* WallpaperDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperDetailView.swift; sourceTree = "<group>"; };
-		56A33010B9FBDBB2E816069C /* ColorAdjustView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorAdjustView.swift; sourceTree = "<group>"; };
+		1A1237E0F4A5EFB4007419A8 /* babel.min.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = babel.min.js; sourceTree = "<group>"; };
+		2008F380223F64B8EF14B4AB /* plumwallpaper.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = plumwallpaper.html; sourceTree = "<group>"; };
+		53812788847355C2B1FD5F46 /* WebViewContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewContainer.swift; sourceTree = "<group>"; };
+		5ACCFDD08004072144D05E29 /* react-dom.production.min.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "react-dom.production.min.js"; sourceTree = "<group>"; };
 		60AD48DB3AC1A8944B151694 /* PlumWallPaper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PlumWallPaper.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		62C0ACECCC1562A5452D9243 /* FilterPreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterPreset.swift; sourceTree = "<group>"; };
-		63BF896F956B8DE0C2AE1363 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
-		68FD1249A087B43D5360D439 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		6ADB412413EAC0832E173D7D /* DisplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayManager.swift; sourceTree = "<group>"; };
+		759FFE56B57BE81A7F79CB76 /* WebBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebBridge.swift; sourceTree = "<group>"; };
 		86E26610109B5C3DDAA74367 /* CormorantGaramond-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CormorantGaramond-Italic.ttf"; sourceTree = "<group>"; };
+		9256B3C39BB1639D8FB6841C /* react.production.min.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = react.production.min.js; sourceTree = "<group>"; };
 		94245DA52FDAC92EE0B44D07 /* AppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel.swift; sourceTree = "<group>"; };
+		A8A48758B89F8163A9B9FF66 /* ScreenInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenInfo.swift; sourceTree = "<group>"; };
 		AA7A59EE5402C77BB64071F5 /* DesktopBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopBridge.swift; sourceTree = "<group>"; };
 		ACF1C1D9BC347E282F5C2F06 /* Tag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tag.swift; sourceTree = "<group>"; };
 		B057F6896210D905F09D6232 /* WallpaperRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperRenderer.swift; sourceTree = "<group>"; };
 		B0823F5D57978191B355D159 /* FileImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileImporter.swift; sourceTree = "<group>"; };
 		B4A261413E16AFB752D01B79 /* FilterEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterEngine.swift; sourceTree = "<group>"; };
-		BA373EA0799BA29543D08C55 /* EdgeBorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeBorder.swift; sourceTree = "<group>"; };
 		BBE5FA06BA9E7ED726E742D2 /* ThumbnailGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailGenerator.swift; sourceTree = "<group>"; };
 		C5ACA543E101FECACD5CA1D7 /* Wallpaper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wallpaper.swift; sourceTree = "<group>"; };
 		C772358D777023DF5DDA0881 /* PreferencesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesStore.swift; sourceTree = "<group>"; };
 		CC0D0A105F06031860E8B5C3 /* PlumWallPaperApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlumWallPaperApp.swift; sourceTree = "<group>"; };
-		D72A46B6F183C459421CE447 /* AdjustComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustComponents.swift; sourceTree = "<group>"; };
 		DBBCF7B95A9750898F118A5E /* CormorantGaramond-SemiBoldItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CormorantGaramond-SemiBoldItalic.ttf"; sourceTree = "<group>"; };
 		DC71A3853630F86F1CF1A2FA /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
+		DE9247489F0710A84087B5C2 /* bridge.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = bridge.js; sourceTree = "<group>"; };
 		F831A3D8DFBF129BC31B3368 /* RestoreManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestoreManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -74,9 +70,6 @@
 			isa = PBXGroup;
 			children = (
 				94245DA52FDAC92EE0B44D07 /* AppViewModel.swift */,
-				129CEDAF6288357D04AC00D7 /* Theme.swift */,
-				8D18D64724F75E53491BF2B0 /* Components */,
-				C5DF5344E4358E1476CE376B /* Views */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -85,6 +78,7 @@
 			isa = PBXGroup;
 			children = (
 				E9D02966C16502E2484E688C /* Fonts */,
+				7C78D98FAC1BA8BEC7DC6DB3 /* Web */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -101,6 +95,7 @@
 			isa = PBXGroup;
 			children = (
 				6ADB412413EAC0832E173D7D /* DisplayManager.swift */,
+				A8A48758B89F8163A9B9FF66 /* ScreenInfo.swift */,
 			);
 			path = DisplayManager;
 			sourceTree = "<group>";
@@ -143,33 +138,32 @@
 			path = WallpaperEngine;
 			sourceTree = "<group>";
 		};
-		8D18D64724F75E53491BF2B0 /* Components */ = {
+		7C78D98FAC1BA8BEC7DC6DB3 /* Web */ = {
 			isa = PBXGroup;
 			children = (
-				D72A46B6F183C459421CE447 /* AdjustComponents.swift */,
-				BA373EA0799BA29543D08C55 /* EdgeBorder.swift */,
+				1A1237E0F4A5EFB4007419A8 /* babel.min.js */,
+				DE9247489F0710A84087B5C2 /* bridge.js */,
+				2008F380223F64B8EF14B4AB /* plumwallpaper.html */,
+				5ACCFDD08004072144D05E29 /* react-dom.production.min.js */,
+				9256B3C39BB1639D8FB6841C /* react.production.min.js */,
 			);
-			path = Components;
+			path = Web;
 			sourceTree = "<group>";
 		};
-		C5DF5344E4358E1476CE376B /* Views */ = {
+		86932B98A84765EDC7DA6E75 /* Bridge */ = {
 			isa = PBXGroup;
 			children = (
-				56A33010B9FBDBB2E816069C /* ColorAdjustView.swift */,
-				63BF896F956B8DE0C2AE1363 /* HomeView.swift */,
-				3DA999BB9002BB08BEB509A5 /* ImportModalView.swift */,
-				68FD1249A087B43D5360D439 /* LibraryView.swift */,
-				37D0A7603EAF8FA9FE4DDD4C /* MonitorSelectorView.swift */,
-				2E27B6A9A48389A9CBCAEC83 /* SettingsView.swift */,
-				54BCF687F784BF6D89DEE79E /* WallpaperDetailView.swift */,
+				759FFE56B57BE81A7F79CB76 /* WebBridge.swift */,
+				53812788847355C2B1FD5F46 /* WebViewContainer.swift */,
 			);
-			path = Views;
+			path = Bridge;
 			sourceTree = "<group>";
 		};
 		C74CDDB4BAB7CD69B07A890A /* Sources */ = {
 			isa = PBXGroup;
 			children = (
 				33948DCF99565DEC4FEF469D /* App */,
+				86932B98A84765EDC7DA6E75 /* Bridge */,
 				350B3A361D4B60897435CC32 /* Core */,
 				1B035FF823EEDBCCB8EE65AE /* Resources */,
 				F5F01C22EC0668E59DE3D0FE /* Storage */,
@@ -278,6 +272,11 @@
 			files = (
 				57771A5C8A9738B020222518 /* CormorantGaramond-Italic.ttf in Resources */,
 				751AE8DA0570ECF906AF9F12 /* CormorantGaramond-SemiBoldItalic.ttf in Resources */,
+				E42BEBA8A8B63C125D83BC97 /* babel.min.js in Resources */,
+				E9352CBB698585F6211516E8 /* bridge.js in Resources */,
+				61AA8D7EADD4BE815DF19A8A /* plumwallpaper.html in Resources */,
+				A6FCC65E1A70E52472F467B1 /* react-dom.production.min.js in Resources */,
+				40F19F1B80946945F402BBFC /* react.production.min.js in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -288,32 +287,25 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DDA81C4F27C6B78C2884DC38 /* AdjustComponents.swift in Sources */,
 				7AEC1B68C77B506566F27D60 /* AppViewModel.swift in Sources */,
-				B368CE94FDAD07831E473AD7 /* ColorAdjustView.swift in Sources */,
 				6FD6A307965E6F262777B41C /* DesktopBridge.swift in Sources */,
 				F334E4A5ADD5FF1A64363891 /* DisplayManager.swift in Sources */,
-				1C1F1F6C49F581D0640DEDD1 /* EdgeBorder.swift in Sources */,
 				1AFC146A2EB65DAF577B34E8 /* FileImporter.swift in Sources */,
 				9EB770A81DF47B9F794F27E9 /* FilterEngine.swift in Sources */,
 				965E61C15BDCE3C2A55FC3C4 /* FilterPreset.swift in Sources */,
-				40C249A58D39E6FCC2F229B2 /* HomeView.swift in Sources */,
-				20A8DB8CB5002455B09C6C85 /* ImportModalView.swift in Sources */,
-				A3B9E8902034FB842BC88740 /* LibraryView.swift in Sources */,
-				DCC9B622188F96F0D66BAA70 /* MonitorSelectorView.swift in Sources */,
 				283D2B2FF747E8F0C39C8E9E /* PlumWallPaperApp.swift in Sources */,
 				F43FDE1B9A058397730912A9 /* PreferencesStore.swift in Sources */,
 				14A5D263475ED4C2B1409136 /* RestoreManager.swift in Sources */,
+				83A8F1D434474BC9F3714E89 /* ScreenInfo.swift in Sources */,
 				B6B9A75D9D49916C8B03972D /* Settings.swift in Sources */,
-				ABC3DFF742CD332D51A8928E /* SettingsView.swift in Sources */,
 				BA9D1BD24C8FF8FFA0B0EB05 /* Tag.swift in Sources */,
-				E8C72A9C265FA2D818F8FDBE /* Theme.swift in Sources */,
 				665A6C328A895BFF05A5445A /* ThumbnailGenerator.swift in Sources */,
 				C03F4C27CCC0F897E002BC6E /* Wallpaper.swift in Sources */,
-				CB03EEFF3CF61B5E0B642B6E /* WallpaperDetailView.swift in Sources */,
 				7CD1F7829CC15AA754C35D33 /* WallpaperEngine.swift in Sources */,
 				C2B10CCE260388AE6BE016A3 /* WallpaperRenderer.swift in Sources */,
 				71FBC63BEA5F27C41E73CB10 /* WallpaperStore.swift in Sources */,
+				B99534CF3E13FFBF1ED3E8F3 /* WebBridge.swift in Sources */,
+				A8BEAB8E676EDA2DD7E96AFE /* WebViewContainer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
