@@ -175,13 +175,15 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
 
     // MARK: - Helpers
 
+    private static let callbackIdPattern = /^cb_[0-9]+_[a-z0-9]+$/
+
     private func resolveWallpaper(_ params: [String: Any]) throws -> Wallpaper {
         guard let wallpaperId = params["wallpaperId"] as? String,
               let uuid = UUID(uuidString: wallpaperId) else {
             throw BridgeError.missingParameter("wallpaperId")
         }
-        let wallpapers = try wallpaperStore.fetchAllWallpapers()
-        guard let wallpaper = wallpapers.first(where: { $0.id == uuid }) else {
+        let descriptor = FetchDescriptor<Wallpaper>(predicate: #Predicate { $0.id == uuid })
+        guard let wallpaper = try modelContext.fetch(descriptor).first else {
             throw BridgeError.notFound("Wallpaper not found")
         }
         return wallpaper
@@ -207,12 +209,25 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
     }
 
     private func sendCallback(callbackId: String, result: [String: Any]) {
-        guard let jsonData = try? JSONSerialization.data(withJSONObject: result),
-              let jsonString = String(data: jsonData, encoding: .utf8) else {
+        guard callbackId.wholeMatch(of: Self.callbackIdPattern) != nil else {
+            let errorResult: [String: Any] = ["success": false, "error": "Invalid callbackId format"]
+            if let data = try? JSONSerialization.data(withJSONObject: errorResult),
+               let json = String(data: data, encoding: .utf8) {
+                webView?.evaluateJavaScript("console.error('WebBridge: invalid callbackId', \(json));")
+            }
             return
         }
-        let script = "window.__bridgeCallback('\(callbackId)', \(jsonString));"
-        webView?.evaluateJavaScript(script)
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: result)
+            guard let jsonString = String(data: jsonData, encoding: .utf8) else {
+                throw BridgeError.serializationFailed("Failed to encode JSON as UTF-8")
+            }
+            let script = "window.__bridgeCallback('\(callbackId)', \(jsonString));"
+            webView?.evaluateJavaScript(script)
+        } catch {
+            let fallback = "window.__bridgeCallback('\(callbackId)', {\"success\":false,\"error\":\"Serialization failed\"});"
+            webView?.evaluateJavaScript(fallback)
+        }
     }
 
     // MARK: - Serialization
@@ -333,11 +348,13 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
 private enum BridgeError: LocalizedError {
     case missingParameter(String)
     case notFound(String)
+    case serializationFailed(String)
 
     var errorDescription: String? {
         switch self {
         case .missingParameter(let name): return "Missing parameter: \(name)"
         case .notFound(let message): return message
+        case .serializationFailed(let message): return message
         }
     }
 }
