@@ -81,6 +81,14 @@ final class WallpaperStore {
         return !results.isEmpty
     }
 
+    /// 检查壁纸名称是否已存在
+    func nameExists(_ name: String) throws -> Bool {
+        let descriptor = FetchDescriptor<Wallpaper>(
+            predicate: #Predicate { $0.name == name }
+        )
+        return try !modelContext.fetch(descriptor).isEmpty
+    }
+
     /// 获取最近使用的壁纸
     func fetchRecentWallpapers(limit: Int = 10) throws -> [Wallpaper] {
         var descriptor = FetchDescriptor<Wallpaper>(

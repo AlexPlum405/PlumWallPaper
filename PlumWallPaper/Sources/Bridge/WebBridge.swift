@@ -130,15 +130,29 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 let urls = paths.map { URL(fileURLWithPath: $0) }
                 let imported = try await FileImporter.shared.importFiles(urls: urls)
 
-                // 处理 tag 和 favorite
+                let customName = params["name"] as? String
                 let tagName = params["tag"] as? String
                 let favorite = params["favorite"] as? Bool ?? false
 
-                for wallpaper in imported {
+                for (index, wallpaper) in imported.enumerated() {
+                    // 自定义名称
+                    if let customName = customName, !customName.isEmpty {
+                        wallpaper.name = imported.count > 1 ? "\(customName) (\(index + 1))" : customName
+                    }
+
+                    // 重复检测：如果 fileHash 已存在，自动追加序号
+                    if try wallpaperStore.wallpaperExists(fileHash: wallpaper.fileHash) {
+                        var suffix = 2
+                        let baseName = wallpaper.name
+                        while try wallpaperStore.nameExists(baseName + " (\(suffix))") {
+                            suffix += 1
+                        }
+                        wallpaper.name = "\(baseName) (\(suffix))"
+                    }
+
                     wallpaper.isFavorite = favorite
 
                     if let tagName = tagName, !tagName.isEmpty {
-                        // 查找或创建 tag
                         let descriptor = FetchDescriptor<Tag>(predicate: #Predicate { $0.name == tagName })
                         let existingTag = try? modelContext.fetch(descriptor).first
                         let tag = existingTag ?? {
