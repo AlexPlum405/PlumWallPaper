@@ -508,20 +508,39 @@
 
           {/* Scrolling Sections */}
           <div style={{ padding: '80px 80px 140px', background: '#0d0e12', position: 'relative', zIndex: 30 }}>
-            {['收藏', '最近添加', '自然', '城市'].map((title, sectionIdx) => (
-              <div key={title} style={{ marginBottom: 100 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-                  <h2 style={{ fontSize: 38, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500, letterSpacing: '-0.02em' }}>{title}</h2>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', transition: '0.3s' }} className="view-all">
-                    <span>查看全部</span>
-                    <Icon name="play" size={10} />
+            {(() => {
+              const favorites = wallpapers.filter(w => w.isFavorite);
+              const recent = [...wallpapers].sort((a, b) => new Date(b.importDate) - new Date(a.importDate)).slice(0, 8);
+              const tagMap = {};
+              wallpapers.forEach(w => {
+                if (w.tags) w.tags.forEach(t => {
+                  const name = typeof t === 'string' ? t : t.name;
+                  if (name) {
+                    if (!tagMap[name]) tagMap[name] = [];
+                    tagMap[name].push(w);
+                  }
+                });
+              });
+              const sections = [];
+              if (favorites.length > 0) sections.push({ title: '收藏', items: favorites });
+              sections.push({ title: '最近添加', items: recent });
+              Object.keys(tagMap).forEach(tag => {
+                sections.push({ title: tag, items: tagMap[tag] });
+              });
+              return sections.map((section, sectionIdx) => (
+                <div key={section.title} style={{ marginBottom: 100 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+                    <h2 style={{ fontSize: 38, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500, letterSpacing: '-0.02em' }}>{section.title}</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', transition: '0.3s' }} className="view-all">
+                      <span>查看全部</span>
+                      <Icon name="play" size={10} />
+                    </div>
                   </div>
-                </div>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
-                  {wallpapers.slice(0, 4).map((w, i) => (
-                    <div 
-                      key={`${title}-${w.id}`} 
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
+                    {section.items.slice(0, 4).map((w, i) => (
+                    <div
+                      key={`${section.title}-${w.id}`}
                       className="card-v2" 
                       onClick={() => onPreview(w)} 
                       onContextMenu={(e) => handleContextMenu(e, w)} 
@@ -547,7 +566,7 @@
                       }} className="card-container">
                         <img src={w.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: '0.8s cubic-bezier(0.2, 1, 0.3, 1)' }} className="card-img" />
 
-                        {title === '最近添加' && (
+                        {section.title === '最近添加' && (
                           <div style={{
                             position: 'absolute', top: 16, left: 16, background: 'var(--accent)',
                             color: '#fff', fontSize: 9, fontWeight: 900, padding: '4px 10px',
@@ -572,7 +591,8 @@
                   ))}
                 </div>
               </div>
-            ))}
+            ));
+            })()}
           </div>
 
           <style>{`
@@ -600,13 +620,13 @@
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>资源操作</div>
               </div>
               {[
-                { l: '设为壁纸', i: 'monitor', a: () => onSetWallpaper(contextMenu.w) },
-                { l: '进入色彩调节', i: 'sliders', a: () => onEditColor(contextMenu.w) },
-                { l: '全屏预览', i: 'search', a: () => onPreview(contextMenu.w) },
-                { l: '收藏该壁纸', i: 'heart', a: () => onToggleFavorite && onToggleFavorite(contextMenu.w) },
+                { l: '设为壁纸', i: 'monitor', a: () => { onSetWallpaper(contextMenu.w); setContextMenu(null); } },
+                { l: '进入色彩调节', i: 'sliders', a: () => { onEditColor(contextMenu.w); setContextMenu(null); } },
+                { l: '全屏预览', i: 'search', a: () => { onPreview(contextMenu.w); setContextMenu(null); } },
+                { l: '收藏该壁纸', i: 'heart', a: () => { onToggleFavorite(contextMenu.w); setContextMenu(null); } },
                 { type: 'sep' },
-                { l: '在访达中显示', i: 'monitor', a: () => {} },
-                { l: '移除该资源', i: 'close', a: () => onDelete && onDelete(contextMenu.w), c: '#ff4d4d' },
+                { l: '在访达中显示', i: 'monitor', a: () => { bridge.call('revealInFinder', { wallpaperId: contextMenu.w.id }); setContextMenu(null); } },
+                { l: '移除该资源', i: 'close', a: () => { onDelete(contextMenu.w); setContextMenu(null); }, c: '#ff4d4d' },
               ].map((it, idx) => it.type === 'sep' ? (
                 <div key={idx} style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '4px 8px' }} />
               ) : (
@@ -731,13 +751,14 @@
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>资源管理</div>
               </div>
               {[
-                { l: '设为壁纸', i: 'monitor', a: () => onSetWallpaper(contextMenu.w) },
-                { l: '进入色彩调节', i: 'sliders', a: () => onEditColor && onEditColor(contextMenu.w) },
-                { l: '全屏预览', i: 'search', a: () => onPreview && onPreview(contextMenu.w) },
-                { l: '编辑分类标签', i: 'plus', a: () => setShowTagManager(true) },
+                { l: '设为壁纸', i: 'monitor', a: () => { onSetWallpaper(contextMenu.w); setContextMenu(null); } },
+                { l: '进入色彩调节', i: 'sliders', a: () => { onEditColor && onEditColor(contextMenu.w); setContextMenu(null); } },
+                { l: '全屏预览', i: 'search', a: () => { onPreview && onPreview(contextMenu.w); setContextMenu(null); } },
+                { l: '编辑分类标签', i: 'plus', a: () => { setShowTagManager(true); setContextMenu(null); } },
                 { type: 'sep' },
-                { l: '设为收藏', i: 'heart', a: () => onToggleFavorite && onToggleFavorite(contextMenu.w) },
-                { l: '移至回收站', i: 'close', a: () => onDelete && onDelete(contextMenu.w), c: '#ff4d4d' },
+                { l: '设为收藏', i: 'heart', a: () => { onToggleFavorite && onToggleFavorite(contextMenu.w); setContextMenu(null); } },
+                { l: '在访达中显示', i: 'monitor', a: () => { bridge.call('revealInFinder', { wallpaperId: contextMenu.w.id }); setContextMenu(null); } },
+                { l: '移至回收站', i: 'close', a: () => { onDelete && onDelete(contextMenu.w); setContextMenu(null); }, c: '#ff4d4d' },
               ].map((it, idx) => it.type === 'sep' ? (
                 <div key={idx} style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '4px 8px' }} />
               ) : (
@@ -814,18 +835,22 @@
         <div className="animate-in" style={{ height: '100vh', background: '#000', position: 'relative', overflow: 'hidden' }}>
           {/* 实时预览容器 */}
           <div style={{ width: '100%', height: '100%', position: 'relative', transition: '0.1s' }}>
-            <img src={wallpaper.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: filterString }} />
-            
+            {wallpaper.type === 'video' ? (
+              <video src={wallpaper.filePath} autoPlay loop muted style={{ width: '100%', height: '100%', objectFit: 'cover', filter: filterString }} />
+            ) : (
+              <img src={wallpaper.filePath} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: filterString }} />
+            )}
+
             {/* 叠加效果层：暗角 */}
-            <div style={{ 
-              position: 'absolute', inset: 0, 
+            <div style={{
+              position: 'absolute', inset: 0,
               background: `radial-gradient(circle, transparent ${100 - vignette}%, rgba(0,0,0,${vignette/100}))`,
               pointerEvents: 'none'
             }} />
-            
+
             {/* 叠加效果层：颗粒感 */}
             {grain > 0 && (
-              <div style={{ 
+              <div style={{
                 position: 'absolute', inset: 0, opacity: grain / 100, pointerEvents: 'none',
                 backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
               }} />

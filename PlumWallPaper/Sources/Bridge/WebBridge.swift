@@ -226,6 +226,11 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 try modelContext.save()
                 return success([:] as [String: Any])
 
+            case "revealInFinder":
+                let wallpaper = try resolveWallpaper(params)
+                let fileURL = URL(fileURLWithPath: wallpaper.filePath)
+                NSWorkspace.shared.activateFileViewerSelecting([fileURL])
+                return success([:] as [String: Any])
 
             default:
                 return fail("Unknown action: \(action)")
