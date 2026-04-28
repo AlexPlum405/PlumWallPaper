@@ -21,7 +21,6 @@ final class Tag {
     var color: String?
 
     /// 关联的壁纸
-    @Relationship(deleteRule: .nullify, inverse: \Wallpaper.tags)
     var wallpapers: [Wallpaper]
 
     init(

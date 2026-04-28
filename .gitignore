@@ -81,3 +81,4 @@ history/
 
 # Superpowers (Claude Code specific)
 .superpowers/
+.build/
