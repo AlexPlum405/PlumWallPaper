@@ -416,7 +416,8 @@
     const HomePage = ({ onSetWallpaper, wallpapers, fitMode, onPreview, onEditColor, onToggleFavorite, onDelete }) => {
       const [heroIndex, setHeroIndex] = useState(0);
       const [contextMenu, setContextMenu] = useState(null);
-      const hero = wallpapers[heroIndex];
+      const safeHeroIndex = Math.min(heroIndex, Math.max(0, wallpapers.length - 1));
+      const hero = wallpapers[safeHeroIndex];
       const scrollContainerRef = useRef(null);
       
       const [dragState, setDragState] = useState({ isDragging: false, startX: 0, scrollLeft: 0, moved: false });
@@ -462,50 +463,52 @@
       return (
         <div ref={scrollContainerRef} className="no-scrollbar" style={{ height: '100vh', overflowY: 'auto', overflowX: 'hidden', scrollBehavior: 'smooth', background: '#0d0e12' }}>
           {/* Hero Section */}
-          <section style={{ height: '85vh', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
-              {hero.type === 'video' ? (
-                <video
-                  key={hero.id}
-                  src={hero.filePath}
-                  autoPlay
-                  loop
-                  muted
-                  style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover' }}
-                />
-              ) : (
-                <img src={hero.filePath} style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover', transition: '1.2s cubic-bezier(0.2, 1, 0.3, 1)' }} />
-              )}
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(13,14,18,0) 50%, #0d0e12 100%)' }} />
-            </div>
-            
-            <div className="animate-in" style={{ position: 'relative', zIndex: 10, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '0 80px 140px' }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: 16 }}>Jewel Curated · {hero.tags && hero.tags[0]}</div>
-              <h1 style={{ fontSize: 84, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500, marginBottom: 24, letterSpacing: -2, lineHeight: 1.1 }}>{hero.name}</h1>
-              
-              <div style={{ display: 'flex', gap: 40, marginBottom: 40, color: 'rgba(255,255,255,0.4)', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                <div>Type: {hero.type}</div>
-                <div>Res: {hero.resolution}</div>
-                <div>Size: {formatSize(hero.fileSize)}</div>
-                {formatDuration(hero.duration) !== '-' && <div>Time: {formatDuration(hero.duration)}</div>}
+          {hero && (
+            <section style={{ height: '85vh', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
+                {hero.type === 'video' ? (
+                  <video
+                    key={hero.id}
+                    src={hero.filePath}
+                    autoPlay
+                    loop
+                    muted
+                    style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover' }}
+                  />
+                ) : (
+                  <img src={hero.filePath} style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover', transition: '1.2s cubic-bezier(0.2, 1, 0.3, 1)' }} />
+                )}
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(13,14,18,0) 50%, #0d0e12 100%)' }} />
               </div>
 
-              <div style={{ display: 'flex', gap: 16 }}>
-                <button className="btn-primary btn" style={{ padding: '14px 36px' }} onClick={() => onSetWallpaper(hero)}>设为壁纸</button>
-                <button className="btn" style={{ padding: '14px 24px' }} onClick={() => onToggleFavorite && onToggleFavorite(hero)}><Icon name="heart" /> 收藏</button>
-              </div>
-            </div>
+              <div className="animate-in" style={{ position: 'relative', zIndex: 10, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '0 80px 140px' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: 16 }}>Jewel Curated · {hero.tags && hero.tags[0] && hero.tags[0].name}</div>
+                <h1 style={{ fontSize: 84, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500, marginBottom: 24, letterSpacing: -2, lineHeight: 1.1 }}>{hero.name}</h1>
 
-            <div onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} className="no-scrollbar" style={{ position: 'absolute', bottom: 40, left: 80, right: 0, overflowX: 'auto', zIndex: 20, cursor: dragState.isDragging ? 'grabbing' : 'grab', userSelect: 'none' }}>
-              <div style={{ display: 'flex', gap: 16, paddingRight: 80 }}>
-                {wallpapers.map((w, i) => (
-                  <div key={w.id} onClick={() => handleHeroThumbClick(i)} style={{ flexShrink: 0, width: 160, aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden', cursor: 'pointer', border: heroIndex === i ? '2px solid #fff' : '1px solid rgba(255,255,255,0.1)', opacity: heroIndex === i ? 1 : 0.4, transition: '0.3s' }}>
-                    <img src={w.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
-                  </div>
-                ))}
+                <div style={{ display: 'flex', gap: 40, marginBottom: 40, color: 'rgba(255,255,255,0.4)', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  <div>Type: {hero.type}</div>
+                  <div>Res: {hero.resolution}</div>
+                  <div>Size: {formatSize(hero.fileSize)}</div>
+                  {formatDuration(hero.duration) !== '-' && <div>Time: {formatDuration(hero.duration)}</div>}
+                </div>
+
+                <div style={{ display: 'flex', gap: 16 }}>
+                  <button className="btn-primary btn" style={{ padding: '14px 36px' }} onClick={() => onSetWallpaper(hero)}>设为壁纸</button>
+                  <button className="btn" style={{ padding: '14px 24px' }} onClick={() => onToggleFavorite && onToggleFavorite(hero)}><Icon name="heart" /> 收藏</button>
+                </div>
+              </div>
+
+              <div onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} className="no-scrollbar" style={{ position: 'absolute', bottom: 40, left: 80, right: 0, overflowX: 'auto', zIndex: 20, cursor: dragState.isDragging ? 'grabbing' : 'grab', userSelect: 'none' }}>
+                <div style={{ display: 'flex', gap: 16, paddingRight: 80 }}>
+                  {wallpapers.map((w, i) => (
+                    <div key={w.id} onClick={() => handleHeroThumbClick(i)} style={{ flexShrink: 0, width: 160, aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden', cursor: 'pointer', border: safeHeroIndex === i ? '2px solid #fff' : '1px solid rgba(255,255,255,0.1)', opacity: safeHeroIndex === i ? 1 : 0.4, transition: '0.3s' }}>
+                      <img src={w.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
+                    </div>
+                  ))}
               </div>
             </div>
           </section>
+          )}
 
           {/* Scrolling Sections */}
           <div style={{ padding: '80px 80px 140px', background: '#0d0e12', position: 'relative', zIndex: 30 }}>
@@ -1329,6 +1332,10 @@
       const handleDelete = (wallpaper) => {
         bridge.call('deleteWallpaper', { wallpaperId: wallpaper.id }).then(() => {
           addToast('已从库中移除');
+          // 如果删除的是当前 hero，重置索引
+          if (wallpapers[heroIndex]?.id === wallpaper.id) {
+            setHeroIndex(0);
+          }
           refreshWallpapers();
         });
       };
