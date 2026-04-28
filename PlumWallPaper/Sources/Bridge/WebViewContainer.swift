@@ -8,6 +8,8 @@
 import SwiftUI
 import WebKit
 import SwiftData
+import AppKit
+import UniformTypeIdentifiers
 
 /// NSViewRepresentable 包装 WKWebView，加载本地 HTML 并注入 WebBridge
 struct WebViewContainer: NSViewRepresentable {
@@ -22,25 +24,42 @@ struct WebViewContainer: NSViewRepresentable {
         let config = WKWebViewConfiguration()
         let contentController = WKUserContentController()
         config.userContentController = contentController
+        config.preferences.setValue(true, forKey: "developerExtrasEnabled")
 
-        let webView = WKWebView(frame: .zero, configuration: config)
+        let webView = DropEnabledWebView(frame: .zero, configuration: config)
         webView.setValue(false, forKey: "drawsBackground")
+        webView.isInspectable = true
+        webView.navigationDelegate = context.coordinator
+        webView.registerForDraggedTypes([.fileURL])
+        webView.onDropFiles = { urls in
+            Task { @MainActor in
+                do {
+                    let imported = try await FileImporter.shared.importFiles(urls: urls)
+                    let store = WallpaperStore(modelContext: modelContext)
+                    try store.addWallpapers(imported)
+                    webView.evaluateJavaScript("window.location.reload()") { _, _ in }
+                } catch {
+                    NSLog("[WebView] Drop import failed: %@", error.localizedDescription)
+                }
+            }
+        }
 
-        // 创建 WebBridge 并保存到 Coordinator 以防止被释放
         let bridge = WebBridge(modelContext: modelContext, webView: webView)
         context.coordinator.bridge = bridge
         contentController.add(bridge, name: "bridge")
 
-        // 保存 webView 引用到 AppViewModel
         viewModel.webView = webView
 
-        // 加载本地 HTML 文件
-        if let htmlURL = Bundle.main.url(
-            forResource: "plumwallpaper",
-            withExtension: "html",
-            subdirectory: "Resources/Web"
-        ) {
-            webView.loadFileURL(htmlURL, allowingReadAccessTo: URL(fileURLWithPath: NSHomeDirectory()))
+        if let htmlURL = Bundle.main.url(forResource: "plumwallpaper", withExtension: "html") {
+            NSLog("[WebView] Loading HTML: %@", htmlURL.absoluteString)
+            webView.loadFileURL(htmlURL, allowingReadAccessTo: htmlURL.deletingLastPathComponent())
+        } else {
+            NSLog("[WebView] ERROR: plumwallpaper.html not found in bundle!")
+            NSLog("[WebView] Bundle path: %@", Bundle.main.bundlePath)
+            if let resourcePath = Bundle.main.resourcePath {
+                let files = (try? FileManager.default.contentsOfDirectory(atPath: resourcePath)) ?? []
+                NSLog("[WebView] Resources: %@", files.joined(separator: ", "))
+            }
         }
 
         return webView
@@ -53,7 +72,50 @@ struct WebViewContainer: NSViewRepresentable {
     // MARK: - Coordinator
 
     @MainActor
-    final class Coordinator {
+    final class Coordinator: NSObject, WKNavigationDelegate {
         var bridge: WebBridge?
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            NSLog("[WebView] Navigation finished, URL: %@", webView.url?.absoluteString ?? "nil")
+        }
+
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            NSLog("[WebView] Navigation failed: %@", error.localizedDescription)
+        }
+
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            NSLog("[WebView] Provisional navigation failed: %@", error.localizedDescription)
+        }
+    }
+}
+
+// MARK: - 支持拖拽文件的 WKWebView 子类
+
+@MainActor
+final class DropEnabledWebView: WKWebView {
+    var onDropFiles: (([URL]) -> Void)?
+
+    private static let supportedExtensions: Set<String> = ["mp4", "mov", "m4v", "heic", "heif"]
+
+    override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        guard hasValidFiles(sender) else { return [] }
+        return .copy
+    }
+
+    override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        guard let urls = fileURLs(from: sender), !urls.isEmpty else { return false }
+        onDropFiles?(urls)
+        return true
+    }
+
+    private func hasValidFiles(_ info: NSDraggingInfo) -> Bool {
+        fileURLs(from: info)?.isEmpty == false
+    }
+
+    private func fileURLs(from info: NSDraggingInfo) -> [URL]? {
+        info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [
+            .urlReadingFileURLsOnly: true
+        ])?.compactMap { ($0 as? URL) }
+         .filter { Self.supportedExtensions.contains($0.pathExtension.lowercased()) }
     }
 }

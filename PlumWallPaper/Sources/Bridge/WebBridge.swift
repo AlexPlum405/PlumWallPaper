@@ -8,6 +8,8 @@
 import Foundation
 import WebKit
 import SwiftData
+import AppKit
+import UniformTypeIdentifiers
 
 /// JS → Swift 路由层
 /// 接收来自 WKWebView 的消息，路由到对应的 Swift 后端服务，并将结果回传给 JS。
@@ -60,15 +62,33 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 let wallpapers = try wallpaperStore.fetchAllWallpapers()
                 return success(wallpapers.map { serializeWallpaper($0) })
 
-            // 2. importFiles
+            // 2. importFiles — 弹出 NSOpenPanel 让用户选择文件
             case "importFiles":
-                guard let paths = params["paths"] as? [String] else {
-                    return fail("Missing paths parameter")
+                return await withCheckedContinuation { continuation in
+                    DispatchQueue.main.async {
+                        let panel = NSOpenPanel()
+                        panel.allowsMultipleSelection = true
+                        panel.canChooseDirectories = false
+                        panel.allowedContentTypes = [.movie, .image]
+                        panel.message = "选择要导入的壁纸文件（支持视频和 HEIC 图片）"
+
+                        panel.begin { response in
+                            Task { @MainActor in
+                                guard response == .OK, !panel.urls.isEmpty else {
+                                    continuation.resume(returning: self.fail("User cancelled"))
+                                    return
+                                }
+                                do {
+                                    let imported = try await FileImporter.shared.importFiles(urls: panel.urls)
+                                    try self.wallpaperStore.addWallpapers(imported)
+                                    continuation.resume(returning: self.success(imported.map { self.serializeWallpaper($0) }))
+                                } catch {
+                                    continuation.resume(returning: self.fail(error.localizedDescription))
+                                }
+                            }
+                        }
+                    }
                 }
-                let urls = paths.map { URL(fileURLWithPath: $0) }
-                let imported = try await FileImporter.shared.importFiles(urls: urls)
-                try wallpaperStore.addWallpapers(imported)
-                return success(imported.map { serializeWallpaper($0) })
 
             // 3. setWallpaper
             case "setWallpaper":
