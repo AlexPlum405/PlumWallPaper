@@ -95,8 +95,36 @@ struct WebViewContainer: NSViewRepresentable {
     // MARK: - Coordinator
 
     @MainActor
-    final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler, NSWindowDelegate {
         var bridge: WebBridge?
+
+        func configureWindow(_ window: NSWindow) {
+            window.titlebarAppearsTransparent = true
+            window.titleVisibility = .hidden
+            window.styleMask.insert(.fullSizeContentView)
+            window.isMovableByWindowBackground = true
+            window.backgroundColor = .clear
+            window.isOpaque = false
+            window.hasShadow = true
+        }
+
+        func windowDidResize(_ notification: Notification) {
+            if let window = notification.object as? NSWindow {
+                configureWindow(window)
+            }
+        }
+
+        func windowDidEnterFullScreen(_ notification: Notification) {
+            if let window = notification.object as? NSWindow {
+                configureWindow(window)
+            }
+        }
+
+        func windowDidEndLiveResize(_ notification: Notification) {
+            if let window = notification.object as? NSWindow {
+                configureWindow(window)
+            }
+        }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             NSLog("[WebView] Navigation finished, URL: %@", webView.url?.absoluteString ?? "nil")
@@ -129,13 +157,27 @@ final class DropEnabledWebView: WKWebView {
     private static let supportedExtensions: Set<String> = ["mp4", "mov", "m4v", "heic", "heif"]
     private var resizeSnapshotView: NSView?
 
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if let window = window, let delegate = window.delegate as? WebViewContainer.Coordinator {
+            delegate.configureWindow(window)
+        } else if let window = window {
+            window.titlebarAppearsTransparent = true
+            window.titleVisibility = .hidden
+            window.styleMask.insert(.fullSizeContentView)
+            window.isMovableByWindowBackground = true
+            window.backgroundColor = .clear
+            window.isOpaque = false
+        }
+    }
+
     override var preservesContentDuringLiveResize: Bool {
         true
     }
 
     override func viewWillStartLiveResize() {
         super.viewWillStartLiveResize()
-        guard resizeSnapshotView == nil else { return }
+        guard resizeSnapshotView == nil, let window = window else { return }
         guard let rep = bitmapImageRepForCachingDisplay(in: bounds) else { return }
         cacheDisplay(in: bounds, to: rep)
         let image = NSImage(size: bounds.size)
@@ -145,24 +187,23 @@ final class DropEnabledWebView: WKWebView {
         imageView.imageScaling = .scaleAxesIndependently
         imageView.autoresizingMask = [.width, .height]
         imageView.wantsLayer = true
-        imageView.layer?.backgroundColor = NSColor(red: 0.05, green: 0.055, blue: 0.07, alpha: 1.0).cgColor
-        addSubview(imageView)
+        imageView.layer?.backgroundColor = NSColor(red: 0.051, green: 0.055, blue: 0.071, alpha: 1.0).cgColor
+        window.contentView?.addSubview(imageView, positioned: .above, relativeTo: self)
         resizeSnapshotView = imageView
-        layer?.opacity = 0
+        isHidden = true
     }
 
     override func viewDidEndLiveResize() {
         super.viewDidEndLiveResize()
+        isHidden = false
         guard let snapshot = resizeSnapshotView else { return }
-        layer?.opacity = 1
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.2
+            context.duration = 0.15
             snapshot.animator().alphaValue = 0
         }, completionHandler: {
             snapshot.removeFromSuperview()
         })
         resizeSnapshotView = nil
-        needsDisplay = true
     }
 
     override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {

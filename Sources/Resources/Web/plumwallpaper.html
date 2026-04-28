@@ -189,27 +189,41 @@
 
     const TopNav = ({ currentView, setView, onSearchClick, onImportClick }) => (
       <nav style={{ 
-        position: 'absolute', top: 0, left: 0, right: 0, height: 110, padding: '0 56px', 
+        position: 'absolute', top: 0, left: 0, right: 0, height: 110, padding: '0 56px 0 80px', 
         display: 'flex', alignItems: 'center', gap: 32, zIndex: 1000,
-        background: 'linear-gradient(to bottom, rgba(0,0,0,0.4), transparent)'
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.1) 60%, transparent 100%)',
+        WebkitAppRegion: 'drag'
       }}>
-        <div className="branding" onClick={() => setView('home')} style={{ display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', transition: '0.4s cubic-bezier(0.2, 1, 0.3, 1)' }}>
+        <div className="branding" onClick={() => setView('home')} style={{ 
+          display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', 
+          transition: '0.4s cubic-bezier(0.2, 1, 0.3, 1)',
+          WebkitAppRegion: 'no-drag'
+        }}>
           <div style={{
             width: 44, height: 44, background: '#16181c', borderRadius: 12,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.1)',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.3), inset 0 0 0 0.5px rgba(255,255,255,0.15)',
             position: 'relative'
           }}>
-            <svg viewBox="0 0 40 40" width="30" height="30"><path d="M20 36C28 36 34 30 34 22C34 14 20 6 20 6C20 6 6 14 6 22C6 30 12 36 20 36Z" fill="#E03E3E"/><path d="M20 2V8" stroke="#2ECC71" strokeWidth="4" strokeLinecap="round"/></svg>
+            <svg viewBox="0 0 40 40" width="30" height="30">
+              <defs>
+                <radialGradient id="plumGrad" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+                  <stop offset="0%" stopColor="#ff4d4d" />
+                  <stop offset="100%" stopColor="#E03E3E" />
+                </radialGradient>
+              </defs>
+              <path d="M20 36C28 36 34 30 34 22C34 14 20 6 20 6C20 6 6 14 6 22C6 30 12 36 20 36Z" fill="url(#plumGrad)"/>
+              <path d="M20 2V8" stroke="#2ECC71" strokeWidth="3" strokeLinecap="round"/>
+            </svg>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-            <span style={{ fontSize: 28, fontWeight: 700, fontFamily: 'var(--font-display)', fontStyle: 'italic', color: '#fff', letterSpacing: '-0.02em' }}>Plum</span>
-            <span style={{ fontSize: 9, fontWeight: 300, textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.4em', marginTop: 2 }}>WallPaper</span>
+            <span style={{ fontSize: 26, fontWeight: 700, fontFamily: 'var(--font-display)', fontStyle: 'italic', color: '#fff', letterSpacing: '-0.02em' }}>Plum</span>
+            <span style={{ fontSize: 9, fontWeight: 900, textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', letterSpacing: '4px', marginTop: 4 }}>WallPaper</span>
           </div>
         </div>
 
-        {/* 灵动分段控制器：去容器边框 */}
-        <div style={{ display: 'flex', position: 'relative', padding: 2, marginLeft: 16 }}>
+        {/* 灵动分段控制器 */}
+        <div style={{ display: 'flex', position: 'relative', padding: 2, marginLeft: 16, WebkitAppRegion: 'no-drag' }}>
           {['home', 'library'].map(v => (
             <button key={v} onClick={() => setView(v)} style={{ 
               position: 'relative', zIndex: 1, padding: '10px 24px', borderRadius: 12, border: 'none', 
@@ -217,7 +231,7 @@
               fontSize: 14, fontWeight: 600, cursor: 'pointer', transition: '0.4s', display: 'flex', alignItems: 'center', gap: 8
             }}>
               {currentView === v && (
-                <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)', borderRadius: 12, zIndex: -1, boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }} className="animate-in" />
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(24px)', borderRadius: 12, zIndex: -1, boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }} className="animate-in" />
               )}
               <Icon name={v === 'home' ? 'monitor' : 'image'} size={14} />
               {v === 'home' ? '首页' : '壁纸库'}
@@ -225,8 +239,8 @@
           ))}
         </div>
 
-        {/* 简洁功能按钮组：去圆形框 */}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+        {/* 简洁功能按钮组 */}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 12, WebkitAppRegion: 'no-drag' }}>
           {[
             { id: 'search', icon: 'search', action: onSearchClick },
             { id: 'import', icon: 'plus', action: onImportClick },
@@ -237,10 +251,11 @@
               onClick={btn.action} 
               className="topbar-btn-v3"
               style={{ 
-                width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                background: btn.active ? 'rgba(255,255,255,0.08)' : 'transparent', 
-                border: 'none', cursor: 'pointer', color: btn.active ? '#fff' : 'rgba(255,255,255,0.4)', 
-                transition: '0.3s cubic-bezier(0.2, 1, 0.3, 1)'
+                width: 42, height: 42, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                background: btn.active ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.03)', 
+                border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', color: btn.active ? '#fff' : 'rgba(255,255,255,0.4)', 
+                transition: '0.3s cubic-bezier(0.2, 1, 0.3, 1)',
+                backdropFilter: 'blur(10px)'
               }}
             >
               <Icon name={btn.icon} size={20} />
@@ -426,23 +441,40 @@
           <section style={{ height: '85vh', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
               <img src={hero.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover', transition: '1.2s cubic-bezier(0.2, 1, 0.3, 1)' }} />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(13,14,18,0) 50%, #0d0e12 100%)' }} />
+              
+              {/* Noise Overlay - Jewel Texture */}
+              <div style={{ 
+                position: 'absolute', inset: 0, opacity: 0.035, pointerEvents: 'none', zIndex: 2,
+                backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
+              }} />
+
+              {/* Smoother Gradient Overlay */}
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(13,14,18,0) 40%, rgba(13,14,18,0.8) 75%, #0d0e12 100%)', zIndex: 3 }} />
             </div>
             
             <div className="animate-in" style={{ position: 'relative', zIndex: 10, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '0 80px 140px' }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: 16 }}>Jewel Curated · {hero.tags && hero.tags[0]}</div>
-              <h1 style={{ fontSize: 84, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500, marginBottom: 24, letterSpacing: -2, lineHeight: 1.1 }}>{hero.name}</h1>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.4em', textTransform: 'uppercase', marginBottom: 20 }}>Jewel Curated · {hero.tags && hero.tags[0]}</div>
+              <h1 style={{ 
+                fontSize: 92, 
+                fontFamily: 'var(--font-display)', 
+                fontStyle: 'italic', 
+                fontWeight: 500, 
+                marginBottom: 28, 
+                letterSpacing: '-0.04em', 
+                lineHeight: 1.0,
+                textShadow: '0 10px 30px rgba(0,0,0,0.3)'
+              }}>{hero.name}</h1>
               
-              <div style={{ display: 'flex', gap: 40, marginBottom: 40, color: 'rgba(255,255,255,0.4)', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                <div>Type: {hero.type}</div>
-                <div>Res: {hero.resolution}</div>
-                <div>Size: {formatSize(hero.fileSize)}</div>
-                {formatDuration(hero.duration) !== '-' && <div>Time: {formatDuration(hero.duration)}</div>}
+              <div style={{ display: 'flex', gap: 40, marginBottom: 48, color: 'rgba(255,255,255,0.4)', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 600 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="image" size={14} /> {hero.type}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="monitor" size={14} /> {hero.resolution}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="sliders" size={14} /> {formatSize(hero.fileSize)}</div>
+                {formatDuration(hero.duration) !== '-' && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="play" size={14} /> {formatDuration(hero.duration)}</div>}
               </div>
 
-              <div style={{ display: 'flex', gap: 16 }}>
-                <button className="btn-primary btn" style={{ padding: '14px 36px' }} onClick={() => onSetWallpaper(hero)}>设为壁纸</button>
-                <button className="btn" style={{ padding: '14px 24px' }} onClick={() => onToggleFavorite && onToggleFavorite(hero)}><Icon name="heart" /> 收藏</button>
+              <div style={{ display: 'flex', gap: 20 }}>
+                <button className="btn-primary btn" style={{ padding: '16px 48px', fontSize: 15, borderRadius: 14 }} onClick={() => onSetWallpaper(hero)}>设为壁纸</button>
+                <button className="btn" style={{ padding: '16px 32px', fontSize: 15, borderRadius: 14, background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(20px)' }} onClick={() => onToggleFavorite && onToggleFavorite(hero)}><Icon name="heart" /> 收藏</button>
               </div>
             </div>
 
