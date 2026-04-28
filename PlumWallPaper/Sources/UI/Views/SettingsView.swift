@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct SettingsView: View {
+    @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query private var settings: [Settings]
     
@@ -31,9 +32,9 @@ struct SettingsView: View {
             .padding(.top, 100)
             .background(Color(red: 20/255, green: 21/255, blue: 26/255))
         } detail: {
-            ZStack {
+            ZStack(alignment: .topTrailing) {
                 Theme.bg.edgesIgnoringSafeArea(.all)
-                
+
                 if let selection = selection, let config = currentSettings {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 56) {
@@ -58,6 +59,17 @@ struct SettingsView: View {
                 } else {
                     ProgressView()
                 }
+
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white.opacity(0.5))
+                        .padding(10)
+                        .background(Theme.glass)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(PlainButtonStyle())
+                .padding(24)
             }
         }
         .onAppear {

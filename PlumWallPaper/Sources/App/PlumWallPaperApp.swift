@@ -46,6 +46,14 @@ struct PlumWallPaperApp: App {
                 }
         }
         .windowStyle(HiddenTitleBarWindowStyle())
+        .commands {
+            CommandGroup(replacing: .appTermination) {
+                Button("退出 PlumWallPaper") {
+                    NSApplication.shared.terminate(nil)
+                }
+                .keyboardShortcut("q")
+            }
+        }
     }
 }
 
