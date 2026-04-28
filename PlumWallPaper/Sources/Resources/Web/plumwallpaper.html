@@ -1367,12 +1367,13 @@
       };
 
       const handleToggleFavorite = (wallpaper) => {
-        console.log('[Favorite] Toggling favorite for:', wallpaper.id, wallpaper.name);
+        const wasFavorite = wallpaper.isFavorite;
+        console.log('[Favorite] Toggling favorite for:', wallpaper.id, wallpaper.name, 'was:', wasFavorite);
         bridge.call('toggleFavorite', { wallpaperId: wallpaper.id }).then((result) => {
           console.log('[Favorite] Toggle result:', result);
           return refreshWallpapers();
         }).then(() => {
-          console.log('[Favorite] Refresh complete');
+          addToast(wasFavorite ? '已移除收藏' : '已加入收藏');
         }).catch((err) => {
           console.error('[Favorite] Error:', err);
           addToast('操作失败: ' + err.message);
