@@ -17,8 +17,9 @@ final class WallpaperEngine {
         guard let screen = DisplayManager.shared.screen(for: screenInfo) else { return }
         let key = screenInfo.id
 
-        // 停止旧 renderer
-        renderers[key]?.stop()
+        if let old = renderers.removeValue(forKey: key) {
+            old.stop()
+        }
 
         let renderer: WallpaperRenderer
         switch wallpaper.type {
@@ -98,11 +99,11 @@ final class BasicVideoRenderer: WallpaperRenderer {
         )
         window.isOpaque = false
         window.backgroundColor = .clear
-        window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) - 1)
+        window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)))
         window.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         window.ignoresMouseEvents = true
 
-        let contentView = NSView(frame: screen.frame)
+        let contentView = NSView(frame: CGRect(origin: .zero, size: window.frame.size))
         contentView.wantsLayer = true
         let layer = AVPlayerLayer(player: queuePlayer)
         layer.frame = contentView.bounds
@@ -118,18 +119,24 @@ final class BasicVideoRenderer: WallpaperRenderer {
     }
 
     func stop() {
-        player?.pause()
-        player?.replaceCurrentItem(with: nil)
-        looper = nil
-        currentItem = nil
-        playerLayer?.removeFromSuperlayer()
-        playerLayer?.player = nil
-        playerLayer = nil
+        let p = player
+        let l = looper
+        let pl = playerLayer
+        let w = hostingWindow
+
         player = nil
-        hostingWindow?.contentView = nil
-        hostingWindow?.orderOut(nil)
-        hostingWindow?.close()
+        looper = nil
+        playerLayer = nil
         hostingWindow = nil
+        currentItem = nil
+
+        p?.pause()
+        p?.replaceCurrentItem(with: nil)
+        _ = l
+        pl?.removeFromSuperlayer()
+        pl?.player = nil
+        w?.contentView = nil
+        w?.orderOut(nil)
     }
 
     func pause() {

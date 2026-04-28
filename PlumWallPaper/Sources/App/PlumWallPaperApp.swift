@@ -32,20 +32,11 @@ struct PlumWallPaperApp: App {
         WindowGroup {
             WebViewContainer(viewModel: viewModel, modelContext: modelContainer.mainContext)
                 .frame(minWidth: 1200, minHeight: 800)
-                .background(.black)
+                .ignoresSafeArea()
                 .task {
                     await viewModel.restoreLastSession(context: modelContainer.mainContext)
                 }
-                .onAppear {
-                    if let window = NSApplication.shared.windows.first {
-                        window.titlebarAppearsTransparent = true
-                        window.titleVisibility = .hidden
-                        window.isMovableByWindowBackground = true
-                        window.backgroundColor = .black
-                    }
-                }
         }
-        .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .appTermination) {
                 Button("退出 PlumWallPaper") {
