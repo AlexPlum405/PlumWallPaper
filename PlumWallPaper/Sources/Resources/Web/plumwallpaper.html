@@ -1396,7 +1396,7 @@
       const filteredWallpapers = useMemo(() => {
         return wallpapers.filter(w =>
           w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (w.tags && w.tags.some(tag => tag.includes(searchQuery)))
+          (w.tags && w.tags.some(tag => tag.name && tag.name.toLowerCase().includes(searchQuery.toLowerCase())))
         );
       }, [searchQuery, wallpapers]);
 
