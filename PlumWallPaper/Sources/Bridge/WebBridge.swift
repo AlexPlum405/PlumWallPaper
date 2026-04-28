@@ -129,6 +129,27 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 }
                 let urls = paths.map { URL(fileURLWithPath: $0) }
                 let imported = try await FileImporter.shared.importFiles(urls: urls)
+
+                // 处理 tag 和 favorite
+                let tagName = params["tag"] as? String
+                let favorite = params["favorite"] as? Bool ?? false
+
+                for wallpaper in imported {
+                    wallpaper.isFavorite = favorite
+
+                    if let tagName = tagName, !tagName.isEmpty {
+                        // 查找或创建 tag
+                        let descriptor = FetchDescriptor<Tag>(predicate: #Predicate { $0.name == tagName })
+                        let existingTag = try? modelContext.fetch(descriptor).first
+                        let tag = existingTag ?? {
+                            let newTag = Tag(name: tagName, color: nil)
+                            modelContext.insert(newTag)
+                            return newTag
+                        }()
+                        wallpaper.tags.append(tag)
+                    }
+                }
+
                 try wallpaperStore.addWallpapers(imported)
                 return success(imported.map { serializeWallpaper($0) })
 

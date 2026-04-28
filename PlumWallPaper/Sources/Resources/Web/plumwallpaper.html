@@ -293,7 +293,7 @@
       const handleConfirmImport = () => {
         console.log('[Import] Confirming import with metadata:', meta);
         const paths = selectedFiles.map(f => f.path);
-        onStartImport(paths);
+        onStartImport({ paths, metadata: meta });
       };
 
       return (
@@ -1363,9 +1363,9 @@
         });
       };
 
-      const handleImport = (paths) => {
-        console.log('[Import] Calling bridge.call(importFiles) with paths:', paths);
-        bridge.call('importFiles', { paths }).then((result) => {
+      const handleImport = ({ paths, metadata }) => {
+        console.log('[Import] Calling bridge.call(importFiles) with paths:', paths, 'metadata:', metadata);
+        bridge.call('importFiles', { paths, tag: metadata.tag, favorite: metadata.fav }).then((result) => {
           console.log('[Import] Success, imported:', result);
           addToast('已导入 ' + result.length + ' 个壁纸');
           return refreshWallpapers();
