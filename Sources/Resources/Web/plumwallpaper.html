@@ -28,7 +28,7 @@
 
   <style>
     :root {
-      --bg: #0d0e12;
+      --bg: #181A1F;
       --fg: #ffffff;
       --accent: #E03E3E; 
       --glass: rgba(255, 255, 255, 0.04);
@@ -847,7 +847,9 @@
           {/* 右侧 25%：调节面板 */}
           <div className="no-scrollbar" style={{ 
             flex: 0.25, height: '100%',
-            background: '#0d0e12',
+            background: 'rgba(13, 14, 18, 0.25)',
+            backdropFilter: 'blur(30px) saturate(120%)',
+            WebkitBackdropFilter: 'blur(30px) saturate(120%)',
             padding: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column'
           }}>
             <div style={{ padding: '40px 32px 16px' }}>

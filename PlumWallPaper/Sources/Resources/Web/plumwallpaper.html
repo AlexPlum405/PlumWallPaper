@@ -8,13 +8,13 @@
   <style>
     @font-face {
       font-family: 'Cormorant Garamond';
-      src: url('CormorantGaramond-Italic.ttf') format('truetype');
+      src: url('../Fonts/CormorantGaramond-Italic.ttf') format('truetype');
       font-style: italic;
       font-weight: 300 500;
     }
     @font-face {
       font-family: 'Cormorant Garamond';
-      src: url('CormorantGaramond-SemiBoldItalic.ttf') format('truetype');
+      src: url('../Fonts/CormorantGaramond-SemiBoldItalic.ttf') format('truetype');
       font-style: italic;
       font-weight: 600 700;
     }
@@ -28,7 +28,7 @@
 
   <style>
     :root {
-      --bg: #0d0e12;
+      --bg: #181A1F;
       --fg: #ffffff;
       --accent: #E03E3E; 
       --glass: rgba(255, 255, 255, 0.04);
@@ -41,19 +41,10 @@
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
 
     body {
-      background: var(--bg);
+      background: #000;
       color: var(--fg);
       font-family: var(--font-ui);
       overflow: hidden;
-      margin: 0;
-      padding: 0;
-    }
-
-    #root {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100vh;
     }
 
     /* 隐藏滚动条但保留功能 */
@@ -405,11 +396,7 @@
           <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(20px)', padding: '8px 24px', borderRadius: 100, border: '1px solid rgba(255,255,255,0.1)', fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>Immersive Preview</div>
           <button onClick={onClose} className="btn" style={{ borderRadius: '50%', width: 44, height: 44, justifyContent: 'center', background: 'rgba(255,255,255,0.1)', border: 'none', backdropFilter: 'blur(10px)' }}><Icon name="close" /></button>
         </div>
-        {wallpaper.type === 'video' ? (
-          <video src={wallpaper.filePath} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        ) : (
-          <img src={wallpaper.filePath} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        )}
+        <img src={wallpaper.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 280, background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <span style={{ padding: '4px 12px', background: 'var(--accent)', borderRadius: 6, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{wallpaper.tags && wallpaper.tags[0] && (wallpaper.tags[0].name || wallpaper.tags[0])}</span>
@@ -474,11 +461,7 @@
           {/* Hero Section */}
           <section style={{ height: '85vh', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
-              {hero.type === 'video' ? (
-                <video key={hero.id} src={hero.filePath} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover' }} />
-              ) : (
-                <img src={hero.filePath} style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover', transition: '1.2s cubic-bezier(0.2, 1, 0.3, 1)' }} />
-              )}
+              <img src={hero.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover', transition: '1.2s cubic-bezier(0.2, 1, 0.3, 1)' }} />
               
               {/* Noise Overlay - Jewel Texture */}
               <div style={{ 
@@ -491,7 +474,7 @@
             </div>
             
             <div className="animate-in" style={{ position: 'relative', zIndex: 10, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '0 80px 140px' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.4em', textTransform: 'uppercase', marginBottom: 20 }}>Jewel Curated · {hero.tags && hero.tags[0] && (hero.tags[0].name || hero.tags[0])}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.4em', textTransform: 'uppercase', marginBottom: 20 }}>Jewel Curated · {hero.tags && hero.tags[0]}</div>
               <h1 style={{ 
                 fontSize: 92, 
                 fontFamily: 'var(--font-display)', 
@@ -734,7 +717,7 @@
                   <div style={{ fontWeight: 600, fontSize: 16, color: 'rgba(255,255,255,0.9)' }}>{w.name}</div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{w.resolution} · {w.type}</span>
-                    <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4 }}>{w.tags && w.tags[0] && (w.tags[0].name || w.tags[0])}</span>
+                    <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4 }}>{w.tags && w.tags[0]}</span>
                   </div>
                 </div>
               </div>
@@ -833,14 +816,13 @@
       `;
 
       return (
-        <div className="animate-in" style={{ height: '100vh', background: '#000', display: 'flex', overflow: 'hidden' }}>
+        <div className="animate-in" style={{ height: '100vh', position: 'relative', display: 'flex', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', inset: -50, zIndex: -1 }}>
+            <img src={wallpaper.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(80px) brightness(0.4)' }} />
+          </div>
           {/* 左侧 75%：实时预览 */}
           <div style={{ flex: 0.75, height: '100%', position: 'relative', transition: '0.1s', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
-            {wallpaper.type === 'video' ? (
-              <video src={wallpaper.filePath} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', filter: filterString }} />
-            ) : (
-              <img src={wallpaper.filePath} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: filterString }} />
-            )}
+            <img src={wallpaper.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: filterString }} />
             
             {/* 叠加效果层：暗角 */}
             <div style={{ 
@@ -865,7 +847,9 @@
           {/* 右侧 25%：调节面板 */}
           <div className="no-scrollbar" style={{ 
             flex: 0.25, height: '100%',
-            background: '#0d0e12',
+            background: 'rgba(13, 14, 18, 0.25)',
+            backdropFilter: 'blur(30px) saturate(120%)',
+            WebkitBackdropFilter: 'blur(30px) saturate(120%)',
             padding: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column'
           }}>
             <div style={{ padding: '40px 32px 16px' }}>
@@ -1407,7 +1391,7 @@
       const filteredWallpapers = useMemo(() => {
         return wallpapers.filter(w =>
           w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (w.tags && w.tags.some(tag => (tag.name || tag || '').toLowerCase().includes(searchQuery.toLowerCase())))
+          (w.tags && w.tags.some(tag => tag.includes(searchQuery)))
         );
       }, [searchQuery, wallpapers]);
 
@@ -1533,7 +1517,7 @@
                           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.2)', transition: '0.3s' }} className="overlay" />
                         </div>
                         <div style={{ fontSize: 16, fontWeight: 600 }}>{w.name}</div>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>{w.tags && w.tags[0] && (w.tags[0].name || w.tags[0])} · {w.type}</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>{w.tags && w.tags[0]} · {w.type}</div>
                       </div>
                     ))}
                     {filteredWallpapers.length === 0 && (
