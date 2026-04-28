@@ -9,12 +9,15 @@
 /* Begin PBXBuildFile section */
 		14A5D263475ED4C2B1409136 /* RestoreManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F831A3D8DFBF129BC31B3368 /* RestoreManager.swift */; };
 		1AFC146A2EB65DAF577B34E8 /* FileImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0823F5D57978191B355D159 /* FileImporter.swift */; };
+		1C1F1F6C49F581D0640DEDD1 /* EdgeBorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA373EA0799BA29543D08C55 /* EdgeBorder.swift */; };
 		20A8DB8CB5002455B09C6C85 /* ImportModalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DA999BB9002BB08BEB509A5 /* ImportModalView.swift */; };
 		283D2B2FF747E8F0C39C8E9E /* PlumWallPaperApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0D0A105F06031860E8B5C3 /* PlumWallPaperApp.swift */; };
 		40C249A58D39E6FCC2F229B2 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63BF896F956B8DE0C2AE1363 /* HomeView.swift */; };
+		57771A5C8A9738B020222518 /* CormorantGaramond-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 86E26610109B5C3DDAA74367 /* CormorantGaramond-Italic.ttf */; };
 		665A6C328A895BFF05A5445A /* ThumbnailGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBE5FA06BA9E7ED726E742D2 /* ThumbnailGenerator.swift */; };
 		6FD6A307965E6F262777B41C /* DesktopBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA7A59EE5402C77BB64071F5 /* DesktopBridge.swift */; };
 		71FBC63BEA5F27C41E73CB10 /* WallpaperStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 094BEBCC84E89952400E6597 /* WallpaperStore.swift */; };
+		751AE8DA0570ECF906AF9F12 /* CormorantGaramond-SemiBoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DBBCF7B95A9750898F118A5E /* CormorantGaramond-SemiBoldItalic.ttf */; };
 		7AEC1B68C77B506566F27D60 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94245DA52FDAC92EE0B44D07 /* AppViewModel.swift */; };
 		7CD1F7829CC15AA754C35D33 /* WallpaperEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12EF93D3B27543CA2501881C /* WallpaperEngine.swift */; };
 		965E61C15BDCE3C2A55FC3C4 /* FilterPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62C0ACECCC1562A5452D9243 /* FilterPreset.swift */; };
@@ -28,11 +31,10 @@
 		C2B10CCE260388AE6BE016A3 /* WallpaperRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B057F6896210D905F09D6232 /* WallpaperRenderer.swift */; };
 		CB03EEFF3CF61B5E0B642B6E /* WallpaperDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BCF687F784BF6D89DEE79E /* WallpaperDetailView.swift */; };
 		DCC9B622188F96F0D66BAA70 /* MonitorSelectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37D0A7603EAF8FA9FE4DDD4C /* MonitorSelectorView.swift */; };
+		DDA81C4F27C6B78C2884DC38 /* AdjustComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D72A46B6F183C459421CE447 /* AdjustComponents.swift */; };
 		E8C72A9C265FA2D818F8FDBE /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 129CEDAF6288357D04AC00D7 /* Theme.swift */; };
 		F334E4A5ADD5FF1A64363891 /* DisplayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ADB412413EAC0832E173D7D /* DisplayManager.swift */; };
 		F43FDE1B9A058397730912A9 /* PreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C772358D777023DF5DDA0881 /* PreferencesStore.swift */; };
-		AA11BB22CC33DD44EE55FF66 /* AdjustComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF67 /* AdjustComponents.swift */; };
-		BB22CC33DD44EE55FF66AA11 /* EdgeBorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF66AA12 /* EdgeBorder.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,20 +51,22 @@
 		63BF896F956B8DE0C2AE1363 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		68FD1249A087B43D5360D439 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		6ADB412413EAC0832E173D7D /* DisplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayManager.swift; sourceTree = "<group>"; };
+		86E26610109B5C3DDAA74367 /* CormorantGaramond-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CormorantGaramond-Italic.ttf"; sourceTree = "<group>"; };
 		94245DA52FDAC92EE0B44D07 /* AppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel.swift; sourceTree = "<group>"; };
 		AA7A59EE5402C77BB64071F5 /* DesktopBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopBridge.swift; sourceTree = "<group>"; };
 		ACF1C1D9BC347E282F5C2F06 /* Tag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tag.swift; sourceTree = "<group>"; };
 		B057F6896210D905F09D6232 /* WallpaperRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperRenderer.swift; sourceTree = "<group>"; };
 		B0823F5D57978191B355D159 /* FileImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileImporter.swift; sourceTree = "<group>"; };
 		B4A261413E16AFB752D01B79 /* FilterEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterEngine.swift; sourceTree = "<group>"; };
+		BA373EA0799BA29543D08C55 /* EdgeBorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeBorder.swift; sourceTree = "<group>"; };
 		BBE5FA06BA9E7ED726E742D2 /* ThumbnailGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailGenerator.swift; sourceTree = "<group>"; };
 		C5ACA543E101FECACD5CA1D7 /* Wallpaper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wallpaper.swift; sourceTree = "<group>"; };
 		C772358D777023DF5DDA0881 /* PreferencesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesStore.swift; sourceTree = "<group>"; };
 		CC0D0A105F06031860E8B5C3 /* PlumWallPaperApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlumWallPaperApp.swift; sourceTree = "<group>"; };
+		D72A46B6F183C459421CE447 /* AdjustComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustComponents.swift; sourceTree = "<group>"; };
+		DBBCF7B95A9750898F118A5E /* CormorantGaramond-SemiBoldItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CormorantGaramond-SemiBoldItalic.ttf"; sourceTree = "<group>"; };
 		DC71A3853630F86F1CF1A2FA /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		F831A3D8DFBF129BC31B3368 /* RestoreManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestoreManager.swift; sourceTree = "<group>"; };
-		AA11BB22CC33DD44EE55FF67 /* AdjustComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustComponents.swift; sourceTree = "<group>"; };
-		BB22CC33DD44EE55FF66AA12 /* EdgeBorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeBorder.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -71,19 +75,18 @@
 			children = (
 				94245DA52FDAC92EE0B44D07 /* AppViewModel.swift */,
 				129CEDAF6288357D04AC00D7 /* Theme.swift */,
-				CC44DD55EE66FF77AA88BB01 /* Components */,
+				8D18D64724F75E53491BF2B0 /* Components */,
 				C5DF5344E4358E1476CE376B /* Views */,
 			);
 			path = UI;
 			sourceTree = "<group>";
 		};
-		CC44DD55EE66FF77AA88BB01 /* Components */ = {
+		1B035FF823EEDBCCB8EE65AE /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				AA11BB22CC33DD44EE55FF67 /* AdjustComponents.swift */,
-				BB22CC33DD44EE55FF66AA12 /* EdgeBorder.swift */,
+				E9D02966C16502E2484E688C /* Fonts */,
 			);
-			path = Components;
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		207B8F83D9CEA4C681DBA9AB /* Products */ = {
@@ -140,6 +143,15 @@
 			path = WallpaperEngine;
 			sourceTree = "<group>";
 		};
+		8D18D64724F75E53491BF2B0 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				D72A46B6F183C459421CE447 /* AdjustComponents.swift */,
+				BA373EA0799BA29543D08C55 /* EdgeBorder.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
 		C5DF5344E4358E1476CE376B /* Views */ = {
 			isa = PBXGroup;
 			children = (
@@ -159,6 +171,7 @@
 			children = (
 				33948DCF99565DEC4FEF469D /* App */,
 				350B3A361D4B60897435CC32 /* Core */,
+				1B035FF823EEDBCCB8EE65AE /* Resources */,
 				F5F01C22EC0668E59DE3D0FE /* Storage */,
 				525A9B69F36C1BF6E81D6844 /* System */,
 				0C21D03227FF232BA7FB1423 /* UI */,
@@ -185,6 +198,15 @@
 			);
 			sourceTree = "<group>";
 		};
+		E9D02966C16502E2484E688C /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				86E26610109B5C3DDAA74367 /* CormorantGaramond-Italic.ttf */,
+				DBBCF7B95A9750898F118A5E /* CormorantGaramond-SemiBoldItalic.ttf */,
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
 		F5F01C22EC0668E59DE3D0FE /* Storage */ = {
 			isa = PBXGroup;
 			children = (
@@ -203,6 +225,7 @@
 			buildConfigurationList = 8738315FC56C4DF298609E39 /* Build configuration list for PBXNativeTarget "PlumWallPaper" */;
 			buildPhases = (
 				C9EC7DDABBE62CC1A8E2D11E /* Sources */,
+				AA5DAFB799C8AD217CDFFED5 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -248,15 +271,29 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		AA5DAFB799C8AD217CDFFED5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				57771A5C8A9738B020222518 /* CormorantGaramond-Italic.ttf in Resources */,
+				751AE8DA0570ECF906AF9F12 /* CormorantGaramond-SemiBoldItalic.ttf in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		C9EC7DDABBE62CC1A8E2D11E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DDA81C4F27C6B78C2884DC38 /* AdjustComponents.swift in Sources */,
 				7AEC1B68C77B506566F27D60 /* AppViewModel.swift in Sources */,
 				B368CE94FDAD07831E473AD7 /* ColorAdjustView.swift in Sources */,
 				6FD6A307965E6F262777B41C /* DesktopBridge.swift in Sources */,
 				F334E4A5ADD5FF1A64363891 /* DisplayManager.swift in Sources */,
+				1C1F1F6C49F581D0640DEDD1 /* EdgeBorder.swift in Sources */,
 				1AFC146A2EB65DAF577B34E8 /* FileImporter.swift in Sources */,
 				9EB770A81DF47B9F794F27E9 /* FilterEngine.swift in Sources */,
 				965E61C15BDCE3C2A55FC3C4 /* FilterPreset.swift in Sources */,
@@ -277,8 +314,6 @@
 				7CD1F7829CC15AA754C35D33 /* WallpaperEngine.swift in Sources */,
 				C2B10CCE260388AE6BE016A3 /* WallpaperRenderer.swift in Sources */,
 				71FBC63BEA5F27C41E73CB10 /* WallpaperStore.swift in Sources */,
-				AA11BB22CC33DD44EE55FF66 /* AdjustComponents.swift in Sources */,
-				BB22CC33DD44EE55FF66AA11 /* EdgeBorder.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -296,6 +331,11 @@
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_GENERATION_MODE = GeneratedFile;
+				INFOPLIST_KEY_ATSApplicationFontsPath = Fonts;
+				INFOPLIST_KEY_UIAppFonts = (
+					"CormorantGaramond-Italic.ttf",
+					"CormorantGaramond-SemiBoldItalic.ttf",
+				);
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -437,6 +477,11 @@
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_GENERATION_MODE = GeneratedFile;
+				INFOPLIST_KEY_ATSApplicationFontsPath = Fonts;
+				INFOPLIST_KEY_UIAppFonts = (
+					"CormorantGaramond-Italic.ttf",
+					"CormorantGaramond-SemiBoldItalic.ttf",
+				);
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

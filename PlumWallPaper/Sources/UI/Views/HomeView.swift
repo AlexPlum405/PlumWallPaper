@@ -7,6 +7,7 @@ struct HomeView: View {
     @Query(sort: \Wallpaper.importDate, order: .reverse) private var wallpapers: [Wallpaper]
     
     @State private var activeId: UUID? = nil
+    @Namespace private var animation
     
     var activeWallpaper: Wallpaper? {
         if let id = activeId {
@@ -18,126 +19,161 @@ struct HomeView: View {
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 0) {
-                // --- Hero Section (极致沉浸) ---
+                // --- Hero Section (100% 原型还原) ---
                 ZStack(alignment: .bottomLeading) {
-                    // 背景
-                    Group {
+                    // 1. 背景层 (带 1.2s 缓动切换感，通过视图状态控制)
+                    ZStack {
                         if let wallpaper = activeWallpaper,
                            let thumbData = try? Data(contentsOf: URL(fileURLWithPath: wallpaper.thumbnailPath)),
                            let nsImage = NSImage(data: thumbData) {
                             Image(nsImage: nsImage)
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
+                                .transition(.opacity.animation(.easeInOut(duration: 1.2)))
+                                .id(wallpaper.id)
                         } else {
                             Color.black
                         }
                     }
-                    .frame(height: 720)
+                    .frame(height: 850)
                     .clipped()
+                    // 2. 渐变叠加 (原型中的双层渐变)
                     .overlay(
-                        LinearGradient(
-                            stops: [
-                                .init(color: .clear, location: 0),
-                                .init(color: Theme.bg.opacity(0.8), location: 0.6),
-                                .init(color: Theme.bg, location: 1.0)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
+                        ZStack {
+                            LinearGradient(
+                                stops: [
+                                    .init(color: .clear, location: 0.5),
+                                    .init(color: Theme.bg, location: 1.0)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        }
                     )
                     
-                    // 信息层
+                    // 3. 内容层
                     if let wallpaper = activeWallpaper {
-                        VStack(alignment: .leading, spacing: 28) {
-                            Text(wallpaper.tags.first?.name.uppercased() ?? "PREMIUM")
-                                .font(.system(size: 11, weight: .black))
-                                .tracking(3)
-                                .foregroundColor(Theme.accent)
+                        VStack(alignment: .leading, spacing: 0) {
+                            HStack(spacing: 8) {
+                                Text("Jewel Curated ·")
+                                    .font(Theme.Fonts.ui(size: 12, weight: .semibold))
+                                Text(wallpaper.tags.first?.name.uppercased() ?? "NATURAL")
+                                    .font(Theme.Fonts.ui(size: 12, weight: .semibold))
+                            }
+                            .foregroundColor(Theme.accent)
+                            .tracking(3)
+                            .padding(.bottom, 16)
                             
                             Text(wallpaper.name)
                                 .font(Theme.Fonts.display(size: 84))
+                                .fontWeight(.medium)
                                 .italic()
-                                .lineLimit(1)
-                                .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+                                .foregroundColor(.white)
+                                .padding(.bottom, 24)
+                                .shadow(color: .black.opacity(0.3), radius: 30, x: 0, y: 10)
                             
-                            HStack(spacing: 24) {
-                                Label(wallpaper.resolution, systemImage: "video.fill")
-                                Label(ByteCountFormatter.string(fromByteCount: wallpaper.fileSize, countStyle: .file), systemImage: "sdcard.fill")
+                            HStack(spacing: 40) {
+                                Text("TYPE: \(wallpaper.type == .video ? "VIDEO" : "HEIC")")
+                                Text("RES: \(wallpaper.resolution)")
+                                Text("SIZE: \(ByteCountFormatter.string(fromByteCount: wallpaper.fileSize, countStyle: .file))")
                                 if let duration = wallpaper.duration {
-                                    Label(formatDuration(duration), systemImage: "clock.fill")
+                                    Text("TIME: \(formatDuration(duration))")
                                 }
                             }
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.white.opacity(0.35))
+                            .font(Theme.Fonts.ui(size: 13))
+                            .foregroundColor(.white.opacity(0.4))
+                            .tracking(1)
+                            .padding(.bottom, 40)
                             
                             HStack(spacing: 16) {
                                 Button(action: { setWallpaper(wallpaper) }) {
                                     Text("设为壁纸")
-                                        .font(.system(size: 14, weight: .bold))
+                                        .font(Theme.Fonts.ui(size: 14, weight: .bold))
                                         .padding(.horizontal, 36)
                                         .padding(.vertical, 14)
                                         .background(Color.white)
                                         .foregroundColor(.black)
                                         .cornerRadius(12)
-                                        .shadow(color: .white.opacity(0.2), radius: 20, x: 0, y: 10)
                                 }
                                 .buttonStyle(PlainButtonStyle())
                                 
                                 Button(action: { toggleFavorite(wallpaper) }) {
-                                    Image(systemName: wallpaper.isFavorite ? "heart.fill" : "heart")
-                                        .font(.system(size: 18))
-                                        .foregroundColor(wallpaper.isFavorite ? Theme.accent : .white)
-                                        .padding(14)
-                                        .background(Theme.glassHeavy)
-                                        .plumGlass(cornerRadius: 12)
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "heart.fill")
+                                        Text("收藏")
+                                    }
+                                    .font(Theme.Fonts.ui(size: 14, weight: .bold))
+                                    .padding(.horizontal, 24)
+                                    .padding(.vertical, 14)
+                                    .background(Theme.glassHeavy)
+                                    .plumGlass(cornerRadius: 12)
                                 }
                                 .buttonStyle(PlainButtonStyle())
                             }
                         }
                         .padding(.leading, 80)
-                        .padding(.bottom, 200)
+                        .padding(.bottom, 260) // 为缩略图条腾出空间
                     }
                     
-                    // --- 物理判定缩略图条 ---
+                    // 4. 浮动缩略图条 (横向滚动 + 激活高亮)
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 20) {
+                        HStack(spacing: 16) {
                             ForEach(wallpapers.prefix(10)) { w in
                                 ThumbCard(
                                     thumbnailPath: w.thumbnailPath,
                                     isActive: (activeId ?? wallpapers.first?.id) == w.id,
-                                    onSelect: { activeId = w.id }
+                                    onSelect: { 
+                                        withAnimation(.easeInOut(duration: 0.6)) { activeId = w.id }
+                                    }
                                 )
                             }
                         }
                         .padding(.horizontal, 80)
                     }
-                    .padding(.bottom, 48)
+                    .padding(.bottom, 40)
                 }
-                .frame(height: 720)
+                .frame(height: 850)
                 
-                // --- Grid Section ---
-                VStack(alignment: .leading, spacing: 40) {
-                    HStack(alignment: .lastTextBaseline) {
-                        Text("最近添加")
-                            .font(Theme.Fonts.display(size: 36))
-                        Spacer()
-                        Text("查看全部")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(Theme.accent)
-                    }
-                    
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 32)], spacing: 40) {
-                        ForEach(wallpapers.prefix(8)) { wallpaper in
-                            WallpaperGridCard(wallpaper: wallpaper)
-                        }
+                // --- Grid Sections (最近添加, 收藏等) ---
+                VStack(spacing: 100) {
+                    renderSection(title: "最近添加", items: wallpapers.prefix(4))
+                    if let favs = try? wallpapers.filter({ $0.isFavorite }).prefix(4), !favs.isEmpty {
+                        renderSection(title: "收藏的作品", items: Array(favs))
                     }
                 }
-                .padding(80)
+                .padding(.top, 80)
+                .padding(.horizontal, 80)
+                .padding(.bottom, 140)
                 .background(Theme.bg)
             }
         }
         .background(Theme.bg)
         .edgesIgnoringSafeArea(.all)
+    }
+    
+    @ViewBuilder
+    func renderSection(title: String, items: some Collection<Wallpaper>) -> some View {
+        VStack(alignment: .leading, spacing: 32) {
+            HStack(alignment: .center) {
+                Text(title)
+                    .font(Theme.Fonts.display(size: 38))
+                    .italic()
+                    .fontWeight(.medium)
+                Spacer()
+                HStack(spacing: 8) {
+                    Text("查看全部")
+                    Image(systemName: "play.fill").font(.system(size: 10))
+                }
+                .font(Theme.Fonts.ui(size: 13))
+                .foregroundColor(.white.opacity(0.25))
+            }
+            
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 32), GridItem(.flexible(), spacing: 32), GridItem(.flexible(), spacing: 32), GridItem(.flexible(), spacing: 32)], spacing: 32) {
+                ForEach(Array(items.enumerated()), id: \.offset) { index, wallpaper in
+                    WallpaperGridCard(wallpaper: wallpaper, isNew: title == "最近添加")
+                }
+            }
+        }
     }
     
     // --- 逻辑 ---
@@ -159,90 +195,131 @@ struct HomeView: View {
     }
 }
 
+// --- 组件还原 ---
+
 struct ThumbCard: View {
     let thumbnailPath: String
     let isActive: Bool
     let onSelect: () -> Void
     
-    @State private var dragDistance: CGFloat = 0
-    
     var body: some View {
-        Group {
-            if let thumbData = try? Data(contentsOf: URL(fileURLWithPath: thumbnailPath)),
-               let nsImage = NSImage(data: thumbData) {
-                Image(nsImage: nsImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else {
-                Color.white.opacity(0.05)
-            }
-        }
-        .frame(width: 220, height: 124)
-        .cornerRadius(14)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(isActive ? Color.white : Color.clear, lineWidth: 2)
-        )
-        .shadow(color: isActive ? .white.opacity(0.1) : .clear, radius: 20)
-        .opacity(isActive ? 1 : 0.4)
-        .scaleEffect(isActive ? 1.02 : 1.0)
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { val in dragDistance = sqrt(pow(val.translation.width, 2) + pow(val.translation.height, 2)) }
-                .onEnded { _ in
-                    if dragDistance < 5 {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { onSelect() }
-                    }
-                    dragDistance = 0
+        Button(action: onSelect) {
+            Group {
+                if let thumbData = try? Data(contentsOf: URL(fileURLWithPath: thumbnailPath)),
+                   let nsImage = NSImage(data: thumbData) {
+                    Image(nsImage: nsImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    Color.white.opacity(0.05)
                 }
-        )
+            }
+            .frame(width: 160, height: 90)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isActive ? Color.white : Color.white.opacity(0.1), lineWidth: isActive ? 2 : 1)
+            )
+            .opacity(isActive ? 1.0 : 0.4)
+            .scaleEffect(isActive ? 1.0 : 0.98)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
 struct WallpaperGridCard: View {
     let wallpaper: Wallpaper
+    let isNew: Bool
     @State private var isHovered = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 18) {
             ZStack {
-                if let thumbData = try? Data(contentsOf: URL(fileURLWithPath: wallpaper.thumbnailPath)),
-                   let nsImage = NSImage(data: thumbData) {
-                    Image(nsImage: nsImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(maxWidth: .infinity)
-                        .aspectRatio(16/9, contentMode: .fit)
-                        .cornerRadius(18)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 18)
-                                .stroke(isHovered ? Color.white.opacity(0.2) : Theme.border, lineWidth: 1)
-                        )
-                }
+                // Aura Glow 背景
+                RadialGradient(colors: [Theme.accent.opacity(0.3), .clear], center: .center, startRadius: 0, endRadius: 180)
+                    .blur(radius: 40)
+                    .scaleEffect(isHovered ? 1.2 : 0.8)
+                    .opacity(isHovered ? 1 : 0)
+                    .frame(width: 300, height: 200)
                 
-                Image(systemName: "play.fill")
-                    .font(.system(size: 32))
-                    .foregroundColor(.white)
-                    .opacity(isHovered ? 0.8 : 0.15)
-                    .scaleEffect(isHovered ? 1.1 : 1.0)
+                // 封面容器
+                ZStack(alignment: .topLeading) {
+                    if let thumbData = try? Data(contentsOf: URL(fileURLWithPath: wallpaper.thumbnailPath)),
+                       let nsImage = NSImage(data: thumbData) {
+                        Image(nsImage: nsImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(maxWidth: .infinity)
+                            .aspectRatio(16/9, contentMode: .fit)
+                            .cornerRadius(24)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 24)
+                                    .stroke(isHovered ? Color.white.opacity(0.25) : Color.white.opacity(0.08), lineWidth: 1)
+                            )
+                            .shadow(color: .black.opacity(isHovered ? 0.6 : 0.2), radius: isHovered ? 40 : 20, x: 0, y: 10)
+                    }
+                    
+                    if isNew {
+                        Text("NEW")
+                            .font(Theme.Fonts.ui(size: 9, weight: .black))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Theme.accent)
+                            .cornerRadius(6)
+                            .padding(16)
+                            .shadow(color: Theme.accent.opacity(0.4), radius: 10)
+                    }
+                    
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Spacer()
+                            HStack(spacing: 6) {
+                                Text(ByteCountFormatter.string(fromByteCount: wallpaper.fileSize, countStyle: .file))
+                                if let duration = wallpaper.duration {
+                                    Text(formatDuration(duration))
+                                }
+                            }
+                            .font(Theme.Fonts.ui(size: 10, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.7))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color.black.opacity(0.4))
+                            .blur(radius: 0.1) // 模拟毛玻璃感
+                            .cornerRadius(10)
+                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                            .padding(16)
+                        }
+                    }
+                }
+                .scaleEffect(isHovered ? 1.03 : 1.0)
             }
-            .scaleEffect(isHovered ? 1.02 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
+            .animation(.interactiveSpring(response: 0.5, dampingFraction: 0.8), value: isHovered)
             .onHover { isHovered = $0 }
             
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(wallpaper.name)
-                        .font(.system(size: 16, weight: .bold))
-                    Text("\(wallpaper.resolution) · \(wallpaper.type == .video ? "VIDEO" : "HEIC")")
-                        .font(.system(size: 11, weight: .black))
-                        .foregroundColor(.white.opacity(0.3))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(wallpaper.name)
+                    .font(Theme.Fonts.ui(size: 17, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.9))
+                
+                HStack(spacing: 8) {
+                    Text(wallpaper.resolution)
+                    Circle().frame(width: 3, height: 3).opacity(0.2)
+                    Text(wallpaper.type == .video ? "VIDEO" : "HEIC")
                 }
-                Spacer()
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.white.opacity(0.2))
+                .font(Theme.Fonts.ui(size: 13))
+                .foregroundColor(.white.opacity(0.3))
             }
+            .padding(.horizontal, 4)
         }
+    }
+    
+    func formatDuration(_ duration: TimeInterval) -> String {
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = [.minute, .second]
+        formatter.unitsStyle = .positional
+        formatter.zeroFormattingBehavior = .pad
+        return formatter.string(from: duration) ?? "00:00"
     }
 }

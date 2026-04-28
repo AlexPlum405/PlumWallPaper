@@ -29,3 +29,8 @@ targets:
         CODE_SIGN_STYLE: Automatic
         ENABLE_APP_SANDBOX: "NO"
         COMBINE_HIDPI_IMAGES: "YES"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_ATSApplicationFontsPath: "Fonts"
+        INFOPLIST_KEY_UIAppFonts: 
+          - CormorantGaramond-Italic.ttf
+          - CormorantGaramond-SemiBoldItalic.ttf
