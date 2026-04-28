@@ -623,10 +623,10 @@
                 { l: '设为壁纸', i: 'monitor', a: () => { onSetWallpaper(contextMenu.w); setContextMenu(null); } },
                 { l: '进入色彩调节', i: 'sliders', a: () => { onEditColor(contextMenu.w); setContextMenu(null); } },
                 { l: '全屏预览', i: 'search', a: () => { onPreview(contextMenu.w); setContextMenu(null); } },
-                { l: '收藏该壁纸', i: 'heart', a: () => { onToggleFavorite(contextMenu.w); setContextMenu(null); } },
+                { l: '收藏该壁纸', i: 'heart', a: () => { console.log('[Menu] Toggle favorite:', contextMenu.w.id); onToggleFavorite(contextMenu.w); setContextMenu(null); } },
                 { type: 'sep' },
                 { l: '在访达中显示', i: 'monitor', a: () => { bridge.call('revealInFinder', { wallpaperId: contextMenu.w.id }); setContextMenu(null); } },
-                { l: '移除该资源', i: 'close', a: () => { onDelete(contextMenu.w); setContextMenu(null); }, c: '#ff4d4d' },
+                { l: '移除该资源', i: 'close', a: () => { console.log('[Menu] Delete wallpaper:', contextMenu.w.id); onDelete(contextMenu.w); setContextMenu(null); }, c: '#ff4d4d' },
               ].map((it, idx) => it.type === 'sep' ? (
                 <div key={idx} style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '4px 8px' }} />
               ) : (
@@ -1346,20 +1346,33 @@
       };
 
       const handleToggleFavorite = (wallpaper) => {
-        bridge.call('toggleFavorite', { wallpaperId: wallpaper.id }).then(() => {
-          refreshWallpapers();
+        console.log('[Favorite] Toggling favorite for:', wallpaper.id, wallpaper.name);
+        bridge.call('toggleFavorite', { wallpaperId: wallpaper.id }).then((result) => {
+          console.log('[Favorite] Toggle result:', result);
+          return refreshWallpapers();
+        }).then(() => {
+          console.log('[Favorite] Refresh complete');
+        }).catch((err) => {
+          console.error('[Favorite] Error:', err);
+          addToast('操作失败: ' + err.message);
         });
       };
 
       const handleDelete = (wallpaper) => {
+        console.log('[Delete] Starting delete for wallpaper:', wallpaper.id, wallpaper.name);
         bridge.call('deleteWallpaper', { wallpaperId: wallpaper.id }).then(() => {
+          console.log('[Delete] Delete successful, refreshing...');
           // 如果删除的是当前 hero，重置索引
           if (wallpapers[heroIndex]?.id === wallpaper.id) {
             setHeroIndex(0);
           }
           return refreshWallpapers();
         }).then(() => {
+          console.log('[Delete] Refresh complete');
           addToast('已从库中移除');
+        }).catch((err) => {
+          console.error('[Delete] Error:', err);
+          addToast('删除失败: ' + err.message);
         });
       };
 
