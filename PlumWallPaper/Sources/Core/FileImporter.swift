@@ -28,6 +28,7 @@ final class FileImporter {
         let thumbnailPath = try await ThumbnailGenerator.shared.generateThumbnail(for: url, type: type)
         let resolution = try await detectResolution(for: url, type: type)
         let duration = try await detectDuration(for: url, type: type)
+        let hasAudio = try await detectAudio(for: url, type: type)
 
         return Wallpaper(
             name: url.deletingPathExtension().lastPathComponent,
@@ -37,7 +38,8 @@ final class FileImporter {
             fileSize: fileSize,
             duration: duration,
             thumbnailPath: thumbnailPath,
-            fileHash: fileHash
+            fileHash: fileHash,
+            hasAudio: hasAudio
         )
     }
 
@@ -69,6 +71,48 @@ final class FileImporter {
         let asset = AVAsset(url: url)
         let duration = try await asset.load(.duration)
         return CMTimeGetSeconds(duration)
+    }
+
+    private func detectAudio(for url: URL, type: WallpaperType) async throws -> Bool {
+        guard type == .video else { return false }
+        let asset = AVAsset(url: url)
+        let audioTracks = try await asset.loadTracks(withMediaType: .audio)
+        guard let track = audioTracks.first else { return false }
+
+        guard let reader = try? AVAssetReader(asset: asset) else { return false }
+        let settings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVLinearPCMIsFloatKey: true,
+            AVLinearPCMBitDepthKey: 32,
+            AVNumberOfChannelsKey: 1
+        ]
+        let output = AVAssetReaderTrackOutput(track: track, outputSettings: settings)
+        reader.add(output)
+        reader.startReading()
+
+        let silenceThreshold: Float = 0.001
+        var samplesChecked = 0
+        let maxSamples = 48000 * 3
+
+        while reader.status == .reading, samplesChecked < maxSamples {
+            guard let buffer = output.copyNextSampleBuffer(),
+                  let blockBuffer = CMSampleBufferGetDataBuffer(buffer) else { break }
+            var length = 0
+            var dataPointer: UnsafeMutablePointer<Int8>?
+            CMBlockBufferGetDataPointer(blockBuffer, atOffset: 0, lengthAtOffsetOut: nil, totalLengthOut: &length, dataPointerOut: &dataPointer)
+            guard let ptr = dataPointer else { continue }
+            let floatCount = length / MemoryLayout<Float>.size
+            let floatPtr = ptr.withMemoryRebound(to: Float.self, capacity: floatCount) { $0 }
+            for i in 0..<floatCount {
+                if abs(floatPtr[i]) > silenceThreshold {
+                    reader.cancelReading()
+                    return true
+                }
+            }
+            samplesChecked += floatCount
+        }
+        reader.cancelReading()
+        return false
     }
 
     func quickHash(url: URL) async throws -> String {

@@ -55,6 +55,9 @@ final class Wallpaper {
     /// 文件哈希（用于重复检测）
     var fileHash: String
 
+    /// 是否包含音频轨道
+    var hasAudio: Bool?
+
     init(
         id: UUID = UUID(),
         name: String,
@@ -69,7 +72,8 @@ final class Wallpaper {
         importDate: Date = Date(),
         lastUsedDate: Date? = nil,
         filterPreset: FilterPreset? = nil,
-        fileHash: String
+        fileHash: String,
+        hasAudio: Bool? = nil
     ) {
         self.id = id
         self.name = name
@@ -85,6 +89,7 @@ final class Wallpaper {
         self.lastUsedDate = lastUsedDate
         self.filterPreset = filterPreset
         self.fileHash = fileHash
+        self.hasAudio = hasAudio
     }
 }
 

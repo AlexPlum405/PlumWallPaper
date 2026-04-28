@@ -19,7 +19,7 @@ struct WebViewContainer: NSViewRepresentable {
         Coordinator()
     }
 
-    func makeNSView(context: Context) -> WKWebView {
+    func makeNSView(context: Context) -> NSView {
         let config = WKWebViewConfiguration()
         let contentController = WKUserContentController()
         config.userContentController = contentController
@@ -32,16 +32,41 @@ struct WebViewContainer: NSViewRepresentable {
         webView.isInspectable = true
         webView.navigationDelegate = context.coordinator
         webView.windowCoordinator = context.coordinator
-        webView.registerForDraggedTypes([.fileURL])
-        webView.onDropFiles = { urls in
-            Task { @MainActor in
-                do {
-                    let imported = try await FileImporter.shared.importFiles(urls: urls)
-                    let store = WallpaperStore(modelContext: modelContext)
-                    try store.addWallpapers(imported)
-                    webView.evaluateJavaScript("window.location.reload()") { _, _ in }
-                } catch {
-                    NSLog("[WebView] Drop import failed: %@", error.localizedDescription)
+
+        let containerView = DropEnabledContainerView(webView: webView)
+        containerView.onDropFiles = { urls in
+            NSLog("[DRAG-L3-CALLBACK] onDropFiles fired with %d URLs", urls.count)
+            let payload = urls.map { ["path": $0.path, "name": $0.deletingPathExtension().lastPathComponent] }
+            guard let data = try? JSONSerialization.data(withJSONObject: payload),
+                  let json = String(data: data, encoding: .utf8) else {
+                return
+            }
+
+            let script = """
+            (function() {
+                if (window.__receiveDroppedFiles) {
+                    window.__receiveDroppedFiles(
+                        \(json)
+                    );
+                    return true;
+                }
+                return false;
+            })();
+            """
+
+            webView.evaluateJavaScript(script) { result, _ in
+                if let handled = result as? Bool, handled {
+                    return
+                }
+                Task { @MainActor in
+                    do {
+                        let imported = try await FileImporter.shared.importFiles(urls: urls)
+                        let store = WallpaperStore(modelContext: modelContext)
+                        try store.addWallpapers(imported)
+                        webView.evaluateJavaScript("window.location.reload()") { _, _ in }
+                    } catch {
+                        NSLog("[WebView] Drop import failed: %@", error.localizedDescription)
+                    }
                 }
             }
         }
@@ -84,10 +109,10 @@ struct WebViewContainer: NSViewRepresentable {
             }
         }
 
-        return webView
+        return containerView
     }
 
-    func updateNSView(_ nsView: WKWebView, context: Context) {
+    func updateNSView(_ nsView: NSView, context: Context) {
     }
 
     // MARK: - Coordinator
@@ -211,10 +236,8 @@ struct WebViewContainer: NSViewRepresentable {
 
 @MainActor
 final class DropEnabledWebView: WKWebView {
-    var onDropFiles: (([URL]) -> Void)?
     weak var windowCoordinator: WebViewContainer.Coordinator?
 
-    private static let supportedExtensions: Set<String> = ["mp4", "mov", "m4v", "heic", "heif"]
     private var dragBar: TitlebarDragView?
 
     // Freeze 快照状态
@@ -225,11 +248,32 @@ final class DropEnabledWebView: WKWebView {
     // Resize 边缘
     private static let resizeEdgeThickness: CGFloat = 5
 
+    override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        NSLog("[DRAG-L2-WEBVIEW] draggingEntered → forwarding to superview (superview=%@)", String(describing: superview))
+        return superview?.draggingEntered(sender) ?? []
+    }
+
+    override func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        return superview?.draggingUpdated(sender) ?? []
+    }
+
+    override func prepareForDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        NSLog("[DRAG-L2-WEBVIEW] prepareForDragOperation → forwarding to superview")
+        return superview?.prepareForDragOperation(sender) ?? false
+    }
+
+    override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        NSLog("[DRAG-L2-WEBVIEW] performDragOperation → forwarding to superview")
+        return superview?.performDragOperation(sender) ?? false
+    }
+
     // MARK: - 视图生命周期
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         guard let window = window else { return }
+        registerForDraggedTypes([.fileURL])
+        NSLog("[DRAG-L2-WEBVIEW] viewDidMoveToWindow superview=%@, registered for .fileURL", String(describing: superview))
 
         if let coordinator = windowCoordinator {
             window.delegate = coordinator
@@ -345,15 +389,61 @@ final class DropEnabledWebView: WKWebView {
         unfreezeAfterResize()
     }
 
-    // MARK: - 文件拖拽
+}
+
+// MARK: - DropEnabledContainerView
+
+@MainActor
+final class DropEnabledContainerView: NSView {
+    var onDropFiles: (([URL]) -> Void)?
+    private let webView: WKWebView
+    private static let supportedExtensions: Set<String> = ["mp4", "mov", "m4v", "heic", "heif"]
+
+    init(webView: WKWebView) {
+        self.webView = webView
+        super.init(frame: .zero)
+        registerForDraggedTypes([.fileURL])
+        NSLog("[DRAG-L1-CONTAINER] registered for drag types: fileURL")
+        webView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(webView)
+        NSLayoutConstraint.activate([
+            webView.topAnchor.constraint(equalTo: topAnchor),
+            webView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            webView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            webView.trailingAnchor.constraint(equalTo: trailingAnchor)
+        ])
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
 
     override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        NSLog("[DRAG-L1-CONTAINER] draggingEntered")
+        guard hasValidFiles(sender) else {
+            NSLog("[DRAG-L1-CONTAINER] draggingEntered: no valid files")
+            return []
+        }
+        NSLog("[DRAG-L1-CONTAINER] draggingEntered: valid files, returning .copy")
+        return .copy
+    }
+
+    override func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
         guard hasValidFiles(sender) else { return [] }
         return .copy
     }
 
+    override func prepareForDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        let ok = hasValidFiles(sender)
+        NSLog("[DRAG-L1-CONTAINER] prepareForDragOperation: %@", ok ? "true" : "false")
+        return ok
+    }
+
     override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
-        guard let urls = fileURLs(from: sender), !urls.isEmpty else { return false }
+        NSLog("[DRAG-L1-CONTAINER] performDragOperation")
+        guard let urls = fileURLs(from: sender), !urls.isEmpty else {
+            NSLog("[DRAG-L1-CONTAINER] performDragOperation: no valid URLs")
+            return false
+        }
+        NSLog("[DRAG-L1-CONTAINER] performDragOperation: %@", urls.map(\.lastPathComponent).joined(separator: ", "))
         onDropFiles?(urls)
         return true
     }

@@ -8,13 +8,13 @@
   <style>
     @font-face {
       font-family: 'Cormorant Garamond';
-      src: url('./CormorantGaramond-Italic.ttf') format('truetype');
+      src: url('CormorantGaramond-Italic.ttf') format('truetype');
       font-style: italic;
       font-weight: 300 500;
     }
     @font-face {
       font-family: 'Cormorant Garamond';
-      src: url('./CormorantGaramond-SemiBoldItalic.ttf') format('truetype');
+      src: url('CormorantGaramond-SemiBoldItalic.ttf') format('truetype');
       font-style: italic;
       font-weight: 600 700;
     }
@@ -158,6 +158,20 @@
       return m + ':' + s;
     };
 
+    const n = (val, def) => (typeof val === 'number' ? val : def);
+
+    const getFilterCSS = (fp) => {
+      if (!fp) return 'none';
+      return 'hue-rotate(' + n(fp.hue,0) + 'deg) saturate(' + n(fp.saturation,100) + '%) brightness(' + n(fp.brightness,100) + '%) contrast(' + n(fp.contrast,100) + '%) grayscale(' + n(fp.grayscale,0) + '%) invert(' + n(fp.invert,0) + '%) brightness(' + n(fp.exposure,100) + '%)';
+    };
+
+    const BUILTIN_PRESETS = [
+      { id: 'portra400', name: '柯达 Portra 400', hue: 0, saturation: 80, brightness: 90, contrast: 110, blur: 0, grayscale: 10, invert: 0, exposure: 105, grain: 15, vignette: 20 },
+      { id: 'superia', name: '富士 Superia', hue: 10, saturation: 70, brightness: 105, contrast: 105, blur: 0, grayscale: 0, invert: 0, exposure: 100, grain: 0, vignette: 10 },
+      { id: 'teal-orange', name: '电影青橙', hue: 0, saturation: 120, brightness: 110, contrast: 115, blur: 0, grayscale: 0, invert: 0, exposure: 115, grain: 0, vignette: 0 },
+      { id: 'bw-film', name: '黑白胶片', hue: 0, saturation: 0, brightness: 100, contrast: 120, blur: 0, grayscale: 100, invert: 0, exposure: 110, grain: 20, vignette: 40 },
+    ];
+
     // --- Components ---
 
     const Icon = ({ name, size = 18 }) => {
@@ -166,15 +180,23 @@
         plus: <path d="M12 5v14M5 12h14" />,
         settings: <><circle cx="12" cy="12" r="3" /><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" /></>,
         heart: <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />,
+        'heart-filled': <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />,
         check: <path d="M20 6L9 17l-5-5" />,
         close: <path d="M18 6L6 18M6 6l12 12" />,
         play: <path d="M5 3l14 9-14 9V3z" />,
         image: <><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></>,
         monitor: <><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /></>,
         sliders: <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" />,
+        droplet: <path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z" />,
+        edit: <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />,
+        trash: <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />,
+        'volume-2': <><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07" /></>,
+        'volume-x': <><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></>,
+        'volume-1': <><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.54 8.46a5 5 0 010 7.07" /></>,
       };
+      const isFilled = name === 'heart-filled';
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={isFilled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={isFilled ? '0' : '2'} strokeLinecap="round" strokeLinejoin="round">
           {icons[name]}
         </svg>
       );
@@ -213,7 +235,7 @@
                     )}
 
                     <div style={{ aspectRatio: '16/10', background: '#000', borderRadius: 12, marginBottom: 20, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', position: 'relative' }}>
-                       <img src={wallpaper.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: selectedMonitor === m.id ? 1 : 0.4, transition: '0.6s' }} />
+                       <img src={wallpaper.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: selectedMonitor === m.id ? 1 : 0.4, transition: '0.6s', filter: getFilterCSS(wallpaper.filterPreset) }} />
                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: selectedMonitor === m.id ? 0 : 0.4 }}>
                          <Icon name="monitor" size={48} />
                        </div>
@@ -328,63 +350,145 @@
 
     // --- Pages ---
 
-    const ImportModal = ({ onClose, onStartImport }) => {
-      const fileInputRef = useRef(null);
-      const folderInputRef = useRef(null);
-      const [step, setStep] = useState(1); // 1: Select, 2: Metadata
-      const [meta, setMeta] = useState({ name: 'Ethereal Peaks (Imported)', tag: '自然', fav: false });
+    const ImportModal = ({ onClose, onStartImport, initialFiles = [], customTags = [], onAddCustomTag }) => {
+      const [step, setStep] = useState(initialFiles.length > 0 ? 2 : 1);
+      const [selectedFiles, setSelectedFiles] = useState(initialFiles);
+      const [duplicates, setDuplicates] = useState([]);
+      const [meta, setMeta] = useState({ name: initialFiles.length > 0 ? initialFiles[0].name : '', tag: '自然', fav: false });
+      const [customTag, setCustomTag] = useState('');
+      const [showCustomTag, setShowCustomTag] = useState(false);
+      const [checking, setChecking] = useState(false);
+
+      useEffect(() => {
+        if (initialFiles.length > 0) checkAndGoStep2(initialFiles);
+      }, []);
+
+      useEffect(() => {
+        const builtIn = ['自然', '城市', '动漫', '极简', '暗色', '4K'];
+        setTagOptions([...builtIn, ...customTags.filter(t => !builtIn.includes(t))]);
+      }, [customTags]);
+      const [tagOptions, setTagOptions] = useState(() => {
+        const builtIn = ['自然', '城市', '动漫', '极简', '暗色', '4K'];
+        return [...builtIn, ...customTags.filter(t => !builtIn.includes(t))];
+      });
+
+      const handleSelectFiles = () => {
+        bridge.call('selectFiles').then(files => {
+          if (files && files.length > 0) {
+            setSelectedFiles(files);
+            setMeta(prev => ({ ...prev, name: prev.name || files[0].name }));
+            checkAndGoStep2(files);
+          }
+        }).catch(() => {});
+      };
+
+      const handleSelectFolder = () => {
+        bridge.call('selectFolder').then(files => {
+          if (files && files.length > 0) {
+            setSelectedFiles(files);
+            setMeta(prev => ({ ...prev, name: prev.name || files[0].name }));
+            checkAndGoStep2(files);
+          }
+        }).catch(() => {});
+      };
+
+      const checkAndGoStep2 = (files) => {
+        setChecking(true);
+        const paths = files.map(f => f.path);
+        bridge.call('checkDuplicates', { paths }).then(dupes => {
+          setDuplicates(dupes || []);
+          setChecking(false);
+          setStep(2);
+        }).catch(() => { setChecking(false); setStep(2); });
+      };
+
+      const handleImportClick = () => {
+        if (step === 1) {
+          handleSelectFiles();
+        } else {
+          const tag = showCustomTag && customTag.trim() ? customTag.trim() : meta.tag;
+          const paths = selectedFiles.map(f => f.path);
+          onStartImport(paths, { ...meta, tag });
+        }
+      };
+
+      const handleAddCustomTag = () => {
+        const name = customTag.trim();
+        if (name) {
+          if (!tagOptions.includes(name)) setTagOptions(prev => [...prev, name]);
+          if (onAddCustomTag) onAddCustomTag(name);
+          setMeta({ ...meta, tag: name });
+          setCustomTag('');
+          setShowCustomTag(false);
+        }
+      };
 
       return (
         <div className="animate-in" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(30px)', zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ width: step === 1 ? 640 : 520, background: '#1a1b1e', borderRadius: 28, border: '1px solid var(--glass-border)', overflow: 'hidden', boxShadow: '0 50px 100px rgba(0,0,0,0.6)', transition: '0.4s cubic-bezier(0.2, 1, 0.3, 1)' }}>
+          <div style={{ width: step === 1 ? 640 : 560, background: '#1a1b1e', borderRadius: 28, border: '1px solid var(--glass-border)', overflow: 'hidden', boxShadow: '0 50px 100px rgba(0,0,0,0.6)', transition: '0.4s cubic-bezier(0.2, 1, 0.3, 1)' }}>
             <div style={{ padding: '28px 40px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h2 style={{ fontSize: 22, fontWeight: 600, fontFamily: 'var(--font-display)', fontStyle: 'italic' }}>
                   {step === 1 ? '导入壁纸资源' : '完善壁纸信息'}
                 </h2>
                 <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>
-                  {step === 1 ? '支持 Apple ProRAW, HEIC 及 8K 视频' : '为新资源配置分类与元数据'}
+                  {step === 1 ? '支持 Apple ProRAW, HEIC 及 8K 视频' : `已选择 ${selectedFiles.length} 个文件`}
                 </p>
               </div>
               <button onClick={onClose} className="btn" style={{ borderRadius: '50%', width: 36, height: 36, padding: 0, justifyContent: 'center' }}><Icon name="close" /></button>
             </div>
-            
+
             <div style={{ padding: 40 }}>
               {step === 1 ? (
                 <div className="animate-in">
-                  <div 
-                    onClick={() => fileInputRef.current.click()}
-                    style={{ 
-                      height: 240, borderRadius: 24, 
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      gap: 20, cursor: 'pointer', transition: '0.4s', background: 'rgba(255,255,255,0.02)',
-                      position: 'relative', overflow: 'hidden'
-                    }}
-                    onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
-                    onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
-                  >
-                    {/* Animated Dashed Border */}
-                    <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-                      <rect x="2" y="2" width="calc(100% - 4px)" height="calc(100% - 4px)" rx="22" 
-                        fill="none" stroke="var(--accent)" strokeWidth="2" strokeDasharray="8 8" 
-                        className="animated-dash" opacity="0.3" />
-                    </svg>
-
-                    <div style={{ width: 80, height: 80, background: 'rgba(255,255,255,0.05)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
-                      <Icon name="plus" size={40} />
-                    </div>
-                    <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>在此处添加您的资源</div>
-                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', marginTop: 8 }}>或者拖拽文件到窗口内</div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 32 }}>
-                    <button onClick={() => setStep(2)} className="btn" style={{ height: 50, justifyContent: 'center', borderRadius: 12 }}><Icon name="image" size={18} /> 批量文件</button>
-                    <button onClick={() => setStep(2)} className="btn" style={{ height: 50, justifyContent: 'center', borderRadius: 12 }}><Icon name="monitor" size={18} /> 整包导入</button>
-                  </div>
+                  {checking ? (
+                    <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)' }}>正在检查文件...</div>
+                  ) : (
+                    <>
+                      <div
+                        onClick={handleSelectFiles}
+                        style={{
+                          height: 240, borderRadius: 24,
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                          gap: 20, cursor: 'pointer', transition: '0.4s', background: 'rgba(255,255,255,0.02)',
+                          position: 'relative', overflow: 'hidden'
+                        }}
+                        onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
+                      >
+                        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+                          <rect x="2" y="2" width="99%" height="99%" rx="22"
+                            fill="none" stroke="var(--accent)" strokeWidth="2" strokeDasharray="8 8"
+                            className="animated-dash" opacity="0.3" />
+                        </svg>
+                        <div style={{ width: 80, height: 80, background: 'rgba(255,255,255,0.05)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
+                          <Icon name="plus" size={40} />
+                        </div>
+                        <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+                          <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>在此处添加您的资源</div>
+                          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', marginTop: 8 }}>或者拖拽文件到窗口内</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 32 }}>
+                        <button onClick={handleSelectFiles} className="btn" style={{ height: 50, justifyContent: 'center', borderRadius: 12 }}><Icon name="image" size={18} /> 批量文件</button>
+                        <button onClick={handleSelectFolder} className="btn" style={{ height: 50, justifyContent: 'center', borderRadius: 12 }}><Icon name="monitor" size={18} /> 整包导入</button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                  {duplicates.length > 0 && (
+                    <div style={{ background: 'rgba(224,62,62,0.08)', border: '1px solid rgba(224,62,62,0.2)', borderRadius: 16, padding: '16px 20px' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginBottom: 8 }}>检测到 {duplicates.length} 个重复文件</div>
+                      {duplicates.map(d => (
+                        <div key={d.path} style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>
+                          "{d.name}" 已存在（库中名称: {d.existingName}）
+                        </div>
+                      ))}
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 8 }}>修改下方名称后仍可导入，系统会自动追加编号避免冲突</div>
+                    </div>
+                  )}
                   <div>
                     <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 8 }}>资源名称</div>
                     <input value={meta.name} onChange={e => setMeta({...meta, name: e.target.value})} style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: 12, padding: '12px 16px', color: '#fff', outline: 'none' }} />
@@ -392,15 +496,22 @@
                   <div>
                     <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 12 }}>所属分类标签</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {['自然', '城市', '动漫', '极简', '暗色', '4K'].map(t => (
-                        <div key={t} onClick={() => setMeta({...meta, tag: t})} style={{ 
+                      {tagOptions.map(t => (
+                        <div key={t} onClick={() => { setMeta({...meta, tag: t}); setShowCustomTag(false); }} style={{
                           padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer', transition: '0.2s',
-                          background: meta.tag === t ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
-                          color: meta.tag === t ? '#fff' : 'rgba(255,255,255,0.4)',
-                          border: '1px solid ' + (meta.tag === t ? 'var(--accent)' : 'var(--glass-border)')
+                          background: !showCustomTag && meta.tag === t ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
+                          color: !showCustomTag && meta.tag === t ? '#fff' : 'rgba(255,255,255,0.4)',
+                          border: '1px solid ' + (!showCustomTag && meta.tag === t ? 'var(--accent)' : 'var(--glass-border)')
                         }}>{t}</div>
                       ))}
-                      <div style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'var(--accent)' }}>+ 新增分类</div>
+                      {!showCustomTag ? (
+                        <div onClick={() => setShowCustomTag(true)} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'var(--accent)' }}>+ 新增分类</div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <input autoFocus value={customTag} onChange={e => setCustomTag(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddCustomTag()} placeholder="输入分类名..." style={{ width: 120, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--accent)', borderRadius: 8, padding: '6px 12px', color: '#fff', fontSize: 12, outline: 'none' }} />
+                          <div onClick={handleAddCustomTag} style={{ padding: '6px 10px', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'var(--accent)', color: '#fff' }}>确定</div>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '16px 20px', borderRadius: 16 }}>
@@ -411,20 +522,18 @@
                   </div>
                 </div>
               )}
-              <input type="file" ref={fileInputRef} style={{ display: 'none' }} multiple onChange={() => setStep(2)} />
-              <input type="file" ref={folderInputRef} style={{ display: 'none' }} webkitdirectory="true" onChange={() => setStep(2)} />
             </div>
 
             <div style={{ padding: '24px 40px', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
-                {step === 1 ? '存储路径: /Documents/WallPapers/Library' : '即将导入 1 个资源'}
+                {step === 1 ? '支持 MP4, MOV, M4V, HEIC, HEIF' : `即将导入 ${selectedFiles.length} 个资源`}
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
-                <button onClick={step === 1 ? onClose : () => setStep(1)} className="btn" style={{ padding: '10px 24px' }}>
+                <button onClick={step === 1 ? onClose : () => { setStep(1); setDuplicates([]); }} className="btn" style={{ padding: '10px 24px' }}>
                   {step === 1 ? '取消' : '返回上一步'}
                 </button>
-                <button onClick={onStartImport} className="btn-primary btn" style={{ padding: '10px 32px' }}>
-                  {step === 1 ? '开始分析' : '确认并导入'}
+                <button onClick={handleImportClick} className="btn-primary btn" style={{ padding: '10px 32px' }}>
+                  {step === 1 ? '选择文件' : (duplicates.length > 0 ? '仍然导入' : '确认并导入')}
                 </button>
               </div>
             </div>
@@ -433,37 +542,87 @@
       );
     };
 
-    const PreviewPage = ({ wallpaper, onClose }) => (
+    const PreviewPage = ({ wallpaper, onClose }) => {
+      const [isMuted, setIsMuted] = useState(true);
+      const [volume, setVolume] = useState(0.5);
+      const [showVolSlider, setShowVolSlider] = useState(false);
+      const videoRef = useRef(null);
+
+      useEffect(() => {
+        if (videoRef.current) {
+          videoRef.current.muted = isMuted;
+          videoRef.current.volume = volume;
+        }
+      }, [isMuted, volume]);
+
+      return (
       <div className="animate-in" style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 5000, display: 'flex', flexDirection: 'column' }}>
         <div style={{ position: 'absolute', top: 40, left: 40, right: 40, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', zIndex: 10 }}>
           <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(20px)', padding: '8px 24px', borderRadius: 100, border: '1px solid rgba(255,255,255,0.1)', fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>Immersive Preview</div>
           <button onClick={onClose} className="btn" style={{ borderRadius: '50%', width: 44, height: 44, justifyContent: 'center', background: 'rgba(255,255,255,0.1)', border: 'none', backdropFilter: 'blur(10px)' }}><Icon name="close" /></button>
         </div>
         {wallpaper.type === 'video' ? (
-          <video src={wallpaper.filePath} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <video ref={videoRef} src={wallpaper.filePath} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', filter: getFilterCSS(wallpaper.filterPreset) }} />
         ) : (
-          <img src={wallpaper.filePath} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={wallpaper.filePath} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: getFilterCSS(wallpaper.filterPreset) }} />
         )}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 280, background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-            <span style={{ padding: '4px 12px', background: 'var(--accent)', borderRadius: 6, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{wallpaper.tags && wallpaper.tags[0] && (wallpaper.tags[0].name || wallpaper.tags[0])}</span>
-            {wallpaper.isFavorite && <Icon name="heart" size={14} />}
+            <span style={{ padding: '4px 12px', background: 'var(--accent)', borderRadius: 6, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{wallpaper.tags && wallpaper.tags[0] ? (wallpaper.tags[0].name || String(wallpaper.tags[0])) : ''}</span>
+            {wallpaper.isFavorite && <Icon name="heart-filled" size={14} color="var(--accent)" />}
           </div>
           <h2 style={{ fontSize: 48, fontFamily: 'var(--font-display)', fontStyle: 'italic', marginBottom: 12, letterSpacing: '-0.02em' }}>{wallpaper.name}</h2>
           <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14, fontWeight: 300, letterSpacing: '0.05em' }}>
             {wallpaper.resolution} · {wallpaper.type} · {formatSize(wallpaper.fileSize)} {formatDuration(wallpaper.duration) !== '-' && `· ${formatDuration(wallpaper.duration)}`}
           </p>
         </div>
-      </div>
-    );
 
-    const HomePage = ({ onSetWallpaper, wallpapers, fitMode, onPreview, onEditColor, onToggleFavorite, onDelete }) => {
+        {wallpaper.type === 'video' && wallpaper.hasAudio && (
+          <div style={{ position: 'absolute', bottom: 40, right: 40, zIndex: 20, display: 'flex', alignItems: 'center', gap: 12 }}
+            onMouseEnter={() => setShowVolSlider(true)} onMouseLeave={() => setShowVolSlider(false)}>
+            {showVolSlider && (
+              <div className="animate-in" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(20px)', borderRadius: 10, padding: '8px 16px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input type="range" min={0} max={100} value={Math.round(volume * 100)} onChange={e => { setVolume(e.target.value / 100); if (isMuted) setIsMuted(false); }} style={{ width: 100, accentColor: 'var(--accent)' }} />
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', minWidth: 30, textAlign: 'right' }}>{Math.round(volume * 100)}%</span>
+              </div>
+            )}
+            <button onClick={() => setIsMuted(!isMuted)} className="btn" style={{ borderRadius: '50%', width: 44, height: 44, padding: 0, justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <Icon name={isMuted ? 'volume-x' : 'volume-2'} size={20} />
+            </button>
+          </div>
+        )}
+      </div>
+      );
+    };
+
+    const HomePage = ({ onSetWallpaper, wallpapers, fitMode, onPreview, onEditColor, onToggleFavorite, onDelete, onViewAll }) => {
       const [heroIndex, setHeroIndex] = useState(0);
       const [contextMenu, setContextMenu] = useState(null);
       const hero = wallpapers[heroIndex];
       const scrollContainerRef = useRef(null);
-      
+      const heroVideoRef = useRef(null);
+      const [heroMuted, setHeroMuted] = useState(true);
+
+      useEffect(() => {
+        if (heroVideoRef.current) heroVideoRef.current.muted = heroMuted;
+      }, [heroMuted, heroIndex]);
+
       const [dragState, setDragState] = useState({ isDragging: false, startX: 0, scrollLeft: 0, moved: false });
+
+      const homeSections = useMemo(() => {
+        const favorites = wallpapers.filter(w => w.isFavorite);
+        const recent = wallpapers.slice(0, 6);
+        const tagNames = Array.from(new Set(wallpapers.flatMap(w => (w.tags || []).map(tag => tag.name || String(tag))).filter(Boolean)));
+        const dynamicTags = tagNames.slice(0, 2);
+        const sections = [];
+        if (favorites.length > 0) sections.push({ title: '收藏', items: favorites });
+        if (recent.length > 0) sections.push({ title: '最近添加', items: recent });
+        dynamicTags.forEach(tag => {
+          const items = wallpapers.filter(w => w.tags && w.tags.some(t => (t.name || String(t)) === tag));
+          if (items.length > 0) sections.push({ title: tag, items });
+        });
+        return sections;
+      }, [wallpapers]);
 
       const handleHeroThumbClick = (index) => {
         if (!dragState.moved) setHeroIndex(index);
@@ -509,9 +668,9 @@
           <section style={{ height: '85vh', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
               {hero.type === 'video' ? (
-                <video src={hero.filePath} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover', transition: '1.2s cubic-bezier(0.2, 1, 0.3, 1)' }} />
+                <video ref={heroVideoRef} src={hero.filePath} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover', transition: '1.2s cubic-bezier(0.2, 1, 0.3, 1)', filter: getFilterCSS(hero.filterPreset) }} />
               ) : (
-                <img src={hero.filePath} style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover', transition: '1.2s cubic-bezier(0.2, 1, 0.3, 1)' }} />
+                <img src={hero.filePath} style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover', transition: '1.2s cubic-bezier(0.2, 1, 0.3, 1)', filter: getFilterCSS(hero.filterPreset) }} />
               )}
               
               {/* Noise Overlay - Jewel Texture */}
@@ -525,7 +684,7 @@
             </div>
             
             <div className="animate-in" style={{ position: 'relative', zIndex: 10, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '0 80px 140px' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.4em', textTransform: 'uppercase', marginBottom: 20 }}>Jewel Curated · {hero.tags && hero.tags[0] && (hero.tags[0].name || hero.tags[0])}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.4em', textTransform: 'uppercase', marginBottom: 20 }}>Jewel Curated · {hero.tags && hero.tags[0] ? (hero.tags[0].name || String(hero.tags[0])) : ''}</div>
               <h1 style={{ 
                 fontSize: 92, 
                 fontFamily: 'var(--font-display)', 
@@ -542,11 +701,17 @@
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="monitor" size={14} /> {hero.resolution}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="sliders" size={14} /> {formatSize(hero.fileSize)}</div>
                 {formatDuration(hero.duration) !== '-' && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="play" size={14} /> {formatDuration(hero.duration)}</div>}
+                {hero.hasAudio && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="volume-2" size={14} /> Audio</div>}
               </div>
 
               <div style={{ display: 'flex', gap: 20 }}>
                 <button className="btn-primary btn" style={{ padding: '16px 48px', fontSize: 15, borderRadius: 14 }} onClick={() => onSetWallpaper(hero)}>设为壁纸</button>
-                <button className="btn" style={{ padding: '16px 32px', fontSize: 15, borderRadius: 14, background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(20px)' }} onClick={() => onToggleFavorite && onToggleFavorite(hero)}><Icon name="heart" /> 收藏</button>
+                <button className="btn" style={{ padding: '16px 32px', fontSize: 15, borderRadius: 14, background: hero.isFavorite ? 'var(--accent)' : 'rgba(255,255,255,0.05)', backdropFilter: 'blur(20px)', color: hero.isFavorite ? '#fff' : 'rgba(255,255,255,0.8)' }} onClick={() => onToggleFavorite && onToggleFavorite(hero)}><Icon name={hero.isFavorite ? "heart-filled" : "heart"} /> {hero.isFavorite ? '取消收藏' : '收藏'}</button>
+                {hero.type === 'video' && hero.hasAudio && (
+                  <button className="btn" style={{ width: 56, height: 56, borderRadius: 14, justifyContent: 'center', padding: 0, background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(20px)', color: 'rgba(255,255,255,0.8)' }} onClick={() => setHeroMuted(!heroMuted)}>
+                    <Icon name={heroMuted ? 'volume-x' : 'volume-2'} size={18} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -554,7 +719,7 @@
               <div style={{ display: 'flex', gap: 16, paddingRight: 80 }}>
                 {wallpapers.map((w, i) => (
                   <div key={w.id} onClick={() => handleHeroThumbClick(i)} style={{ flexShrink: 0, width: 160, aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden', cursor: 'pointer', border: heroIndex === i ? '2px solid #fff' : '1px solid rgba(255,255,255,0.1)', opacity: heroIndex === i ? 1 : 0.4, transition: '0.3s' }}>
-                    <img src={w.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
+                    <img src={w.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none', filter: getFilterCSS(w.filterPreset) }} />
                   </div>
                 ))}
               </div>
@@ -563,24 +728,24 @@
 
           {/* Scrolling Sections */}
           <div style={{ padding: '80px 80px 140px', background: '#0d0e12', position: 'relative', zIndex: 30 }}>
-            {['收藏', '最近添加', '自然', '城市'].map((title, sectionIdx) => (
+            {homeSections.map(({ title, items }, sectionIdx) => (
               <div key={title} style={{ marginBottom: 100 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
                   <h2 style={{ fontSize: 38, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500, letterSpacing: '-0.02em' }}>{title}</h2>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', transition: '0.3s' }} className="view-all">
+                  <div onClick={() => onViewAll && onViewAll(title)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', transition: '0.3s' }} className="view-all">
                     <span>查看全部</span>
                     <Icon name="play" size={10} />
                   </div>
                 </div>
-                
+
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
-                  {wallpapers.slice(0, 4).map((w, i) => (
-                    <div 
-                      key={`${title}-${w.id}`} 
-                      className="card-v2" 
-                      onClick={() => onPreview(w)} 
-                      onContextMenu={(e) => handleContextMenu(e, w)} 
-                      style={{ 
+                  {items.slice(0, 4).map((w, i) => (
+                    <div
+                      key={`${title}-${w.id}`}
+                      className="card-v2"
+                      onClick={() => onPreview(w)}
+                      onContextMenu={(e) => handleContextMenu(e, w)}
+                      style={{
                         cursor: 'pointer',
                         animation: `fadeIn 0.8s forwards ${sectionIdx * 0.1 + i * 0.05}s`,
                         opacity: 0,
@@ -600,7 +765,7 @@
                         boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
                         transition: '0.5s cubic-bezier(0.2, 1, 0.3, 1)'
                       }} className="card-container">
-                        <img src={w.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: '0.8s cubic-bezier(0.2, 1, 0.3, 1)' }} className="card-img" />
+                        <img src={w.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: '0.8s cubic-bezier(0.2, 1, 0.3, 1)', filter: getFilterCSS(w.filterPreset) }} className="card-img" />
 
                         {title === '最近添加' && (
                           <div style={{
@@ -610,7 +775,21 @@
                           }}>NEW</div>
                         )}
 
+                        <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: 6, alignItems: 'center' }}>
+                          {w.hasAudio && (
+                            <div style={{ color: 'rgba(255,255,255,0.7)', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.4))' }}>
+                              <Icon name="volume-2" size={14} />
+                            </div>
+                          )}
+                          {w.isFavorite && (
+                            <div style={{ color: 'var(--accent)', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.35))' }}>
+                              <Icon name="heart-filled" size={18} />
+                            </div>
+                          )}
+                        </div>
+
                         <div style={{ position: 'absolute', bottom: 16, right: 16, display: 'flex', gap: 6 }}>
+                           {w.filterPreset && <div style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '5px 10px', borderRadius: 10, fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="droplet" size={9} />{w.filterPreset.name}</div>}
                            <div style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '5px 10px', borderRadius: 10, fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>{formatSize(w.fileSize)}</div>
                            {formatDuration(w.duration) !== '-' && <div style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '5px 10px', borderRadius: 10, fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>{formatDuration(w.duration)}</div>}
                         </div>
@@ -659,9 +838,9 @@
                 { l: '设为壁纸', i: 'monitor', a: () => onSetWallpaper(contextMenu.w) },
                 { l: '进入色彩调节', i: 'sliders', a: () => onEditColor(contextMenu.w) },
                 { l: '全屏预览', i: 'search', a: () => onPreview(contextMenu.w) },
-                { l: '收藏该壁纸', i: 'heart', a: () => onToggleFavorite && onToggleFavorite(contextMenu.w) },
+                { l: contextMenu.w.isFavorite ? '取消收藏' : '收藏该壁纸', i: contextMenu.w.isFavorite ? 'heart-filled' : 'heart', a: () => { onToggleFavorite && onToggleFavorite(contextMenu.w); setContextMenu(null); } },
                 { type: 'sep' },
-                { l: '在访达中显示', i: 'monitor', a: () => {} },
+                { l: '在访达中显示', i: 'monitor', a: () => { bridge.call('revealInFinder', { wallpaperId: contextMenu.w.id }); setContextMenu(null); } },
                 { l: '移除该资源', i: 'close', a: () => onDelete && onDelete(contextMenu.w), c: '#ff4d4d' },
               ].map((it, idx) => it.type === 'sep' ? (
                 <div key={idx} style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '4px 8px' }} />
@@ -681,10 +860,27 @@
       );
     };
 
-    const LibraryPage = ({ wallpapers, setView, onSetWallpaper, onToggleFavorite, onDelete }) => {
+    const LibraryPage = ({ wallpapers, setView, onSetWallpaper, onEditColor, onToggleFavorite, onDelete, initialFilter, sortBy, sortOrder, onChangeSortBy, onToggleSortOrder }) => {
       const [contextMenu, setContextMenu] = useState(null);
       const [showTagManager, setShowTagManager] = useState(false);
-      const [activeFilter, setActiveFilter] = useState('全部');
+      const [showSortMenu, setShowSortMenu] = useState(false);
+      const sortLabels = { importDate: '导入时间', name: '名称', fileSize: '文件大小', resolution: '分辨率', favorite: '收藏优先' };
+      const [activeFilter, setActiveFilter] = useState(initialFilter || '全部');
+
+      const availableFilters = useMemo(() => {
+        const tagNames = Array.from(new Set(
+          wallpapers.flatMap(w => (w.tags || []).map(tag => tag.name || String(tag))).filter(Boolean)
+        ));
+        return ['全部', '收藏', '视频', 'HEIC', ...tagNames];
+      }, [wallpapers]);
+
+      const filteredWallpapers = useMemo(() => {
+        if (activeFilter === '全部') return wallpapers;
+        if (activeFilter === '收藏') return wallpapers.filter(w => w.isFavorite);
+        if (activeFilter === '视频') return wallpapers.filter(w => w.type === 'video');
+        if (activeFilter === 'HEIC') return wallpapers.filter(w => w.type === 'heic');
+        return wallpapers.filter(w => w.tags && w.tags.some(tag => (tag.name || String(tag)) === activeFilter));
+      }, [activeFilter, wallpapers]);
 
       const handleContextMenu = (e, w) => {
         e.preventDefault();
@@ -703,7 +899,7 @@
             <div style={{ flex: 1 }}>
               <h1 style={{ fontSize: 64, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500, letterSpacing: '-0.03em', marginBottom: 32 }}>壁纸库</h1>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                {['全部', '视频', 'HEIC', '自然', '城市', '动漫'].map(tag => (
+                {availableFilters.map(tag => (
                   <div 
                     key={tag} 
                     onClick={() => setActiveFilter(tag)}
@@ -719,16 +915,28 @@
                 ))}
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,0.3)', fontSize: 13, cursor: 'pointer', padding: '8px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', transition: '0.3s' }} onMouseOver={(e) => e.currentTarget.style.color = '#fff'}>
-                <span>按导入时间排序</span>
-                <Icon name="play" size={8} style={{ transform: 'rotate(90deg)', opacity: 0.5 }} />
+            <div style={{ display: 'flex', gap: 12, position: 'relative' }}>
+              <div onClick={() => setShowSortMenu(!showSortMenu)} style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,0.3)', fontSize: 13, cursor: 'pointer', padding: '8px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', transition: '0.3s' }} onMouseOver={(e) => e.currentTarget.style.color = '#fff'} onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}>
+                <span>按{sortLabels[sortBy]}排序</span>
+                <span style={{ fontSize: 10, opacity: 0.5 }}>{sortOrder === 'desc' ? '↓' : '↑'}</span>
               </div>
+              <div onClick={onToggleSortOrder} style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'rgba(255,255,255,0.3)', fontSize: 13, cursor: 'pointer', padding: '8px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', transition: '0.3s' }} onMouseOver={(e) => e.currentTarget.style.color = '#fff'} onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}>
+                {sortOrder === 'desc' ? '倒序' : '顺序'}
+              </div>
+              {showSortMenu && (
+                <div className="animate-in" style={{ position: 'absolute', top: '100%', right: 0, marginTop: 8, width: 200, background: 'rgba(20,21,26,0.95)', backdropFilter: 'blur(40px)', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)', padding: 6, zIndex: 100, boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
+                  {Object.entries(sortLabels).map(([key, label]) => (
+                    <div key={key} onClick={() => { onChangeSortBy(key); setShowSortMenu(false); }} style={{ padding: '10px 14px', borderRadius: 8, fontSize: 13, cursor: 'pointer', transition: '0.15s', color: sortBy === key ? '#fff' : 'rgba(255,255,255,0.5)', background: sortBy === key ? 'rgba(255,255,255,0.08)' : 'transparent', fontWeight: sortBy === key ? 600 : 400 }} className="menu-item">
+                      {label}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 32 }}>
-            {wallpapers.map((w, i) => (
+            {filteredWallpapers.map((w, i) => (
               <div key={w.id} className="library-card-v2" 
                 onDoubleClick={() => setView(w)} 
                 onContextMenu={(e) => handleContextMenu(e, w)}
@@ -751,24 +959,40 @@
                   boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
                   transition: '0.5s cubic-bezier(0.2, 1, 0.3, 1)'
                 }} className="card-container">
-                   <img src={w.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: '0.8s' }} className="card-img" />
+                   <img src={w.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: '0.8s', filter: getFilterCSS(w.filterPreset) }} className="card-img" />
 
                    {/* 悬浮覆盖层 */}
                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.4), transparent)', opacity: 0, transition: '0.3s' }} className="card-overlay" />
 
-                   <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: 8, fontSize: 10, color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>{formatSize(w.fileSize)}</div>
+                   <div style={{ position: 'absolute', bottom: 12, right: 12, display: 'flex', gap: 6 }}>
+                     {w.filterPreset && <div style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: 8, fontSize: 9, color: 'rgba(255,255,255,0.8)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="droplet" size={8} />{w.filterPreset.name}</div>}
+                     <div style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: 8, fontSize: 10, color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>{formatSize(w.fileSize)}</div>
+                   </div>
 
                    {w.type === 'video' && (
                      <div style={{ position: 'absolute', top: 12, right: 12, background: 'var(--accent)', color: '#fff', width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}>
                        <Icon name="play" size={14} />
                      </div>
                    )}
+
+                   <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', gap: 6, alignItems: 'center' }}>
+                     {w.isFavorite && (
+                       <div style={{ color: 'var(--accent)', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.35))' }}>
+                         <Icon name="heart-filled" size={18} />
+                       </div>
+                     )}
+                     {w.hasAudio && (
+                       <div style={{ color: 'rgba(255,255,255,0.75)', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.4))' }}>
+                         <Icon name="volume-2" size={14} />
+                       </div>
+                     )}
+                   </div>
                 </div>
                 <div style={{ padding: '0 4px' }}>
                   <div style={{ fontWeight: 600, fontSize: 16, color: 'rgba(255,255,255,0.9)' }}>{w.name}</div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{w.resolution} · {w.type}</span>
-                    <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4 }}>{w.tags && w.tags[0] && (w.tags[0].name || w.tags[0])}</span>
+                    <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4 }}>{w.tags && w.tags[0] ? (w.tags[0].name || String(w.tags[0])) : ''}</span>
                   </div>
                 </div>
               </div>
@@ -789,11 +1013,12 @@
               </div>
               {[
                 { l: '设为壁纸', i: 'monitor', a: () => onSetWallpaper(contextMenu.w) },
-                { l: '进入色彩调节', i: 'sliders', a: () => setView(contextMenu.w) },
+                { l: '进入色彩调节', i: 'sliders', a: () => { onEditColor && onEditColor(contextMenu.w); setContextMenu(null); } },
                 { l: '编辑分类标签', i: 'plus', a: () => setShowTagManager(true) },
                 { type: 'sep' },
-                { l: '设为收藏', i: 'heart', a: () => onToggleFavorite && onToggleFavorite(contextMenu.w) },
-                { l: '移至回收站', i: 'close', a: () => onDelete && onDelete(contextMenu.w), c: '#ff4d4d' },
+                { l: contextMenu.w.isFavorite ? '取消收藏' : '设为收藏', i: contextMenu.w.isFavorite ? 'heart-filled' : 'heart', a: () => { onToggleFavorite && onToggleFavorite(contextMenu.w); setContextMenu(null); } },
+                { l: '在访达中显示', i: 'monitor', a: () => { bridge.call('revealInFinder', { wallpaperId: contextMenu.w.id }); setContextMenu(null); } },
+                { l: '移至回收站', i: 'close', a: () => { onDelete && onDelete(contextMenu.w); setContextMenu(null); }, c: '#ff4d4d' },
               ].map((it, idx) => it.type === 'sep' ? (
                 <div key={idx} style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '4px 8px' }} />
               ) : (
@@ -845,24 +1070,47 @@
       </div>
     );
 
-    const ColorPage = ({ wallpaper, setView, onSave }) => {
-      const [hue, setHue] = useState(0);
-      const [sat, setSat] = useState(100);
-      const [bri, setBri] = useState(100);
-      const [con, setCon] = useState(100);
-      const [blur, setBlur] = useState(0);
-      const [gray, setGray] = useState(0);
-      const [inv, setInv] = useState(0);
-      const [expo, setExpo] = useState(100);
-      const [grain, setGrain] = useState(0);
-      const [vignette, setVignette] = useState(0);
+    const ColorPage = ({ wallpaper, setView, onSave, savedPresets = [], onSavePreset, onDeletePreset }) => {
+      const fp = wallpaper.filterPreset;
+      const [hue, setHue] = useState(fp ? n(fp.hue, 0) : 0);
+      const [sat, setSat] = useState(fp ? n(fp.saturation, 100) : 100);
+      const [bri, setBri] = useState(fp ? n(fp.brightness, 100) : 100);
+      const [con, setCon] = useState(fp ? n(fp.contrast, 100) : 100);
+      const [blur, setBlur] = useState(fp ? n(fp.blur, 0) : 0);
+      const [gray, setGray] = useState(fp ? n(fp.grayscale, 0) : 0);
+      const [inv, setInv] = useState(fp ? n(fp.invert, 0) : 0);
+      const [expo, setExpo] = useState(fp ? n(fp.exposure, 100) : 100);
+      const [grain, setGrain] = useState(fp ? n(fp.grain, 0) : 0);
+      const [vignette, setVignette] = useState(fp ? n(fp.vignette, 0) : 0);
+      const [currentPresetName, setCurrentPresetName] = useState(fp ? fp.name : '自定义调色');
 
+      const [colorMuted, setColorMuted] = useState(true);
+      const [colorVolume, setColorVolume] = useState(0.5);
       const [showSavePopup, setShowSavePopup] = useState(false);
       const [presetName, setPresetName] = useState('我的自定义色调');
+      const [showAllSaved, setShowAllSaved] = useState(false);
+      const [presetMenu, setPresetMenu] = useState(null);
+      const [editingPreset, setEditingPreset] = useState(null);
+      const [editName, setEditName] = useState('');
+      const [selectedSavedPresetId, setSelectedSavedPresetId] = useState(null);
 
       const mediaRef = useRef(null);
       const canvasRef = useRef(document.createElement('canvas'));
       const [panelTheme, setPanelTheme] = useState({ mode: 'difference', color: '#fff', sub: 'rgba(255,255,255,0.7)', track: 'rgba(255,255,255,0.4)' });
+
+      useEffect(() => {
+        const hide = () => setPresetMenu(null);
+        window.addEventListener('click', hide);
+        return () => window.removeEventListener('click', hide);
+      }, []);
+
+      useEffect(() => {
+        const el = mediaRef.current;
+        if (el && wallpaper.type === 'video') {
+          el.muted = colorMuted;
+          el.volume = colorVolume;
+        }
+      }, [colorMuted, colorVolume, wallpaper.type]);
 
       useEffect(() => {
         let raf;
@@ -916,6 +1164,28 @@
       const reset = () => {
         setHue(0); setSat(100); setBri(100); setCon(100); setBlur(0);
         setGray(0); setInv(0); setExpo(100); setGrain(0); setVignette(0);
+        setCurrentPresetName('自定义调色');
+        setSelectedSavedPresetId(null);
+      };
+
+      const applyPreset = (p) => {
+        setHue(p.hue || 0); setSat(p.saturation != null ? p.saturation : 100);
+        setBri(p.brightness != null ? p.brightness : 100); setCon(p.contrast != null ? p.contrast : 100);
+        setBlur(p.blur || 0); setGray(p.grayscale || 0); setInv(p.invert || 0);
+        setExpo(p.exposure != null ? p.exposure : 100); setGrain(p.grain || 0); setVignette(p.vignette || 0);
+        setCurrentPresetName(p.name);
+        setSelectedSavedPresetId(p.id && p.id.startsWith('user_') ? p.id : null);
+      };
+
+      const getCurrentFilter = () => ({
+        name: currentPresetName,
+        exposure: expo, contrast: con, saturation: sat, hue: hue,
+        blur: blur, grain: grain, vignette: vignette, grayscale: gray, invert: inv
+      });
+
+      const handleSliderChange = (setter) => (value) => {
+        if (!selectedSavedPresetId) setCurrentPresetName('自定义调色');
+        setter(value);
       };
 
       const filterString = `
@@ -953,6 +1223,7 @@
             
             .preset-btn { font-family: 'Inter', sans-serif; font-weight: 400; font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-sub); background: transparent; border: none; padding: 10px 0; text-align: left; cursor: pointer; transition: 0.4s; text-shadow: var(--shadow-text); border-bottom: 1px solid transparent; display: block; width: 100%; }
             .preset-btn:hover { color: var(--accent); border-bottom-color: var(--accent); letter-spacing: 0.2em; }
+            .preset-chip:hover { border-color: var(--accent) !important; color: var(--accent) !important; opacity: 1 !important; }
           `}</style>
           
           {/* 背景全屏壁纸 (完全覆盖) */}
@@ -975,58 +1246,139 @@
             )}
           </div>
 
-          <div style={{ position: 'absolute', top: 32, left: 32, zIndex: 100 }}>
+          <div style={{ position: 'absolute', top: 32, left: 32, zIndex: 100, display: 'flex', gap: 12, alignItems: 'center' }}>
             <button onClick={() => setView('home')} className="btn" style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(20px)', borderRadius: '50%', width: 44, height: 44, padding: 0, justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)' }}><Icon name="close" /></button>
+            {wallpaper.type === 'video' && wallpaper.hasAudio && (
+              <button onClick={() => setColorMuted(!colorMuted)} className="btn" style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(20px)', borderRadius: '50%', width: 44, height: 44, padding: 0, justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <Icon name={colorMuted ? 'volume-x' : 'volume-1'} size={18} />
+              </button>
+            )}
           </div>
 
           {/* 右侧完全悬浮面板 (无 background, 无 blur) */}
           <div className="floating-panel no-scrollbar">
             <div style={{ marginBottom: 56 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <span style={{ padding: '2px 8px', border: '1px solid var(--accent)', borderRadius: 4, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-main)' }}>{wallpaper.tags && wallpaper.tags[0] && (wallpaper.tags[0].name || wallpaper.tags[0])}</span>
-                {wallpaper.isFavorite && <Icon name="heart" size={12} color="var(--accent)" />}
+                <span style={{ padding: '2px 8px', border: '1px solid var(--accent)', borderRadius: 4, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-main)' }}>{wallpaper.tags && wallpaper.tags[0] ? (wallpaper.tags[0].name || String(wallpaper.tags[0])) : ''}</span>
+                {wallpaper.isFavorite && <Icon name="heart-filled" size={12} color="var(--accent)" />}
               </div>
               <h2 className="group-title" style={{ marginBottom: 8, lineHeight: 1.2 }}>{wallpaper.name}</h2>
-              <div style={{ fontSize: 11, color: 'var(--text-sub)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500 }}>Color Grading Studio</div>
+              <div style={{ fontSize: 11, color: 'var(--text-sub)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500 }}>色彩调节工作室</div>
             </div>
 
             <div style={{ marginBottom: 64 }}>
-              <div className="group-title">Basic</div>
-              <SliderControl label="Exposure" value={expo} min={0} max={200} onChange={setExpo} displayValue={`${expo}%`} />
-              <SliderControl label="Contrast" value={con} min={50} max={150} onChange={setCon} displayValue={`${con}%`} />
-              <SliderControl label="Saturation" value={sat} min={0} max={200} onChange={setSat} displayValue={`${sat}%`} />
-              <SliderControl label="Hue" value={hue} min={-180} max={180} onChange={setHue} displayValue={`${hue}°`} />
+              <div className="group-title">基础</div>
+              <SliderControl label="曝光" value={expo} min={0} max={200} onChange={handleSliderChange(setExpo)} displayValue={`${expo}%`} />
+              <SliderControl label="对比度" value={con} min={50} max={150} onChange={handleSliderChange(setCon)} displayValue={`${con}%`} />
+              <SliderControl label="饱和度" value={sat} min={0} max={200} onChange={handleSliderChange(setSat)} displayValue={`${sat}%`} />
+              <SliderControl label="色相" value={hue} min={-180} max={180} onChange={handleSliderChange(setHue)} displayValue={`${hue}°`} />
             </div>
 
             <div style={{ marginBottom: 64 }}>
-              <div className="group-title">Artistic</div>
-              <SliderControl label="Blur" value={blur} min={0} max={20} onChange={setBlur} displayValue={`${blur}px`} />
-              <SliderControl label="Grain" value={grain} min={0} max={100} onChange={setGrain} displayValue={`${grain}%`} />
-              <SliderControl label="Vignette" value={vignette} min={0} max={100} onChange={setVignette} displayValue={`${vignette}%`} />
+              <div className="group-title">艺术</div>
+              <SliderControl label="模糊" value={blur} min={0} max={20} onChange={handleSliderChange(setBlur)} displayValue={`${blur}px`} />
+              <SliderControl label="颗粒" value={grain} min={0} max={100} onChange={handleSliderChange(setGrain)} displayValue={`${grain}%`} />
+              <SliderControl label="暗角" value={vignette} min={0} max={100} onChange={handleSliderChange(setVignette)} displayValue={`${vignette}%`} />
             </div>
 
             <div style={{ marginBottom: 64 }}>
-              <div className="group-title">Filters</div>
-              <SliderControl label="Grayscale" value={gray} min={0} max={100} onChange={setGray} displayValue={`${gray}%`} />
-              <SliderControl label="Invert" value={inv} min={0} max={100} onChange={setInv} displayValue={`${inv}%`} />
+              <div className="group-title">滤镜</div>
+              <SliderControl label="灰度" value={gray} min={0} max={100} onChange={handleSliderChange(setGray)} displayValue={`${gray}%`} />
+              <SliderControl label="反相" value={inv} min={0} max={100} onChange={handleSliderChange(setInv)} displayValue={`${inv}%`} />
             </div>
 
             <div style={{ marginBottom: 40 }}>
-              <div className="group-title">Presets</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <button className="preset-btn" onClick={() => { setHue(0); setSat(80); setBri(90); setCon(110); setBlur(0); setGray(10); setInv(0); setExpo(105); setGrain(15); setVignette(20); }}>Kodak Portra 400</button>
-                <button className="preset-btn" onClick={() => { setHue(10); setSat(70); setBri(105); setCon(105); setBlur(0); setGray(0); setInv(0); setExpo(100); setGrain(0); setVignette(10); }}>Fujifilm Superia</button>
-                <button className="preset-btn" onClick={() => { setHue(0); setSat(120); setBri(110); setCon(115); setBlur(0); setGray(0); setInv(0); setExpo(115); setGrain(0); setVignette(0); }}>Cinematic Teal</button>
-                <button className="preset-btn" onClick={() => { setHue(0); setSat(0); setBri(100); setCon(120); setBlur(0); setGray(100); setInv(0); setExpo(110); setGrain(20); setVignette(40); }}>Monochrome Noir</button>
-                <button className="preset-btn" onClick={() => setShowSavePopup(true)}>+ Save Current</button>
+              <div className="group-title">预设</div>
+              <div style={{ fontSize: 10, color: 'var(--text-sub)', opacity: 0.4, marginBottom: 10, letterSpacing: '0.1em', textTransform: 'uppercase' }}>内置</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
+                {BUILTIN_PRESETS.map(p => (
+                  <div key={p.id} onClick={() => applyPreset(p)} className="preset-chip" style={{
+                    padding: '6px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                    border: '1px solid ' + (currentPresetName === p.name ? 'var(--accent)' : 'rgba(128,128,128,0.3)'),
+                    color: currentPresetName === p.name ? 'var(--accent)' : 'var(--text-sub)',
+                    background: currentPresetName === p.name ? 'rgba(128,128,128,0.1)' : 'transparent',
+                    transition: '0.3s', letterSpacing: '0.03em', whiteSpace: 'nowrap'
+                  }}>{p.name}</div>
+                ))}
               </div>
+              {savedPresets.length > 0 && (
+                <>
+                  <div style={{ fontSize: 10, color: 'var(--text-sub)', opacity: 0.4, marginBottom: 10, letterSpacing: '0.1em', textTransform: 'uppercase' }}>我的方案</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
+                    {(showAllSaved ? savedPresets : savedPresets.slice(0, 6)).map(p => (
+                      <div key={p.id} onClick={() => applyPreset(p)}
+                        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setPresetMenu({ x: e.clientX, y: e.clientY, preset: p }); }}
+                        className="preset-chip" style={{
+                        padding: '6px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                        border: '1px solid ' + (currentPresetName === p.name ? 'var(--accent)' : 'rgba(128,128,128,0.3)'),
+                        color: currentPresetName === p.name ? 'var(--accent)' : 'var(--text-sub)',
+                        background: currentPresetName === p.name ? 'rgba(128,128,128,0.1)' : 'transparent',
+                        transition: '0.3s', letterSpacing: '0.03em', whiteSpace: 'nowrap', position: 'relative'
+                      }}>{p.name}</div>
+                    ))}
+                    {savedPresets.length > 6 && (
+                      <div onClick={() => setShowAllSaved(!showAllSaved)} style={{
+                        padding: '6px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                        border: '1px dashed rgba(128,128,128,0.25)', color: 'var(--text-sub)', opacity: 0.5,
+                        transition: '0.3s', whiteSpace: 'nowrap'
+                      }}>{showAllSaved ? '收起' : `+${savedPresets.length - 6}`}</div>
+                    )}
+                  </div>
+                </>
+              )}
+              <div onClick={() => setShowSavePopup(true)} className="preset-chip" style={{
+                padding: '8px 0', fontSize: 11, cursor: 'pointer', color: 'var(--text-sub)', opacity: 0.6,
+                borderBottom: '1px solid transparent', transition: '0.3s', letterSpacing: '0.05em', display: 'inline-block'
+              }}>+ 保存当前配置</div>
             </div>
 
             <div style={{ display: 'flex', gap: 12, marginTop: 40 }}>
-              <button className="btn" style={{ flex: 1.5, justifyContent: 'center', height: 44, fontSize: 13, background: 'var(--accent)', color: '#000', border: 'none', fontWeight: 600 }} onClick={() => { onSave(); setView('home'); }}>Apply</button>
-              <button className="btn" style={{ flex: 1, justifyContent: 'center', height: 44, fontSize: 13, background: 'transparent', border: '1px solid var(--text-sub)', color: 'var(--text-main)' }} onClick={reset}>Reset</button>
+              <button className="btn" style={{ flex: 1.5, justifyContent: 'center', height: 44, fontSize: 13, background: 'var(--accent)', color: '#000', border: 'none', fontWeight: 600 }} onClick={() => {
+                const filter = getCurrentFilter();
+                filter.brightness = bri;
+                if (selectedSavedPresetId) {
+                  const updated = savedPresets.map(p => p.id === selectedSavedPresetId ? { ...p, ...filter, id: p.id } : p);
+                  localStorage.setItem('plum_saved_presets', JSON.stringify(updated));
+                }
+                onSave(filter); setView('home');
+              }}>应用</button>
+              <button className="btn" style={{ flex: 1, justifyContent: 'center', height: 44, fontSize: 13, background: 'transparent', border: '1px solid var(--text-sub)', color: 'var(--text-main)' }} onClick={reset}>重置</button>
             </div>
           </div>
+
+          {presetMenu && (
+            <div style={{
+              position: 'fixed', top: presetMenu.y, left: presetMenu.x, width: 160,
+              background: 'rgba(20,21,26,0.95)', backdropFilter: 'blur(30px)',
+              borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)',
+              padding: 6, zIndex: 2000, boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+              mixBlendMode: 'normal', animation: 'fadeIn 0.15s ease-out'
+            }}>
+              <div onClick={(e) => { e.stopPropagation(); setEditingPreset(presetMenu.preset); setEditName(presetMenu.preset.name); setPresetMenu(null); }} style={{
+                padding: '9px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer', transition: '0.15s',
+                display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,0.8)'
+              }} className="menu-item"><Icon name="edit" size={13} />重命名</div>
+              <div onClick={(e) => { e.stopPropagation(); if (onDeletePreset) onDeletePreset(presetMenu.preset.id); setPresetMenu(null); }} style={{
+                padding: '9px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer', transition: '0.15s',
+                display: 'flex', alignItems: 'center', gap: 8, color: '#ff4d4d'
+              }} className="menu-item"><Icon name="trash" size={13} />删除</div>
+            </div>
+          )}
+
+          {editingPreset && (
+            <div style={{ position: 'fixed', inset: 0, zIndex: 2500, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', mixBlendMode: 'normal' }}>
+              <div className="animate-in" style={{ width: 300, background: '#1a1b1e', borderRadius: 24, border: '1px solid var(--glass-border)', padding: 28, boxShadow: '0 40px 80px rgba(0,0,0,0.6)' }}>
+                <div style={{ fontSize: 16, fontFamily: 'var(--font-display)', fontStyle: 'italic', marginBottom: 16, color: '#fff' }}>重命名方案</div>
+                <input autoFocus value={editName} onChange={e => setEditName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && editName.trim()) { const updated = savedPresets.map(p => p.id === editingPreset.id ? {...p, name: editName.trim()} : p); localStorage.setItem('plum_saved_presets', JSON.stringify(updated)); window.location.reload(); }}}
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: 10, padding: '12px 16px', color: '#fff', marginBottom: 20, outline: 'none', fontSize: 13 }} />
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button className="btn-primary btn" style={{ flex: 1, justifyContent: 'center', height: 40, fontSize: 12 }} onClick={() => { if (editName.trim()) { const updated = savedPresets.map(p => p.id === editingPreset.id ? {...p, name: editName.trim()} : p); localStorage.setItem('plum_saved_presets', JSON.stringify(updated)); window.location.reload(); } }}>确认</button>
+                  <button className="btn" style={{ flex: 1, justifyContent: 'center', height: 40, fontSize: 12 }} onClick={() => setEditingPreset(null)}>取消</button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {showSavePopup && (
             <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', mixBlendMode: 'normal' }}>
@@ -1040,7 +1392,7 @@
                   style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: 12, padding: '14px 18px', color: '#fff', marginBottom: 24, outline: 'none' }}
                 />
                 <div style={{ display: 'flex', gap: 12 }}>
-                  <button className="btn-primary btn" style={{ flex: 1, justifyContent: 'center' }} onClick={() => { setShowSavePopup(false); onSave(); }}>保存配置</button>
+                  <button className="btn-primary btn" style={{ flex: 1, justifyContent: 'center' }} onClick={() => { const f = getCurrentFilter(); f.name = presetName; f.brightness = bri; const newId = 'user_' + Date.now(); f.id = newId; if (onSavePreset) onSavePreset(f); setCurrentPresetName(presetName); setSelectedSavedPresetId(newId); setShowSavePopup(false); }}>保存配置</button>
                   <button className="btn" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setShowSavePopup(false)}>取消</button>
                 </div>
               </div>
@@ -1071,6 +1423,7 @@
       const navItems = [
         { id: '通用', icon: 'monitor' },
         { id: '外观', icon: 'image' },
+        { id: '音频', icon: 'volume-2' },
         { id: '性能', icon: 'sliders' },
         { id: '库管理', icon: 'plus' },
         { id: '快捷键', icon: 'settings' },
@@ -1196,6 +1549,30 @@
                 
                 <SettingRow title="启动时自动运行" desc="开机即刻呈现沉浸式桌面体验"><Switch active /></SettingRow>
                 <SettingRow title="菜单栏快捷入口" desc="在顶部菜单栏显示实时状态图标"><Switch active /></SettingRow>
+              </div>
+            )}
+
+            {activeTab === '音频' && (
+              <div className="animate-in">
+                <div style={{ marginBottom: 56 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.3)', marginBottom: 24, textTransform: 'uppercase', letterSpacing: '0.15em' }}>壁纸声音策略</div>
+                  <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 28, padding: 36, border: '1px solid rgba(255,255,255,0.05)', marginBottom: 32 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+                      <div>
+                        <div style={{ fontSize: 16, fontWeight: 600 }}>全局壁纸音量</div>
+                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>控制所有有声动态壁纸的默认输出强度</div>
+                      </div>
+                      <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--accent)', fontFamily: 'monospace' }}>50%</div>
+                    </div>
+                    <input type="range" min={0} max={100} value={50} readOnly style={{ width: '100%', accentColor: 'var(--accent)' }} />
+                  </div>
+
+                  <SettingRow title="默认静音启动" desc="首次应用有声壁纸时默认不直接发声"><Switch active={false} /></SettingRow>
+                  <SettingRow title="音频闪避 (Audio Ducking)" desc="当 Music、Spotify 或浏览器正在播放音频时自动降低壁纸音量"><Switch active /></SettingRow>
+                  <SettingRow title="全屏应用时静音" desc="进入 Keynote、视频播放器或游戏全屏时不继续输出壁纸音频"><Switch active /></SettingRow>
+                  <SettingRow title="锁屏与睡眠前静音" desc="在系统准备休眠或进入锁屏界面前提前停止声音"><Switch active /></SettingRow>
+                  <SettingRow title="仅预览时允许声音" desc="桌面常驻时静音，仅在预览和调色页允许试听"><Switch active={false} /></SettingRow>
+                </div>
               </div>
             )}
 
@@ -1392,8 +1769,12 @@
 
     const App = () => {
       const [view, setView] = useState('home');
+      const [libraryInitialFilter, setLibraryInitialFilter] = useState('全部');
       const [showMonitorPopup, setShowMonitorPopup] = useState(false);
       const [showImportModal, setShowImportModal] = useState(false);
+      const [droppedImportFiles, setDroppedImportFiles] = useState([]);
+      const [librarySortBy, setLibrarySortBy] = useState('importDate');
+      const [librarySortOrder, setLibrarySortOrder] = useState('desc');
       const [wallpapers, setWallpapers] = useState([]);
       const [selectedWallpaper, setSelectedWallpaper] = useState(null);
       const [searchQuery, setSearchQuery] = useState('');
@@ -1403,6 +1784,32 @@
       const [fitMode, setFitMode] = useState('填充');
       const [activeMonitors, setActiveMonitors] = useState([]);
       const [settings, setSettings] = useState({});
+      const [savedPresets, setSavedPresets] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('plum_saved_presets') || '[]'); } catch(e) { return []; }
+      });
+      const [customTags, setCustomTags] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('plum_custom_tags') || '[]'); } catch(e) { return []; }
+      });
+
+      const handleAddCustomTag = (tag) => {
+        if (tag && !customTags.includes(tag)) {
+          const updated = [...customTags, tag];
+          setCustomTags(updated);
+          localStorage.setItem('plum_custom_tags', JSON.stringify(updated));
+        }
+      };
+
+      const handleSavePreset = (preset) => {
+        const newPresets = [...savedPresets, { ...preset, id: preset.id || ('user_' + Date.now()) }];
+        setSavedPresets(newPresets);
+        localStorage.setItem('plum_saved_presets', JSON.stringify(newPresets));
+      };
+
+      const handleDeletePreset = (presetId) => {
+        const newPresets = savedPresets.filter(p => p.id !== presetId);
+        setSavedPresets(newPresets);
+        localStorage.setItem('plum_saved_presets', JSON.stringify(newPresets));
+      };
 
       const refreshWallpapers = () => {
         bridge.call('getWallpapers').then(data => {
@@ -1415,6 +1822,21 @@
         refreshWallpapers();
         bridge.call('getScreens').then(data => setActiveMonitors(data));
         bridge.call('getSettings').then(data => setSettings(data));
+      }, []);
+
+      useEffect(() => {
+        window.__receiveDroppedFiles = (files) => {
+          console.log('[DRAG-L4-JS] __receiveDroppedFiles called with', files ? files.length : 0, 'files');
+          if (files && files.length > 0) {
+            setDroppedImportFiles([]);
+            setShowImportModal(false);
+            setTimeout(() => {
+              setDroppedImportFiles(files);
+              setShowImportModal(true);
+            }, 0);
+          }
+        };
+        return () => { delete window.__receiveDroppedFiles; };
       }, []);
 
       const updateSetting = (key, value) => {
@@ -1447,7 +1869,8 @@
       };
 
       const handleToggleFavorite = (wallpaper) => {
-        bridge.call('toggleFavorite', { wallpaperId: wallpaper.id }).then(() => {
+        bridge.call('toggleFavorite', { wallpaperId: wallpaper.id }).then((result) => {
+          addToast(result.isFavorite ? '已添加到收藏' : '已取消收藏');
           refreshWallpapers();
         });
       };
@@ -1459,12 +1882,25 @@
         });
       };
 
-      const handleImport = () => {
-        bridge.call('importFiles').then((result) => {
+      const handleImport = (paths, meta) => {
+        if (!paths || paths.length === 0) {
+          addToast('请选择文件');
+          return;
+        }
+
+        bridge.call('importFiles', {
+          paths: paths,
+          name: meta.name || '',
+          tag: meta.tag,
+          favorite: meta.fav
+        }).then((result) => {
           addToast('已导入 ' + result.length + ' 个壁纸');
           refreshWallpapers();
           setShowImportModal(false);
-        }).catch(() => {});
+          setDroppedImportFiles([]);
+        }).catch((err) => {
+          addToast('导入失败: ' + (err.message || '未知错误'));
+        });
       };
 
       const handlePreview = (w) => {
@@ -1477,6 +1913,11 @@
         setView('color');
       };
 
+      const handleViewAll = (category) => {
+        setLibraryInitialFilter(category === '收藏' ? '全部' : category);
+        setView('library');
+      };
+
       const handleApplyFilter = (wallpaper, preset) => {
         bridge.call('applyFilter', { wallpaperId: wallpaper.id, filter: preset }).then(() => {
           addToast('滤镜已应用');
@@ -1484,11 +1925,43 @@
       };
 
       const filteredWallpapers = useMemo(() => {
-        return wallpapers.filter(w =>
+        const filtered = wallpapers.filter(w =>
           w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (w.tags && w.tags.some(tag => (tag.name || tag).toLowerCase().includes(searchQuery.toLowerCase())))
         );
-      }, [searchQuery, wallpapers]);
+
+        const sorted = [...filtered].sort((a, b) => {
+          let av, bv;
+          switch (librarySortBy) {
+            case 'name':
+              av = (a.name || '').toLowerCase();
+              bv = (b.name || '').toLowerCase();
+              break;
+            case 'fileSize':
+              av = a.fileSize || 0;
+              bv = b.fileSize || 0;
+              break;
+            case 'resolution':
+              av = a.resolution || '';
+              bv = b.resolution || '';
+              break;
+            case 'favorite':
+              av = a.isFavorite ? 1 : 0;
+              bv = b.isFavorite ? 1 : 0;
+              break;
+            case 'importDate':
+            default:
+              av = new Date(a.importDate || 0).getTime();
+              bv = new Date(b.importDate || 0).getTime();
+              break;
+          }
+          if (av < bv) return librarySortOrder === 'asc' ? -1 : 1;
+          if (av > bv) return librarySortOrder === 'asc' ? 1 : -1;
+          return 0;
+        });
+
+        return sorted;
+      }, [searchQuery, wallpapers, librarySortBy, librarySortOrder]);
 
       return (
         <div style={{ background: 'var(--bg)', height: '100vh', position: 'relative', overflow: 'hidden' }}>
@@ -1497,7 +1970,7 @@
               currentView={view} 
               setView={setView} 
               onSearchClick={() => setIsSearching(true)} 
-              onImportClick={() => setShowImportModal(true)}
+              onImportClick={() => { setDroppedImportFiles([]); setShowImportModal(true); }}
             />
           )}
 
@@ -1511,6 +1984,7 @@
                 onEditColor={handleGoToColor}
                 onToggleFavorite={handleToggleFavorite}
                 onDelete={handleDelete}
+                onViewAll={handleViewAll}
               />
             )}
             {view === 'library' && (
@@ -1518,15 +1992,29 @@
                 wallpapers={filteredWallpapers}
                 setView={handlePreview}
                 onSetWallpaper={handleSetWallpaper}
+                onEditColor={handleGoToColor}
                 onToggleFavorite={handleToggleFavorite}
                 onDelete={handleDelete}
+                initialFilter={libraryInitialFilter}
+                sortBy={librarySortBy}
+                sortOrder={librarySortOrder}
+                onChangeSortBy={setLibrarySortBy}
+                onToggleSortOrder={() => setLibrarySortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
               />
             )}
             {view === 'color' && selectedWallpaper && (
               <ColorPage
                 wallpaper={selectedWallpaper}
                 setView={setView}
-                onSave={() => addToast('色彩配置已保存')}
+                savedPresets={savedPresets}
+                onSavePreset={handleSavePreset}
+                onDeletePreset={handleDeletePreset}
+                onSave={(filterParams) => {
+                  bridge.call('applyFilter', { wallpaperId: selectedWallpaper.id, filter: filterParams }).then(() => {
+                    addToast('色彩配置已应用');
+                    refreshWallpapers();
+                  }).catch(() => addToast('应用失败'));
+                }}
               />
             )}
             {view === 'preview' && selectedWallpaper && (
@@ -1547,9 +2035,13 @@
 
           {/* Import Modal */}
           {showImportModal && (
-            <ImportModal 
-              onClose={() => setShowImportModal(false)} 
+            <ImportModal
+              key={droppedImportFiles.map(f => f.path).join('|') || 'manual-import'}
+              onClose={() => { setShowImportModal(false); setDroppedImportFiles([]); }}
               onStartImport={handleImport}
+              initialFiles={droppedImportFiles}
+              customTags={customTags}
+              onAddCustomTag={handleAddCustomTag}
             />
           )}
 
@@ -1609,11 +2101,11 @@
                         className="search-result-v2"
                       >
                         <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', marginBottom: 12 }}>
-                          <img src={w.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={w.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: getFilterCSS(w.filterPreset) }} />
                           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.2)', transition: '0.3s' }} className="overlay" />
                         </div>
                         <div style={{ fontSize: 16, fontWeight: 600 }}>{w.name}</div>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>{w.tags && w.tags[0] && (w.tags[0].name || w.tags[0])} · {w.type}</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>{w.tags && w.tags[0] ? (w.tags[0].name || String(w.tags[0])) : ''} · {w.type}</div>
                       </div>
                     ))}
                     {filteredWallpapers.length === 0 && (

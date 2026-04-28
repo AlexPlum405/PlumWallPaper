@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0A11CE001122334455667788 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A11CE991122334455667788 /* Assets.xcassets */; };
 		14A5D263475ED4C2B1409136 /* RestoreManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F831A3D8DFBF129BC31B3368 /* RestoreManager.swift */; };
 		1AFC146A2EB65DAF577B34E8 /* FileImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0823F5D57978191B355D159 /* FileImporter.swift */; };
 		283D2B2FF747E8F0C39C8E9E /* PlumWallPaperApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0D0A105F06031860E8B5C3 /* PlumWallPaperApp.swift */; };
@@ -37,6 +38,7 @@
 
 /* Begin PBXFileReference section */
 		094BEBCC84E89952400E6597 /* WallpaperStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperStore.swift; sourceTree = "<group>"; };
+		0A11CE991122334455667788 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		12EF93D3B27543CA2501881C /* WallpaperEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperEngine.swift; sourceTree = "<group>"; };
 		1A1237E0F4A5EFB4007419A8 /* babel.min.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = babel.min.js; sourceTree = "<group>"; };
 		2008F380223F64B8EF14B4AB /* plumwallpaper.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = plumwallpaper.html; sourceTree = "<group>"; };
@@ -77,6 +79,7 @@
 		1B035FF823EEDBCCB8EE65AE /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				0A11CE991122334455667788 /* Assets.xcassets */,
 				E9D02966C16502E2484E688C /* Fonts */,
 				7C78D98FAC1BA8BEC7DC6DB3 /* Web */,
 			);
@@ -270,6 +273,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0A11CE001122334455667788 /* Assets.xcassets in Resources */,
 				57771A5C8A9738B020222518 /* CormorantGaramond-Italic.ttf in Resources */,
 				751AE8DA0570ECF906AF9F12 /* CormorantGaramond-SemiBoldItalic.ttf in Resources */,
 				E42BEBA8A8B63C125D83BC97 /* babel.min.js in Resources */,

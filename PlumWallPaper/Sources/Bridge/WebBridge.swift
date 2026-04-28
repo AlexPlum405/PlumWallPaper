@@ -267,6 +267,25 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 NSWorkspace.shared.activateFileViewerSelecting([fileURL])
                 return success([:] as [String: Any])
 
+            case "checkDuplicates":
+                guard let paths = params["paths"] as? [String] else {
+                    return fail("Missing paths parameter")
+                }
+                let urls = paths.map { URL(fileURLWithPath: $0) }
+                var duplicates: [[String: Any]] = []
+                for url in urls {
+                    let hash = try await FileImporter.shared.quickHash(url: url)
+                    if try wallpaperStore.wallpaperExists(fileHash: hash) {
+                        let existingName = try wallpaperStore.findNameByHash(hash) ?? url.deletingPathExtension().lastPathComponent
+                        duplicates.append([
+                            "path": url.path,
+                            "name": url.deletingPathExtension().lastPathComponent,
+                            "existingName": existingName
+                        ])
+                    }
+                }
+                return success(duplicates)
+
             default:
                 return fail("Unknown action: \(action)")
             }
@@ -356,7 +375,8 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
             "thumbnailPath": URL(fileURLWithPath: w.thumbnailPath).absoluteString,
             "isFavorite": w.isFavorite,
             "importDate": dateFormatter.string(from: w.importDate),
-            "tags": w.tags.map { serializeTag($0) }
+            "tags": w.tags.map { serializeTag($0) },
+            "hasAudio": w.hasAudio ?? false
         ]
         if let duration = w.duration { dict["duration"] = duration }
         if let lastUsed = w.lastUsedDate { dict["lastUsedDate"] = dateFormatter.string(from: lastUsed) }
