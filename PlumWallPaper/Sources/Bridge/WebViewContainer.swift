@@ -48,6 +48,26 @@ struct WebViewContainer: NSViewRepresentable {
         context.coordinator.bridge = bridge
         contentController.add(bridge, name: "bridge")
 
+        // 捕获 console.log/error
+        let consoleScript = """
+        (function() {
+            const originalLog = console.log;
+            const originalError = console.error;
+            console.log = function(...args) {
+                originalLog.apply(console, args);
+                window.webkit.messageHandlers.consoleLog.postMessage(args.join(' '));
+            };
+            console.error = function(...args) {
+                originalError.apply(console, args);
+                window.webkit.messageHandlers.consoleError.postMessage(args.join(' '));
+            };
+        })();
+        """
+        let userScript = WKUserScript(source: consoleScript, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+        contentController.addUserScript(userScript)
+        contentController.add(context.coordinator, name: "consoleLog")
+        contentController.add(context.coordinator, name: "consoleError")
+
         viewModel.webView = webView
 
         if let htmlURL = Bundle.main.url(forResource: "plumwallpaper", withExtension: "html") {
@@ -72,7 +92,7 @@ struct WebViewContainer: NSViewRepresentable {
     // MARK: - Coordinator
 
     @MainActor
-    final class Coordinator: NSObject, WKNavigationDelegate {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         var bridge: WebBridge?
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -85,6 +105,14 @@ struct WebViewContainer: NSViewRepresentable {
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
             NSLog("[WebView] Provisional navigation failed: %@", error.localizedDescription)
+        }
+
+        nonisolated func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "consoleLog" {
+                NSLog("[JS console.log] %@", String(describing: message.body))
+            } else if message.name == "consoleError" {
+                NSLog("[JS console.error] %@", String(describing: message.body))
+            }
         }
     }
 }

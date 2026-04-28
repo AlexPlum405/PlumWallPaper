@@ -41,12 +41,15 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
         didReceive message: WKScriptMessage
     ) {
         let body = message.body
+        NSLog("[WebBridge] Received message: %@", String(describing: body))
         Task { @MainActor in
             guard let dict = body as? [String: Any],
                   let action = dict["action"] as? String,
                   let callbackId = dict["callbackId"] as? String else {
+                NSLog("[WebBridge] Invalid message format")
                 return
             }
+            NSLog("[WebBridge] Action: %@, CallbackId: %@", action, callbackId)
             let result = await handleAction(action, params: dict)
             sendCallback(callbackId: callbackId, result: result)
         }

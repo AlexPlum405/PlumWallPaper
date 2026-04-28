@@ -344,7 +344,7 @@
                 <button onClick={step === 1 ? onClose : () => setStep(1)} className="btn" style={{ padding: '10px 24px' }}>
                   {step === 1 ? '取消' : '返回上一步'}
                 </button>
-                <button onClick={onStartImport} className="btn-primary btn" style={{ padding: '10px 32px' }}>
+                <button onClick={step === 1 ? () => setStep(2) : onStartImport} className="btn-primary btn" style={{ padding: '10px 32px' }}>
                   {step === 1 ? '开始分析' : '确认并导入'}
                 </button>
               </div>
@@ -1284,11 +1284,16 @@
       };
 
       const handleImport = () => {
+        console.log('[Import] Calling bridge.call(importFiles)');
         bridge.call('importFiles').then((result) => {
+          console.log('[Import] Success, imported:', result);
           addToast('已导入 ' + result.length + ' 个壁纸');
           refreshWallpapers();
           setShowImportModal(false);
-        }).catch(() => {});
+        }).catch((err) => {
+          console.error('[Import] Error:', err);
+          addToast('导入失败: ' + err.message);
+        });
       };
 
       const handlePreview = (w) => {
@@ -1321,7 +1326,7 @@
               currentView={view} 
               setView={setView} 
               onSearchClick={() => setIsSearching(true)} 
-              onImportClick={() => setShowImportModal(true)}
+              onImportClick={handleImport}
             />
           )}
 
