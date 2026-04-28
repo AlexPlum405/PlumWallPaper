@@ -129,6 +129,18 @@ struct WebViewContainer: NSViewRepresentable {
             }
         }
 
+        func windowDidBecomeKey(_ notification: Notification) {
+            if let window = notification.object as? NSWindow {
+                configureWindow(window)
+            }
+        }
+
+        func windowDidBecomeMain(_ notification: Notification) {
+            if let window = notification.object as? NSWindow {
+                configureWindow(window)
+            }
+        }
+
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             NSLog("[WebView] Navigation finished, URL: %@", webView.url?.absoluteString ?? "nil")
         }
@@ -162,15 +174,21 @@ final class DropEnabledWebView: WKWebView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        if let window = window, let delegate = window.delegate as? WebViewContainer.Coordinator {
-            delegate.configureWindow(window)
-        } else if let window = window {
+        guard let window = window else { return }
+
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.styleMask.insert(.fullSizeContentView)
+        window.isMovableByWindowBackground = true
+        window.backgroundColor = .clear
+        window.isOpaque = false
+        if #available(macOS 11.0, *) {
+            window.titlebarSeparatorStyle = .none
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             window.titlebarAppearsTransparent = true
-            window.titleVisibility = .hidden
             window.styleMask.insert(.fullSizeContentView)
-            window.isMovableByWindowBackground = true
-            window.backgroundColor = .clear
-            window.isOpaque = false
             if #available(macOS 11.0, *) {
                 window.titlebarSeparatorStyle = .none
             }
