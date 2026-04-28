@@ -32,11 +32,13 @@ struct PlumWallPaperApp: App {
         WindowGroup {
             WebViewContainer(viewModel: viewModel, modelContext: modelContainer.mainContext)
                 .frame(minWidth: 1200, minHeight: 800)
-                .ignoresSafeArea()
+                .ignoresSafeArea(.all)
+                .toolbar(.hidden, for: .windowToolbar)
                 .task {
                     await viewModel.restoreLastSession(context: modelContainer.mainContext)
                 }
         }
+        .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .appTermination) {
                 Button("退出 PlumWallPaper") {

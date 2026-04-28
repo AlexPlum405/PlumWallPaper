@@ -106,6 +106,9 @@ struct WebViewContainer: NSViewRepresentable {
             window.backgroundColor = .clear
             window.isOpaque = false
             window.hasShadow = true
+            if #available(macOS 11.0, *) {
+                window.titlebarSeparatorStyle = .none
+            }
         }
 
         func windowDidResize(_ notification: Notification) {
@@ -168,6 +171,9 @@ final class DropEnabledWebView: WKWebView {
             window.isMovableByWindowBackground = true
             window.backgroundColor = .clear
             window.isOpaque = false
+            if #available(macOS 11.0, *) {
+                window.titlebarSeparatorStyle = .none
+            }
         }
     }
 

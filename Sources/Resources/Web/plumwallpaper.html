@@ -816,7 +816,10 @@
       `;
 
       return (
-        <div className="animate-in" style={{ height: '100vh', background: '#000', display: 'flex', overflow: 'hidden' }}>
+        <div className="animate-in" style={{ height: '100vh', position: 'relative', display: 'flex', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', inset: -50, zIndex: -1 }}>
+            <img src={wallpaper.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(80px) brightness(0.4)' }} />
+          </div>
           {/* 左侧 75%：实时预览 */}
           <div style={{ flex: 0.75, height: '100%', position: 'relative', transition: '0.1s', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
             <img src={wallpaper.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: filterString }} />
