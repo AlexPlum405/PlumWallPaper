@@ -667,6 +667,21 @@
       const [showTagManager, setShowTagManager] = useState(false);
       const [activeFilter, setActiveFilter] = useState('全部');
 
+      const dynamicTags = useMemo(() => {
+        const tagSet = new Set();
+        wallpapers.forEach(w => {
+          if (w.tags) w.tags.forEach(t => { if (t.name) tagSet.add(t.name); });
+        });
+        return ['全部', '视频', 'HEIC', ...Array.from(tagSet)];
+      }, [wallpapers]);
+
+      const filteredList = useMemo(() => {
+        if (activeFilter === '全部') return wallpapers;
+        if (activeFilter === '视频') return wallpapers.filter(w => w.type === 'video');
+        if (activeFilter === 'HEIC') return wallpapers.filter(w => w.type === 'heic' || w.type === 'image');
+        return wallpapers.filter(w => w.tags && w.tags.some(t => t.name === activeFilter));
+      }, [wallpapers, activeFilter]);
+
       const handleContextMenu = (e, w) => {
         e.preventDefault();
         setContextMenu({ x: e.clientX, y: e.clientY, w });
@@ -683,8 +698,8 @@
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 60 }}>
             <div style={{ flex: 1 }}>
               <h1 style={{ fontSize: 64, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500, letterSpacing: '-0.03em', marginBottom: 32 }}>壁纸库</h1>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                {['全部', '视频', 'HEIC', '自然', '城市', '动漫'].map(tag => (
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                {dynamicTags.map(tag => (
                   <div 
                     key={tag} 
                     onClick={() => setActiveFilter(tag)}
@@ -709,7 +724,7 @@
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 32 }}>
-            {wallpapers.map((w, i) => (
+            {filteredList.map((w, i) => (
               <div key={w.id} className="library-card-v2"
                 onDoubleClick={() => onPreview && onPreview(w)}
                 onContextMenu={(e) => handleContextMenu(e, w)}
@@ -997,7 +1012,7 @@
       </div>
     );
 
-    const SettingsPage = ({ fitMode, setFitMode, monitors }) => {
+    const SettingsPage = ({ fitMode, setFitMode, monitors, setView }) => {
       const [activeTab, setActiveTab] = useState('通用');
       
       const navItems = [
@@ -1081,15 +1096,18 @@
           </div>
 
           {/* 设置主内容区 - 物理对齐 Content Area */}
-          <div className="no-scrollbar" style={{ 
-            flex: 1, height: '100%', background: 'rgba(255,255,255,0.01)', backdropFilter: 'blur(60px)', 
+          <div className="no-scrollbar" style={{
+            flex: 1, height: '100%', background: 'rgba(255,255,255,0.01)', backdropFilter: 'blur(60px)',
             borderRadius: 0, padding: '140px 72px 80px', overflowY: 'auto'
           }}>
-            <h2 style={{ 
-              fontSize: 42, fontFamily: 'var(--font-display)', fontStyle: 'italic', 
-              marginBottom: 56, letterSpacing: '-0.02em', marginTop: 0,
-              lineHeight: 1, color: '#fff'
-            }}>{activeTab}</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 56 }}>
+              <h2 style={{
+                fontSize: 42, fontFamily: 'var(--font-display)', fontStyle: 'italic',
+                letterSpacing: '-0.02em', margin: 0,
+                lineHeight: 1, color: '#fff'
+              }}>{activeTab}</h2>
+              <button onClick={() => setView('home')} className="btn" style={{ borderRadius: '50%', width: 40, height: 40, padding: 0, justifyContent: 'center' }}><Icon name="close" /></button>
+            </div>
 
             {activeTab === '通用' && (
               <div className="animate-in">
@@ -1353,7 +1371,10 @@
 
       const handleSetWallpaper = (w) => {
         setSelectedWallpaper(w);
-        setShowMonitorPopup(true);
+        bridge.call('getScreens').then(data => {
+          setActiveMonitors(data);
+          setShowMonitorPopup(true);
+        });
       };
 
       const handleApplyWallpaper = (monitorId) => {
@@ -1485,6 +1506,7 @@
                 fitMode={fitMode}
                 setFitMode={setFitMode}
                 monitors={activeMonitors}
+                setView={setView}
               />
             )}
           </main>
