@@ -264,7 +264,7 @@
 
       const handleFileSelect = () => {
         console.log('[Import] Opening file picker for batch files');
-        bridge.call('importFiles').then((result) => {
+        bridge.call('selectFiles').then((result) => {
           console.log('[Import] Files selected:', result);
           if (result && result.length > 0) {
             setSelectedFiles(result);
@@ -278,7 +278,7 @@
 
       const handleFolderSelect = () => {
         console.log('[Import] Opening folder picker');
-        bridge.call('importFolder').then((result) => {
+        bridge.call('selectFolder').then((result) => {
           console.log('[Import] Folder selected:', result);
           if (result && result.length > 0) {
             setSelectedFiles(result);
@@ -292,9 +292,16 @@
 
       const handleConfirmImport = () => {
         console.log('[Import] Confirming import with metadata:', meta);
-        addToast('已导入 ' + selectedFiles.length + ' 个壁纸');
-        refreshWallpapers();
-        onClose();
+        const paths = selectedFiles.map(f => f.path);
+        bridge.call('importFiles', { paths }).then((result) => {
+          console.log('[Import] Import completed:', result);
+          addToast('已导入 ' + result.length + ' 个壁纸');
+          refreshWallpapers();
+          onClose();
+        }).catch((err) => {
+          console.error('[Import] Import error:', err);
+          addToast('导入失败: ' + err.message);
+        });
       };
 
       return (

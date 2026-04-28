@@ -65,8 +65,8 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 let wallpapers = try wallpaperStore.fetchAllWallpapers()
                 return success(wallpapers.map { serializeWallpaper($0) })
 
-            // 2. importFiles — 弹出 NSOpenPanel 让用户选择文件
-            case "importFiles":
+            // 2. selectFiles — 弹出 NSOpenPanel 让用户选择文件，返回路径但不导入
+            case "selectFiles":
                 return await withCheckedContinuation { continuation in
                     DispatchQueue.main.async {
                         let panel = NSOpenPanel()
@@ -81,20 +81,15 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                                     continuation.resume(returning: self.fail("User cancelled"))
                                     return
                                 }
-                                do {
-                                    let imported = try await FileImporter.shared.importFiles(urls: panel.urls)
-                                    try self.wallpaperStore.addWallpapers(imported)
-                                    continuation.resume(returning: self.success(imported.map { self.serializeWallpaper($0) }))
-                                } catch {
-                                    continuation.resume(returning: self.fail(error.localizedDescription))
-                                }
+                                let filePaths = panel.urls.map { ["path": $0.path, "name": $0.deletingPathExtension().lastPathComponent] }
+                                continuation.resume(returning: self.success(filePaths))
                             }
                         }
                     }
                 }
 
-            // 3. importFolder — 弹出 NSOpenPanel 选择目录，扫描其中的壁纸文件
-            case "importFolder":
+            // 3. selectFolder — 弹出 NSOpenPanel 选择目录，返回其中的壁纸文件路径但不导入
+            case "selectFolder":
                 return await withCheckedContinuation { continuation in
                     DispatchQueue.main.async {
                         let panel = NSOpenPanel()
@@ -117,9 +112,8 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                                         continuation.resume(returning: self.fail("目录中没有找到支持的壁纸文件"))
                                         return
                                     }
-                                    let imported = try await FileImporter.shared.importFiles(urls: mediaFiles)
-                                    try self.wallpaperStore.addWallpapers(imported)
-                                    continuation.resume(returning: self.success(imported.map { self.serializeWallpaper($0) }))
+                                    let filePaths = mediaFiles.map { ["path": $0.path, "name": $0.deletingPathExtension().lastPathComponent] }
+                                    continuation.resume(returning: self.success(filePaths))
                                 } catch {
                                     continuation.resume(returning: self.fail(error.localizedDescription))
                                 }
@@ -128,7 +122,17 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                     }
                 }
 
-            // 4. setWallpaper
+            // 4. importFiles — 根据路径导入文件
+            case "importFiles":
+                guard let paths = params["paths"] as? [String] else {
+                    return fail("Missing paths parameter")
+                }
+                let urls = paths.map { URL(fileURLWithPath: $0) }
+                let imported = try await FileImporter.shared.importFiles(urls: urls)
+                try wallpaperStore.addWallpapers(imported)
+                return success(imported.map { serializeWallpaper($0) })
+
+            // 5. setWallpaper
             case "setWallpaper":
                 let (wallpaper, screenInfo) = try resolveWallpaperAndScreen(params)
                 WallpaperEngine.shared.setWallpaper(wallpaper, for: screenInfo)
