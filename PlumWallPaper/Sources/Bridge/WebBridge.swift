@@ -259,11 +259,11 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
         var dict: [String: Any] = [
             "id": w.id.uuidString,
             "name": w.name,
-            "filePath": w.filePath,
+            "filePath": URL(fileURLWithPath: w.filePath).absoluteString,
             "type": w.type.rawValue,
             "resolution": w.resolution,
             "fileSize": w.fileSize,
-            "thumbnailPath": w.thumbnailPath,
+            "thumbnailPath": URL(fileURLWithPath: w.thumbnailPath).absoluteString,
             "isFavorite": w.isFavorite,
             "importDate": dateFormatter.string(from: w.importDate),
             "tags": w.tags.map { serializeTag($0) }

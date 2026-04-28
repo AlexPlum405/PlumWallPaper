@@ -72,7 +72,7 @@ struct WebViewContainer: NSViewRepresentable {
 
         if let htmlURL = Bundle.main.url(forResource: "plumwallpaper", withExtension: "html") {
             NSLog("[WebView] Loading HTML: %@", htmlURL.absoluteString)
-            webView.loadFileURL(htmlURL, allowingReadAccessTo: htmlURL.deletingLastPathComponent())
+            webView.loadFileURL(htmlURL, allowingReadAccessTo: URL(fileURLWithPath: "/"))
         } else {
             NSLog("[WebView] ERROR: plumwallpaper.html not found in bundle!")
             NSLog("[WebView] Bundle path: %@", Bundle.main.bundlePath)
