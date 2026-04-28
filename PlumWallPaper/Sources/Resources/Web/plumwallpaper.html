@@ -398,7 +398,7 @@
         )}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 280, background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-            <span style={{ padding: '4px 12px', background: 'var(--accent)', borderRadius: 6, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{wallpaper.tags && wallpaper.tags[0]}</span>
+            <span style={{ padding: '4px 12px', background: 'var(--accent)', borderRadius: 6, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{wallpaper.tags && wallpaper.tags[0] && wallpaper.tags[0].name}</span>
             {wallpaper.isFavorite && <Icon name="heart" size={14} />}
           </div>
           <h2 style={{ fontSize: 48, fontFamily: 'var(--font-display)', fontStyle: 'italic', marginBottom: 12, letterSpacing: '-0.02em' }}>{wallpaper.name}</h2>
@@ -583,6 +583,12 @@
                           }}>NEW</div>
                         )}
 
+                        {w.isFavorite && (
+                          <div style={{ position: 'absolute', top: 16, right: 16, color: 'var(--accent)', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}>
+                            <Icon name="heart" size={18} />
+                          </div>
+                        )}
+
                         <div style={{ position: 'absolute', bottom: 16, right: 16, display: 'flex', gap: 6 }}>
                            <div style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '5px 10px', borderRadius: 10, fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>{formatSize(w.fileSize)}</div>
                            {formatDuration(w.duration) !== '-' && <div style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '5px 10px', borderRadius: 10, fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>{formatDuration(w.duration)}</div>}
@@ -632,7 +638,7 @@
                 { l: '设为壁纸', i: 'monitor', a: () => { onSetWallpaper(contextMenu.w); setContextMenu(null); } },
                 { l: '进入色彩调节', i: 'sliders', a: () => { onEditColor(contextMenu.w); setContextMenu(null); } },
                 { l: '全屏预览', i: 'search', a: () => { onPreview(contextMenu.w); setContextMenu(null); } },
-                { l: '收藏该壁纸', i: 'heart', a: () => { console.log('[Menu] Toggle favorite:', contextMenu.w.id); onToggleFavorite(contextMenu.w); setContextMenu(null); } },
+                { l: contextMenu.w.isFavorite ? '移除收藏' : '收藏该壁纸', i: 'heart', a: () => { console.log('[Menu] Toggle favorite:', contextMenu.w.id); onToggleFavorite(contextMenu.w); setContextMenu(null); } },
                 { type: 'sep' },
                 { l: '在访达中显示', i: 'monitor', a: () => { bridge.call('revealInFinder', { wallpaperId: contextMenu.w.id }); setContextMenu(null); } },
                 { l: '移除该资源', i: 'close', a: () => { console.log('[Menu] Delete wallpaper:', contextMenu.w.id); handleLocalDelete(contextMenu.w); setContextMenu(null); }, c: '#ff4d4d' },
@@ -736,12 +742,18 @@
                        <Icon name="play" size={14} />
                      </div>
                    )}
+
+                   {w.isFavorite && !w.type !== 'video' && (
+                     <div style={{ position: 'absolute', top: 12, left: 12, color: 'var(--accent)', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}>
+                       <Icon name="heart" size={16} />
+                     </div>
+                   )}
                 </div>
                 <div style={{ padding: '0 4px' }}>
                   <div style={{ fontWeight: 600, fontSize: 16, color: 'rgba(255,255,255,0.9)' }}>{w.name}</div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{w.resolution} · {w.type}</span>
-                    <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4 }}>{w.tags && w.tags[0]}</span>
+                    <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4 }}>{w.tags && w.tags[0] && w.tags[0].name}</span>
                   </div>
                 </div>
               </div>
@@ -765,7 +777,7 @@
                 { l: '全屏预览', i: 'search', a: () => { onPreview && onPreview(contextMenu.w); setContextMenu(null); } },
                 { l: '编辑分类标签', i: 'plus', a: () => { setShowTagManager(true); setContextMenu(null); } },
                 { type: 'sep' },
-                { l: '设为收藏', i: 'heart', a: () => { onToggleFavorite && onToggleFavorite(contextMenu.w); setContextMenu(null); } },
+                { l: contextMenu.w.isFavorite ? '移除收藏' : '设为收藏', i: 'heart', a: () => { onToggleFavorite && onToggleFavorite(contextMenu.w); setContextMenu(null); } },
                 { l: '在访达中显示', i: 'monitor', a: () => { bridge.call('revealInFinder', { wallpaperId: contextMenu.w.id }); setContextMenu(null); } },
                 { l: '移至回收站', i: 'close', a: () => { onDelete && onDelete(contextMenu.w); setContextMenu(null); }, c: '#ff4d4d' },
               ].map((it, idx) => it.type === 'sep' ? (
@@ -879,7 +891,7 @@
           }}>
             <div style={{ padding: '32px 32px 16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <span style={{ padding: '2px 8px', background: 'rgba(255,255,255,0.1)', borderRadius: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(255,255,255,0.5)' }}>{wallpaper.tags && wallpaper.tags[0]}</span>
+                <span style={{ padding: '2px 8px', background: 'rgba(255,255,255,0.1)', borderRadius: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(255,255,255,0.5)' }}>{wallpaper.tags && wallpaper.tags[0] && wallpaper.tags[0].name}</span>
                 {wallpaper.isFavorite && <Icon name="heart" size={12} />}
               </div>
               <h2 style={{ fontSize: 24, fontFamily: 'var(--font-display)', fontStyle: 'italic', marginBottom: 8 }}>{wallpaper.name}</h2>
@@ -1542,7 +1554,7 @@
                           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.2)', transition: '0.3s' }} className="overlay" />
                         </div>
                         <div style={{ fontSize: 16, fontWeight: 600 }}>{w.name}</div>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>{w.tags && w.tags[0]} · {w.type}</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>{w.tags && w.tags[0] && w.tags[0].name} · {w.type}</div>
                       </div>
                     ))}
                     {filteredWallpapers.length === 0 && (
