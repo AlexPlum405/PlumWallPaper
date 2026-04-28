@@ -57,13 +57,8 @@ final class WallpaperStore {
 
     /// 按标签获取壁纸
     func fetchWallpapers(byTag tag: Tag) throws -> [Wallpaper] {
-        let descriptor = FetchDescriptor<Wallpaper>(
-            predicate: #Predicate { wallpaper in
-                wallpaper.tags.contains(where: { $0.id == tag.id })
-            },
-            sortBy: [SortDescriptor(\.importDate, order: .reverse)]
-        )
-        return try modelContext.fetch(descriptor)
+        let allWallpapers = try fetchAllWallpapers()
+        return allWallpapers.filter { $0.tags.contains(where: { $0.id == tag.id }) }
     }
 
     /// 搜索壁纸
@@ -88,7 +83,7 @@ final class WallpaperStore {
 
     /// 获取最近使用的壁纸
     func fetchRecentWallpapers(limit: Int = 10) throws -> [Wallpaper] {
-        let descriptor = FetchDescriptor<Wallpaper>(
+        var descriptor = FetchDescriptor<Wallpaper>(
             predicate: #Predicate { $0.lastUsedDate != nil },
             sortBy: [SortDescriptor(\.lastUsedDate, order: .reverse)]
         )

@@ -1,0 +1,475 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		14A5D263475ED4C2B1409136 /* RestoreManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F831A3D8DFBF129BC31B3368 /* RestoreManager.swift */; };
+		1AFC146A2EB65DAF577B34E8 /* FileImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0823F5D57978191B355D159 /* FileImporter.swift */; };
+		20A8DB8CB5002455B09C6C85 /* ImportModalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DA999BB9002BB08BEB509A5 /* ImportModalView.swift */; };
+		283D2B2FF747E8F0C39C8E9E /* PlumWallPaperApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0D0A105F06031860E8B5C3 /* PlumWallPaperApp.swift */; };
+		40C249A58D39E6FCC2F229B2 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63BF896F956B8DE0C2AE1363 /* HomeView.swift */; };
+		665A6C328A895BFF05A5445A /* ThumbnailGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBE5FA06BA9E7ED726E742D2 /* ThumbnailGenerator.swift */; };
+		6FD6A307965E6F262777B41C /* DesktopBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA7A59EE5402C77BB64071F5 /* DesktopBridge.swift */; };
+		71FBC63BEA5F27C41E73CB10 /* WallpaperStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 094BEBCC84E89952400E6597 /* WallpaperStore.swift */; };
+		7AEC1B68C77B506566F27D60 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94245DA52FDAC92EE0B44D07 /* AppViewModel.swift */; };
+		7CD1F7829CC15AA754C35D33 /* WallpaperEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12EF93D3B27543CA2501881C /* WallpaperEngine.swift */; };
+		965E61C15BDCE3C2A55FC3C4 /* FilterPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62C0ACECCC1562A5452D9243 /* FilterPreset.swift */; };
+		9EB770A81DF47B9F794F27E9 /* FilterEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A261413E16AFB752D01B79 /* FilterEngine.swift */; };
+		A3B9E8902034FB842BC88740 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68FD1249A087B43D5360D439 /* LibraryView.swift */; };
+		ABC3DFF742CD332D51A8928E /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E27B6A9A48389A9CBCAEC83 /* SettingsView.swift */; };
+		B368CE94FDAD07831E473AD7 /* ColorAdjustView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A33010B9FBDBB2E816069C /* ColorAdjustView.swift */; };
+		B6B9A75D9D49916C8B03972D /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC71A3853630F86F1CF1A2FA /* Settings.swift */; };
+		BA9D1BD24C8FF8FFA0B0EB05 /* Tag.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACF1C1D9BC347E282F5C2F06 /* Tag.swift */; };
+		C03F4C27CCC0F897E002BC6E /* Wallpaper.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5ACA543E101FECACD5CA1D7 /* Wallpaper.swift */; };
+		C2B10CCE260388AE6BE016A3 /* WallpaperRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B057F6896210D905F09D6232 /* WallpaperRenderer.swift */; };
+		CB03EEFF3CF61B5E0B642B6E /* WallpaperDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BCF687F784BF6D89DEE79E /* WallpaperDetailView.swift */; };
+		DCC9B622188F96F0D66BAA70 /* MonitorSelectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37D0A7603EAF8FA9FE4DDD4C /* MonitorSelectorView.swift */; };
+		E8C72A9C265FA2D818F8FDBE /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 129CEDAF6288357D04AC00D7 /* Theme.swift */; };
+		F334E4A5ADD5FF1A64363891 /* DisplayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ADB412413EAC0832E173D7D /* DisplayManager.swift */; };
+		F43FDE1B9A058397730912A9 /* PreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C772358D777023DF5DDA0881 /* PreferencesStore.swift */; };
+		AA11BB22CC33DD44EE55FF66 /* AdjustComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF67 /* AdjustComponents.swift */; };
+		BB22CC33DD44EE55FF66AA11 /* EdgeBorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF66AA12 /* EdgeBorder.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		094BEBCC84E89952400E6597 /* WallpaperStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperStore.swift; sourceTree = "<group>"; };
+		129CEDAF6288357D04AC00D7 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		12EF93D3B27543CA2501881C /* WallpaperEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperEngine.swift; sourceTree = "<group>"; };
+		2E27B6A9A48389A9CBCAEC83 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		37D0A7603EAF8FA9FE4DDD4C /* MonitorSelectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonitorSelectorView.swift; sourceTree = "<group>"; };
+		3DA999BB9002BB08BEB509A5 /* ImportModalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportModalView.swift; sourceTree = "<group>"; };
+		54BCF687F784BF6D89DEE79E /* WallpaperDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperDetailView.swift; sourceTree = "<group>"; };
+		56A33010B9FBDBB2E816069C /* ColorAdjustView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorAdjustView.swift; sourceTree = "<group>"; };
+		60AD48DB3AC1A8944B151694 /* PlumWallPaper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PlumWallPaper.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		62C0ACECCC1562A5452D9243 /* FilterPreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterPreset.swift; sourceTree = "<group>"; };
+		63BF896F956B8DE0C2AE1363 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		68FD1249A087B43D5360D439 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		6ADB412413EAC0832E173D7D /* DisplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayManager.swift; sourceTree = "<group>"; };
+		94245DA52FDAC92EE0B44D07 /* AppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel.swift; sourceTree = "<group>"; };
+		AA7A59EE5402C77BB64071F5 /* DesktopBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopBridge.swift; sourceTree = "<group>"; };
+		ACF1C1D9BC347E282F5C2F06 /* Tag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tag.swift; sourceTree = "<group>"; };
+		B057F6896210D905F09D6232 /* WallpaperRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperRenderer.swift; sourceTree = "<group>"; };
+		B0823F5D57978191B355D159 /* FileImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileImporter.swift; sourceTree = "<group>"; };
+		B4A261413E16AFB752D01B79 /* FilterEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterEngine.swift; sourceTree = "<group>"; };
+		BBE5FA06BA9E7ED726E742D2 /* ThumbnailGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailGenerator.swift; sourceTree = "<group>"; };
+		C5ACA543E101FECACD5CA1D7 /* Wallpaper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wallpaper.swift; sourceTree = "<group>"; };
+		C772358D777023DF5DDA0881 /* PreferencesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesStore.swift; sourceTree = "<group>"; };
+		CC0D0A105F06031860E8B5C3 /* PlumWallPaperApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlumWallPaperApp.swift; sourceTree = "<group>"; };
+		DC71A3853630F86F1CF1A2FA /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
+		F831A3D8DFBF129BC31B3368 /* RestoreManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestoreManager.swift; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF67 /* AdjustComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustComponents.swift; sourceTree = "<group>"; };
+		BB22CC33DD44EE55FF66AA12 /* EdgeBorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeBorder.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0C21D03227FF232BA7FB1423 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				94245DA52FDAC92EE0B44D07 /* AppViewModel.swift */,
+				129CEDAF6288357D04AC00D7 /* Theme.swift */,
+				CC44DD55EE66FF77AA88BB01 /* Components */,
+				C5DF5344E4358E1476CE376B /* Views */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		CC44DD55EE66FF77AA88BB01 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				AA11BB22CC33DD44EE55FF67 /* AdjustComponents.swift */,
+				BB22CC33DD44EE55FF66AA12 /* EdgeBorder.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		207B8F83D9CEA4C681DBA9AB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				60AD48DB3AC1A8944B151694 /* PlumWallPaper.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		21CFD5E88D93EDADB5905BA4 /* DisplayManager */ = {
+			isa = PBXGroup;
+			children = (
+				6ADB412413EAC0832E173D7D /* DisplayManager.swift */,
+			);
+			path = DisplayManager;
+			sourceTree = "<group>";
+		};
+		33948DCF99565DEC4FEF469D /* App */ = {
+			isa = PBXGroup;
+			children = (
+				CC0D0A105F06031860E8B5C3 /* PlumWallPaperApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		350B3A361D4B60897435CC32 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				B0823F5D57978191B355D159 /* FileImporter.swift */,
+				B4A261413E16AFB752D01B79 /* FilterEngine.swift */,
+				F831A3D8DFBF129BC31B3368 /* RestoreManager.swift */,
+				BBE5FA06BA9E7ED726E742D2 /* ThumbnailGenerator.swift */,
+				21CFD5E88D93EDADB5905BA4 /* DisplayManager */,
+				7956D0796355DFFB0C388A97 /* WallpaperEngine */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		525A9B69F36C1BF6E81D6844 /* System */ = {
+			isa = PBXGroup;
+			children = (
+				AA7A59EE5402C77BB64071F5 /* DesktopBridge.swift */,
+			);
+			path = System;
+			sourceTree = "<group>";
+		};
+		7956D0796355DFFB0C388A97 /* WallpaperEngine */ = {
+			isa = PBXGroup;
+			children = (
+				12EF93D3B27543CA2501881C /* WallpaperEngine.swift */,
+				B057F6896210D905F09D6232 /* WallpaperRenderer.swift */,
+			);
+			path = WallpaperEngine;
+			sourceTree = "<group>";
+		};
+		C5DF5344E4358E1476CE376B /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				56A33010B9FBDBB2E816069C /* ColorAdjustView.swift */,
+				63BF896F956B8DE0C2AE1363 /* HomeView.swift */,
+				3DA999BB9002BB08BEB509A5 /* ImportModalView.swift */,
+				68FD1249A087B43D5360D439 /* LibraryView.swift */,
+				37D0A7603EAF8FA9FE4DDD4C /* MonitorSelectorView.swift */,
+				2E27B6A9A48389A9CBCAEC83 /* SettingsView.swift */,
+				54BCF687F784BF6D89DEE79E /* WallpaperDetailView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		C74CDDB4BAB7CD69B07A890A /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				33948DCF99565DEC4FEF469D /* App */,
+				350B3A361D4B60897435CC32 /* Core */,
+				F5F01C22EC0668E59DE3D0FE /* Storage */,
+				525A9B69F36C1BF6E81D6844 /* System */,
+				0C21D03227FF232BA7FB1423 /* UI */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		D3EDE0A335EB05D0A923A721 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				62C0ACECCC1562A5452D9243 /* FilterPreset.swift */,
+				DC71A3853630F86F1CF1A2FA /* Settings.swift */,
+				ACF1C1D9BC347E282F5C2F06 /* Tag.swift */,
+				C5ACA543E101FECACD5CA1D7 /* Wallpaper.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		D7CF8A5E2B52A394B64F180A = {
+			isa = PBXGroup;
+			children = (
+				C74CDDB4BAB7CD69B07A890A /* Sources */,
+				207B8F83D9CEA4C681DBA9AB /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F5F01C22EC0668E59DE3D0FE /* Storage */ = {
+			isa = PBXGroup;
+			children = (
+				C772358D777023DF5DDA0881 /* PreferencesStore.swift */,
+				094BEBCC84E89952400E6597 /* WallpaperStore.swift */,
+				D3EDE0A335EB05D0A923A721 /* Models */,
+			);
+			path = Storage;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		2AA0BD841D89D132B98D25E6 /* PlumWallPaper */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8738315FC56C4DF298609E39 /* Build configuration list for PBXNativeTarget "PlumWallPaper" */;
+			buildPhases = (
+				C9EC7DDABBE62CC1A8E2D11E /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PlumWallPaper;
+			packageProductDependencies = (
+			);
+			productName = PlumWallPaper;
+			productReference = 60AD48DB3AC1A8944B151694 /* PlumWallPaper.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		2E3D8D7892AD44418BEEF70B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					2AA0BD841D89D132B98D25E6 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = AD26888A4F53EBEDAA65A358 /* Build configuration list for PBXProject "PlumWallPaper" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = D7CF8A5E2B52A394B64F180A;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 207B8F83D9CEA4C681DBA9AB /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				2AA0BD841D89D132B98D25E6 /* PlumWallPaper */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		C9EC7DDABBE62CC1A8E2D11E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7AEC1B68C77B506566F27D60 /* AppViewModel.swift in Sources */,
+				B368CE94FDAD07831E473AD7 /* ColorAdjustView.swift in Sources */,
+				6FD6A307965E6F262777B41C /* DesktopBridge.swift in Sources */,
+				F334E4A5ADD5FF1A64363891 /* DisplayManager.swift in Sources */,
+				1AFC146A2EB65DAF577B34E8 /* FileImporter.swift in Sources */,
+				9EB770A81DF47B9F794F27E9 /* FilterEngine.swift in Sources */,
+				965E61C15BDCE3C2A55FC3C4 /* FilterPreset.swift in Sources */,
+				40C249A58D39E6FCC2F229B2 /* HomeView.swift in Sources */,
+				20A8DB8CB5002455B09C6C85 /* ImportModalView.swift in Sources */,
+				A3B9E8902034FB842BC88740 /* LibraryView.swift in Sources */,
+				DCC9B622188F96F0D66BAA70 /* MonitorSelectorView.swift in Sources */,
+				283D2B2FF747E8F0C39C8E9E /* PlumWallPaperApp.swift in Sources */,
+				F43FDE1B9A058397730912A9 /* PreferencesStore.swift in Sources */,
+				14A5D263475ED4C2B1409136 /* RestoreManager.swift in Sources */,
+				B6B9A75D9D49916C8B03972D /* Settings.swift in Sources */,
+				ABC3DFF742CD332D51A8928E /* SettingsView.swift in Sources */,
+				BA9D1BD24C8FF8FFA0B0EB05 /* Tag.swift in Sources */,
+				E8C72A9C265FA2D818F8FDBE /* Theme.swift in Sources */,
+				665A6C328A895BFF05A5445A /* ThumbnailGenerator.swift in Sources */,
+				C03F4C27CCC0F897E002BC6E /* Wallpaper.swift in Sources */,
+				CB03EEFF3CF61B5E0B642B6E /* WallpaperDetailView.swift in Sources */,
+				7CD1F7829CC15AA754C35D33 /* WallpaperEngine.swift in Sources */,
+				C2B10CCE260388AE6BE016A3 /* WallpaperRenderer.swift in Sources */,
+				71FBC63BEA5F27C41E73CB10 /* WallpaperStore.swift in Sources */,
+				AA11BB22CC33DD44EE55FF66 /* AdjustComponents.swift in Sources */,
+				BB22CC33DD44EE55FF66AA11 /* EdgeBorder.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		70BDAD3FDCB6948BBC118863 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_GENERATION_MODE = GeneratedFile;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.plum.PlumWallPaper;
+				PRODUCT_NAME = PlumWallPaper;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		939A279242BE62C07C4DBB01 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		959F8BA0C66C2F833D19C923 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		E47B6349E11842573EF324D8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_GENERATION_MODE = GeneratedFile;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.plum.PlumWallPaper;
+				PRODUCT_NAME = PlumWallPaper;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		8738315FC56C4DF298609E39 /* Build configuration list for PBXNativeTarget "PlumWallPaper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				70BDAD3FDCB6948BBC118863 /* Debug */,
+				E47B6349E11842573EF324D8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AD26888A4F53EBEDAA65A358 /* Build configuration list for PBXProject "PlumWallPaper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				939A279242BE62C07C4DBB01 /* Debug */,
+				959F8BA0C66C2F833D19C923 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 2E3D8D7892AD44418BEEF70B /* Project object */;
+}

@@ -142,8 +142,8 @@ struct DisplaySettingsView: View {
         VStack(alignment: .leading, spacing: 40) {
             SettingsGroup(label: "显示器配置") {
                 HStack(spacing: 40) {
-                    MonitorModel(name: "Studio Display", res: "5120×2880", isMain: true)
-                    MonitorModel(name: "MacBook Pro", res: "3456×2234", isMain: false)
+                    MonitorCard(name: "Studio Display", res: "5120×2880", isMain: true)
+                    MonitorCard(name: "MacBook Pro", res: "3456×2234", isMain: false)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 40)
@@ -153,7 +153,7 @@ struct DisplaySettingsView: View {
                 Picker("拓扑模式", selection: $settings.displayTopology) {
                     Text("独立渲染").tag(DisplayTopology.independent)
                     Text("镜像显示").tag(DisplayTopology.mirrored)
-                    Text("跨屏拉伸").tag(DisplayTopology.span)
+                    Text("跨屏拉伸").tag(DisplayTopology.panorama)
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 .padding(.top, 20)
@@ -279,7 +279,7 @@ struct ToggleRow: View {
     let title: String
     let desc: String
     @Binding var isOn: Bool
-    
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
@@ -288,6 +288,30 @@ struct ToggleRow: View {
             }
             Spacer()
             Toggle("", isOn: $isOn).toggleStyle(SwitchToggleStyle(tint: Theme.accent))
+        }
+    }
+}
+
+struct MonitorCard: View {
+    let name: String
+    let res: String
+    let isMain: Bool
+
+    var body: some View {
+        VStack(spacing: 8) {
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isMain ? Theme.accent : Color.white.opacity(0.2), lineWidth: isMain ? 2 : 1)
+                .frame(width: 80, height: 50)
+                .overlay(
+                    Text(isMain ? "主" : "副")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(isMain ? Theme.accent : .white.opacity(0.4))
+                )
+            Text(name)
+                .font(.system(size: 12, weight: .semibold))
+            Text(res)
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundColor(.white.opacity(0.4))
         }
     }
 }

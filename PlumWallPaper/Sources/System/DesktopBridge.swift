@@ -11,7 +11,6 @@ import AppKit
 /// macOS 桌面壁纸 API 封装
 final class DesktopBridge {
     /// 设置 HEIC 动态壁纸
-    @MainActor
     func setDesktopImage(_ url: URL, for screen: NSScreen) throws {
         try NSWorkspace.shared.setDesktopImageURL(url, for: screen)
     }

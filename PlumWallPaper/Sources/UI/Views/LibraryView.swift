@@ -79,7 +79,7 @@ struct LibraryView: View {
             }
         }
         .background(Theme.bg.edgesIgnoringSafeArea(.all))
-        .fullScreenCover(item: $showingColorAdjust) { wallpaper in
+        .sheet(item: $showingColorAdjust) { wallpaper in
             ColorAdjustView(wallpaper: wallpaper)
         }
     }
