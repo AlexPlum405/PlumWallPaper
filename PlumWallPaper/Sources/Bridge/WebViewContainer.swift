@@ -144,15 +144,19 @@ final class DropEnabledWebView: WKWebView {
         imageView.image = image
         imageView.imageScaling = .scaleAxesIndependently
         imageView.autoresizingMask = [.width, .height]
+        imageView.wantsLayer = true
+        imageView.layer?.backgroundColor = NSColor(red: 0.05, green: 0.055, blue: 0.07, alpha: 1.0).cgColor
         addSubview(imageView)
         resizeSnapshotView = imageView
+        layer?.opacity = 0
     }
 
     override func viewDidEndLiveResize() {
         super.viewDidEndLiveResize()
         guard let snapshot = resizeSnapshotView else { return }
+        layer?.opacity = 1
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.15
+            context.duration = 0.2
             snapshot.animator().alphaValue = 0
         }, completionHandler: {
             snapshot.removeFromSuperview()
