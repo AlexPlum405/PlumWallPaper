@@ -258,10 +258,44 @@
     // --- Pages ---
 
     const ImportModal = ({ onClose, onStartImport }) => {
-      const fileInputRef = useRef(null);
-      const folderInputRef = useRef(null);
       const [step, setStep] = useState(1); // 1: Select, 2: Metadata
-      const [meta, setMeta] = useState({ name: 'Ethereal Peaks (Imported)', tag: '自然', fav: false });
+      const [selectedFiles, setSelectedFiles] = useState([]);
+      const [meta, setMeta] = useState({ name: '', tag: '自然', fav: false });
+
+      const handleFileSelect = () => {
+        console.log('[Import] Opening file picker for batch files');
+        bridge.call('importFiles').then((result) => {
+          console.log('[Import] Files selected:', result);
+          if (result && result.length > 0) {
+            setSelectedFiles(result);
+            setMeta({ ...meta, name: result[0].name || '导入的壁纸' });
+            setStep(2);
+          }
+        }).catch((err) => {
+          console.error('[Import] File selection error:', err);
+        });
+      };
+
+      const handleFolderSelect = () => {
+        console.log('[Import] Opening folder picker');
+        bridge.call('importFolder').then((result) => {
+          console.log('[Import] Folder selected:', result);
+          if (result && result.length > 0) {
+            setSelectedFiles(result);
+            setMeta({ ...meta, name: '批量导入' });
+            setStep(2);
+          }
+        }).catch((err) => {
+          console.error('[Import] Folder selection error:', err);
+        });
+      };
+
+      const handleConfirmImport = () => {
+        console.log('[Import] Confirming import with metadata:', meta);
+        addToast('已导入 ' + selectedFiles.length + ' 个壁纸');
+        refreshWallpapers();
+        onClose();
+      };
 
       return (
         <div className="animate-in" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(30px)', zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -277,14 +311,14 @@
               </div>
               <button onClick={onClose} className="btn" style={{ borderRadius: '50%', width: 36, height: 36, padding: 0, justifyContent: 'center' }}><Icon name="close" /></button>
             </div>
-            
+
             <div style={{ padding: 40 }}>
               {step === 1 ? (
                 <div className="animate-in">
-                  <div 
-                    onClick={() => fileInputRef.current.click()}
-                    style={{ 
-                      height: 240, border: '2px dashed rgba(255,255,255,0.1)', borderRadius: 24, 
+                  <div
+                    onClick={handleFileSelect}
+                    style={{
+                      height: 240, border: '2px dashed rgba(255,255,255,0.1)', borderRadius: 24,
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                       gap: 20, cursor: 'pointer', transition: '0.4s', background: 'rgba(255,255,255,0.02)'
                     }}
@@ -300,8 +334,8 @@
                     </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 32 }}>
-                    <button onClick={() => setStep(2)} className="btn" style={{ height: 50, justifyContent: 'center' }}><Icon name="image" size={18} /> 批量文件</button>
-                    <button onClick={() => setStep(2)} className="btn" style={{ height: 50, justifyContent: 'center' }}><Icon name="monitor" size={18} /> 整包导入</button>
+                    <button onClick={handleFileSelect} className="btn" style={{ height: 50, justifyContent: 'center' }}><Icon name="image" size={18} /> 批量文件</button>
+                    <button onClick={handleFolderSelect} className="btn" style={{ height: 50, justifyContent: 'center' }}><Icon name="monitor" size={18} /> 整包导入</button>
                   </div>
                 </div>
               ) : (
@@ -314,7 +348,7 @@
                     <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 12 }}>所属分类标签</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                       {['自然', '城市', '动漫', '极简', '暗色', '4K'].map(t => (
-                        <div key={t} onClick={() => setMeta({...meta, tag: t})} style={{ 
+                        <div key={t} onClick={() => setMeta({...meta, tag: t})} style={{
                           padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer', transition: '0.2s',
                           background: meta.tag === t ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
                           color: meta.tag === t ? '#fff' : 'rgba(255,255,255,0.4)',
@@ -332,19 +366,17 @@
                   </div>
                 </div>
               )}
-              <input type="file" ref={fileInputRef} style={{ display: 'none' }} multiple onChange={() => setStep(2)} />
-              <input type="file" ref={folderInputRef} style={{ display: 'none' }} webkitdirectory="true" onChange={() => setStep(2)} />
             </div>
 
             <div style={{ padding: '24px 40px', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
-                {step === 1 ? '存储路径: /Documents/WallPapers/Library' : '即将导入 1 个资源'}
+                {step === 1 ? '存储路径: /Documents/WallPapers/Library' : `即将导入 ${selectedFiles.length} 个资源`}
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 <button onClick={step === 1 ? onClose : () => setStep(1)} className="btn" style={{ padding: '10px 24px' }}>
                   {step === 1 ? '取消' : '返回上一步'}
                 </button>
-                <button onClick={step === 1 ? () => setStep(2) : onStartImport} className="btn-primary btn" style={{ padding: '10px 32px' }}>
+                <button onClick={step === 1 ? handleFileSelect : handleConfirmImport} className="btn-primary btn" style={{ padding: '10px 32px' }}>
                   {step === 1 ? '开始分析' : '确认并导入'}
                 </button>
               </div>
@@ -425,7 +457,18 @@
           {/* Hero Section */}
           <section style={{ height: '85vh', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
-              <img src={hero.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover', transition: '1.2s cubic-bezier(0.2, 1, 0.3, 1)' }} />
+              {hero.type === 'video' ? (
+                <video
+                  key={hero.id}
+                  src={hero.filePath}
+                  autoPlay
+                  loop
+                  muted
+                  style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover' }}
+                />
+              ) : (
+                <img src={hero.filePath} style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover', transition: '1.2s cubic-bezier(0.2, 1, 0.3, 1)' }} />
+              )}
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(13,14,18,0) 50%, #0d0e12 100%)' }} />
             </div>
             

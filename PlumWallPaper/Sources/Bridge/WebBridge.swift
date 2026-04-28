@@ -93,7 +93,42 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                     }
                 }
 
-            // 3. setWallpaper
+            // 3. importFolder — 弹出 NSOpenPanel 选择目录，扫描其中的壁纸文件
+            case "importFolder":
+                return await withCheckedContinuation { continuation in
+                    DispatchQueue.main.async {
+                        let panel = NSOpenPanel()
+                        panel.allowsMultipleSelection = false
+                        panel.canChooseDirectories = true
+                        panel.canChooseFiles = false
+                        panel.message = "选择包含壁纸文件的目录"
+
+                        panel.begin { response in
+                            Task { @MainActor in
+                                guard response == .OK, let folderURL = panel.url else {
+                                    continuation.resume(returning: self.fail("User cancelled"))
+                                    return
+                                }
+                                do {
+                                    let validExts = Set(["mp4", "mov", "m4v", "heic", "heif"])
+                                    let contents = try FileManager.default.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: nil)
+                                    let mediaFiles = contents.filter { validExts.contains($0.pathExtension.lowercased()) }
+                                    guard !mediaFiles.isEmpty else {
+                                        continuation.resume(returning: self.fail("目录中没有找到支持的壁纸文件"))
+                                        return
+                                    }
+                                    let imported = try await FileImporter.shared.importFiles(urls: mediaFiles)
+                                    try self.wallpaperStore.addWallpapers(imported)
+                                    continuation.resume(returning: self.success(imported.map { self.serializeWallpaper($0) }))
+                                } catch {
+                                    continuation.resume(returning: self.fail(error.localizedDescription))
+                                }
+                            }
+                        }
+                    }
+                }
+
+            // 4. setWallpaper
             case "setWallpaper":
                 let (wallpaper, screenInfo) = try resolveWallpaperAndScreen(params)
                 WallpaperEngine.shared.setWallpaper(wallpaper, for: screenInfo)
