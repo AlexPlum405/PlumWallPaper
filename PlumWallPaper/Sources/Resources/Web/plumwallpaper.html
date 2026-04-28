@@ -399,7 +399,11 @@
           <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(20px)', padding: '8px 24px', borderRadius: 100, border: '1px solid rgba(255,255,255,0.1)', fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>Immersive Preview</div>
           <button onClick={onClose} className="btn" style={{ borderRadius: '50%', width: 44, height: 44, justifyContent: 'center', background: 'rgba(255,255,255,0.1)', border: 'none', backdropFilter: 'blur(10px)' }}><Icon name="close" /></button>
         </div>
-        <img src={wallpaper.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {wallpaper.type === 'video' ? (
+          <video src={wallpaper.filePath} autoPlay loop muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <img src={wallpaper.filePath} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        )}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 280, background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <span style={{ padding: '4px 12px', background: 'var(--accent)', borderRadius: 6, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{wallpaper.tags && wallpaper.tags[0]}</span>
@@ -629,7 +633,7 @@
       );
     };
 
-    const LibraryPage = ({ wallpapers, setView, onSetWallpaper, onToggleFavorite, onDelete }) => {
+    const LibraryPage = ({ wallpapers, setView, onSetWallpaper, onPreview, onEditColor, onToggleFavorite, onDelete }) => {
       const [contextMenu, setContextMenu] = useState(null);
       const [showTagManager, setShowTagManager] = useState(false);
       const [activeFilter, setActiveFilter] = useState('全部');
@@ -677,8 +681,8 @@
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 32 }}>
             {wallpapers.map((w, i) => (
-              <div key={w.id} className="library-card-v2" 
-                onDoubleClick={() => setView(w)} 
+              <div key={w.id} className="library-card-v2"
+                onDoubleClick={() => onPreview && onPreview(w)}
                 onContextMenu={(e) => handleContextMenu(e, w)}
                 style={{ 
                   cursor: 'pointer', transition: '0.4s',
@@ -736,7 +740,8 @@
               </div>
               {[
                 { l: '设为壁纸', i: 'monitor', a: () => onSetWallpaper(contextMenu.w) },
-                { l: '进入色彩调节', i: 'sliders', a: () => setView(contextMenu.w) },
+                { l: '进入色彩调节', i: 'sliders', a: () => onEditColor && onEditColor(contextMenu.w) },
+                { l: '全屏预览', i: 'search', a: () => onPreview && onPreview(contextMenu.w) },
                 { l: '编辑分类标签', i: 'plus', a: () => setShowTagManager(true) },
                 { type: 'sep' },
                 { l: '设为收藏', i: 'heart', a: () => onToggleFavorite && onToggleFavorite(contextMenu.w) },
@@ -1282,7 +1287,7 @@
       const [settings, setSettings] = useState({});
 
       const refreshWallpapers = () => {
-        bridge.call('getWallpapers').then(data => {
+        return bridge.call('getWallpapers').then(data => {
           setWallpapers(data);
           if (!selectedWallpaper && data.length > 0) setSelectedWallpaper(data[0]);
         });
@@ -1331,12 +1336,13 @@
 
       const handleDelete = (wallpaper) => {
         bridge.call('deleteWallpaper', { wallpaperId: wallpaper.id }).then(() => {
-          addToast('已从库中移除');
           // 如果删除的是当前 hero，重置索引
           if (wallpapers[heroIndex]?.id === wallpaper.id) {
             setHeroIndex(0);
           }
-          refreshWallpapers();
+          return refreshWallpapers();
+        }).then(() => {
+          addToast('已从库中移除');
         });
       };
 
@@ -1402,8 +1408,10 @@
             {view === 'library' && (
               <LibraryPage
                 wallpapers={filteredWallpapers}
-                setView={handlePreview}
+                setView={setView}
                 onSetWallpaper={handleSetWallpaper}
+                onPreview={handlePreview}
+                onEditColor={handleGoToColor}
                 onToggleFavorite={handleToggleFavorite}
                 onDelete={handleDelete}
               />
