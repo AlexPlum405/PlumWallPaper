@@ -422,6 +422,15 @@
         if (!dragState.moved) setHeroIndex(index);
       };
 
+      const handleLocalDelete = (w) => {
+        console.log('[HomePage] Delete wallpaper:', w.id);
+        // 如果删除的是当前 hero，重置索引
+        if (wallpapers[heroIndex]?.id === w.id) {
+          setHeroIndex(0);
+        }
+        onDelete(w);
+      };
+
       const handleContextMenu = (e, w) => {
         e.preventDefault();
         setContextMenu({ x: e.clientX, y: e.clientY, w });
@@ -626,7 +635,7 @@
                 { l: '收藏该壁纸', i: 'heart', a: () => { console.log('[Menu] Toggle favorite:', contextMenu.w.id); onToggleFavorite(contextMenu.w); setContextMenu(null); } },
                 { type: 'sep' },
                 { l: '在访达中显示', i: 'monitor', a: () => { bridge.call('revealInFinder', { wallpaperId: contextMenu.w.id }); setContextMenu(null); } },
-                { l: '移除该资源', i: 'close', a: () => { console.log('[Menu] Delete wallpaper:', contextMenu.w.id); onDelete(contextMenu.w); setContextMenu(null); }, c: '#ff4d4d' },
+                { l: '移除该资源', i: 'close', a: () => { console.log('[Menu] Delete wallpaper:', contextMenu.w.id); handleLocalDelete(contextMenu.w); setContextMenu(null); }, c: '#ff4d4d' },
               ].map((it, idx) => it.type === 'sep' ? (
                 <div key={idx} style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '4px 8px' }} />
               ) : (
@@ -1362,10 +1371,6 @@
         console.log('[Delete] Starting delete for wallpaper:', wallpaper.id, wallpaper.name);
         bridge.call('deleteWallpaper', { wallpaperId: wallpaper.id }).then(() => {
           console.log('[Delete] Delete successful, refreshing...');
-          // 如果删除的是当前 hero，重置索引
-          if (wallpapers[heroIndex]?.id === wallpaper.id) {
-            setHeroIndex(0);
-          }
           return refreshWallpapers();
         }).then(() => {
           console.log('[Delete] Refresh complete');

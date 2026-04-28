@@ -266,14 +266,25 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
     private static let callbackIdPattern = /^cb_[0-9]+_[a-z0-9]+$/
 
     private func resolveWallpaper(_ params: [String: Any]) throws -> Wallpaper {
-        guard let wallpaperId = params["wallpaperId"] as? String,
-              let uuid = UUID(uuidString: wallpaperId) else {
+        NSLog("[WebBridge] resolveWallpaper params: %@", String(describing: params))
+        guard let wallpaperId = params["wallpaperId"] as? String else {
+            NSLog("[WebBridge] Missing wallpaperId in params")
             throw BridgeError.missingParameter("wallpaperId")
         }
+        NSLog("[WebBridge] wallpaperId string: %@", wallpaperId)
+        guard let uuid = UUID(uuidString: wallpaperId) else {
+            NSLog("[WebBridge] Invalid UUID format: %@", wallpaperId)
+            throw BridgeError.missingParameter("wallpaperId")
+        }
+        NSLog("[WebBridge] Parsed UUID: %@", uuid.uuidString)
         let descriptor = FetchDescriptor<Wallpaper>(predicate: #Predicate { $0.id == uuid })
-        guard let wallpaper = try modelContext.fetch(descriptor).first else {
+        let results = try modelContext.fetch(descriptor)
+        NSLog("[WebBridge] Found %d wallpapers matching UUID", results.count)
+        guard let wallpaper = results.first else {
+            NSLog("[WebBridge] Wallpaper not found for UUID: %@", uuid.uuidString)
             throw BridgeError.notFound("Wallpaper not found")
         }
+        NSLog("[WebBridge] Resolved wallpaper: %@ (id: %@)", wallpaper.name, wallpaper.id.uuidString)
         return wallpaper
     }
 
