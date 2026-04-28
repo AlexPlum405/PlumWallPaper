@@ -31,8 +31,8 @@ struct WebViewContainer: NSViewRepresentable {
         context.coordinator.bridge = bridge
         contentController.add(bridge, name: "bridge")
 
-        // Task 4 将添加 webView 属性到 AppViewModel
-        // viewModel.webView = webView
+        // 保存 webView 引用到 AppViewModel
+        viewModel.webView = webView
 
         // 加载本地 HTML 文件
         if let htmlURL = Bundle.main.url(

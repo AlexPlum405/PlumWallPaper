@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import AppKit
+import WebKit
 import Observation
 import CryptoKit
 
@@ -32,6 +33,9 @@ final class AppViewModel {
     
     // 色彩调节信号
     var colorAdjustRequest: Wallpaper? = nil
+
+    // WebView 引用（供 Bridge 回调使用）
+    var webView: WKWebView?
 
     // MARK: - 导入
     
