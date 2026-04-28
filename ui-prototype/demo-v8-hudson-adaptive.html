@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>Hudson 浅色壁纸适配方案</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; overflow: hidden; background: #000; color: white; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+
+    .floating-panel {
+      position: absolute; top: 0; right: 0; bottom: 0; width: 400px;
+      padding: 80px 48px; background: transparent; overflow-y: auto; pointer-events: auto;
+    }
+
+    .wallpaper-bg { position: absolute; inset: 0; pointer-events: none; transition: opacity 0.5s ease; }
+    .wallpaper-bg img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.05); }
+
+    /* -------------------------------------------------------------
+       Hudson 基础结构 (基于 v6.1 Classic)
+       ------------------------------------------------------------- */
+    .hudson-base {
+      /* 默认状态：深色壁纸下的纯白 UI + 阴影 */
+      --text-main: rgba(255, 255, 255, 0.95);
+      --text-sub: rgba(255, 255, 255, 0.6);
+      --accent: #fff;
+      --track-bg: rgba(255,255,255,0.25);
+      --shadow-text: 0 4px 16px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,0.6);
+      --shadow-ui: 0 2px 12px rgba(0,0,0,0.9);
+      --blend-mode: normal;
+    }
+
+    /* 解决方案 1: 智能色彩切换 (Dynamic Dark UI) 
+       检测到浅色壁纸时，将全局变量切换为深灰色/黑色，并移除黑色阴影 */
+    .hudson-base.adaptive-dynamic-dark {
+      --text-main: rgba(0, 0, 0, 0.9);
+      --text-sub: rgba(0, 0, 0, 0.5);
+      --accent: #000;
+      --track-bg: rgba(0,0,0,0.15);
+      --shadow-text: none;
+      --shadow-ui: none;
+    }
+
+    /* 解决方案 2: 先锋反色模式 (Mix Blend Mode)
+       极客方案，将整个面板应用差值混合，白色遇到白底变黑，黑底保持白 */
+    .hudson-base.adaptive-blend {
+      --text-main: #fff;
+      --text-sub: rgba(255,255,255,0.7);
+      --accent: #fff;
+      --track-bg: rgba(255,255,255,0.4);
+      --shadow-text: none; /* 必须去掉阴影，否则混合会脏 */
+      --shadow-ui: none;
+      --blend-mode: difference;
+    }
+
+    .floating-panel { mix-blend-mode: var(--blend-mode); transition: mix-blend-mode 0.3s; }
+
+    /* 控件样式绑定 CSS 变量 */
+    .group-title { font-family: 'Newsreader', serif; font-style: italic; font-weight: 300; font-size: 32px; color: var(--text-main); text-shadow: var(--shadow-text); margin-bottom: 28px; letter-spacing: -0.02em; transition: color 0.4s, text-shadow 0.4s; }
+    .control-label { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.1em; color: var(--text-sub); text-transform: uppercase; text-shadow: var(--shadow-text); transition: color 0.4s, text-shadow 0.4s; }
+    .control-val { font-family: 'Newsreader', serif; font-size: 16px; color: var(--text-main); text-shadow: var(--shadow-text); transition: color 0.4s, text-shadow 0.4s; }
+    
+    input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; height: 32px; cursor: pointer; }
+    input[type=range]:focus { outline: none; }
+    input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 1px; background: var(--track-bg); box-shadow: var(--shadow-ui); transition: 0.4s; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: transparent; border: 1.5px solid var(--accent); margin-top: -8.5px; box-shadow: var(--shadow-ui); transition: transform 0.3s, background 0.3s, border-color 0.4s, box-shadow 0.4s; }
+    input[type=range]::-webkit-slider-thumb:hover, input[type=range]:active::-webkit-slider-thumb { transform: scale(1.3); background: rgba(128,128,128,0.15); }
+    
+    .preset-btn { font-family: 'Inter', sans-serif; font-weight: 400; font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-sub); background: transparent; border: none; padding: 10px 0; text-align: left; cursor: pointer; transition: 0.4s; text-shadow: var(--shadow-text); border-bottom: 1px solid transparent; }
+    .preset-btn:hover { color: var(--accent); border-bottom-color: var(--accent); letter-spacing: 0.2em; }
+
+
+    /* 顶部控制栏 */
+    .controls-bar {
+      position: absolute; top: 24px; left: 50%; transform: translateX(-50%);
+      display: flex; flex-direction: column; gap: 12px; z-index: 1000;
+      background: rgba(0,0,0,0.7); padding: 16px 24px; border-radius: 12px;
+      backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.15);
+      align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .control-row { display: flex; gap: 8px; align-items: center; justify-content: center; }
+    .demo-tab {
+      background: transparent; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7);
+      padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
+      cursor: pointer; transition: 0.2s;
+    }
+    .demo-tab:hover { color: white; border-color: rgba(255,255,255,0.4); }
+    .demo-tab.active { background: #fff; color: #000; border-color: #fff; }
+    .tab-label { font-size: 9px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.15em; width: 60px; text-align: right; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState } = React;
+
+    const SliderControl = ({ label, value, min, max, onChange, displayValue }) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <span className="control-label">{label}</span>
+          <span className="control-val">{displayValue || value}</span>
+        </div>
+        <input type="range" min={min} max={max} value={value} onChange={e => onChange(Number(e.target.value))} />
+      </div>
+    );
+
+    const SettingsPanel = ({ bgType, adaptiveMode }) => {
+      const [expo, setExpo] = useState(100);
+      const [con, setCon] = useState(100);
+
+      // 根据选择决定外层容器的 class
+      let themeClass = 'hudson-base';
+      if (bgType === 'light') {
+        if (adaptiveMode === 'dynamic') themeClass += ' adaptive-dynamic-dark';
+        if (adaptiveMode === 'blend') themeClass += ' adaptive-blend';
+      } else {
+        // 深色背景下，如果选了 blend 模式也应用它
+        if (adaptiveMode === 'blend') themeClass += ' adaptive-blend';
+      }
+
+      return (
+        <div className={themeClass} style={{ width: '100vw', height: '100vh', position: 'relative' }}>
+          
+          {/* 背景层切换 */}
+          <div className="wallpaper-bg" style={{ opacity: bgType === 'dark' ? 1 : 0 }}>
+            <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2564&auto=format&fit=crop" />
+          </div>
+          <div className="wallpaper-bg" style={{ opacity: bgType === 'light' ? 1 : 0 }}>
+            {/* 极端刺眼的极简浅色建筑背景 */}
+            <img src="https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=2564&auto=format&fit=crop" />
+          </div>
+
+          <div className="floating-panel no-scrollbar">
+            
+            <div style={{ marginBottom: 64 }}>
+              <div className="group-title">Color Grading</div>
+              <SliderControl label="Exposure" value={expo} min={50} max={150} onChange={setExpo} displayValue={`${expo}%`} />
+              <SliderControl label="Contrast" value={con} min={50} max={150} onChange={setCon} displayValue={`${con}%`} />
+            </div>
+
+            <div style={{ marginBottom: 40 }}>
+              <div className="group-title">Cinematic LUTs</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {['Kodak Portra 400', 'Fujifilm Superia', 'Cinematic Teal'].map(preset => (
+                  <button key={preset} className="preset-btn">{preset}</button>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      );
+    };
+
+    const App = () => {
+      const [bgType, setBgType] = useState('light');
+      const [adaptiveMode, setAdaptiveMode] = useState('none');
+
+      return (
+        <div>
+          <div className="controls-bar">
+            <div className="control-row">
+              <div className="tab-label">壁纸测试</div>
+              <button className={`demo-tab ${bgType === 'dark' ? 'active' : ''}`} onClick={() => setBgType('dark')}>🌃 深色风光</button>
+              <button className={`demo-tab ${bgType === 'light' ? 'active' : ''}`} onClick={() => setBgType('light')}>☀️ 极亮浅色 (刺眼)</button>
+            </div>
+            <div className="control-row" style={{ marginTop: 4 }}>
+              <div className="tab-label">应对方案</div>
+              <button className={`demo-tab ${adaptiveMode === 'none' ? 'active' : ''}`} onClick={() => setAdaptiveMode('none')}>❌ 无作为 (摆烂)</button>
+              <button className={`demo-tab ${adaptiveMode === 'dynamic' ? 'active' : ''}`} onClick={() => setAdaptiveMode('dynamic')}>✅ 方案一: 智能色变</button>
+              <button className={`demo-tab ${adaptiveMode === 'blend' ? 'active' : ''}`} onClick={() => setAdaptiveMode('blend')}>🔥 方案二: 差值反色</button>
+            </div>
+          </div>
+          <SettingsPanel bgType={bgType} adaptiveMode={adaptiveMode} />
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -3,7 +3,29 @@ import SwiftData
 import AppKit
 import WebKit
 import Observation
-import CryptoKit
+
+enum ImportPhase: Equatable {
+    case idle
+    case scanning
+    case importing
+    case duplicateReview
+    case completed
+    case cancelled
+}
+
+struct ImportError: Identifiable {
+    let id = UUID()
+    let fileName: String
+    let message: String
+}
+
+struct DuplicateItem: Identifiable {
+    let id = UUID()
+    let url: URL
+    let fileName: String
+    let fileSize: Int64
+    let existingName: String
+}
 
 /// 应用主 ViewModel：前后端中介层
 @Observable
@@ -17,84 +39,136 @@ final class AppViewModel {
     let restore = RestoreManager.shared
 
     // 导入状态
-    var isImporting = false
+    var importPhase: ImportPhase = .idle
     var importProgress: Double = 0
     var currentImportFileName = ""
-    var importErrorMessage: String? = nil
+    var importErrors: [ImportError] = []
+    var importedCount: Int = 0
+    var skippedCount: Int = 0
 
     // 重复确认
-    var pendingDuplicates: [URL] = []
+    var pendingDuplicates: [DuplicateItem] = []
 
     // 壁纸状态
     var activeWallpaperPerScreen: [String: Wallpaper] = [:]
 
     // 多屏选择信号
     var monitorSelectorRequest: Wallpaper? = nil
-    
+
     // 色彩调节信号
     var colorAdjustRequest: Wallpaper? = nil
 
     // WebView 引用（供 Bridge 回调使用）
     var webView: WKWebView?
 
+    // 取消标记
+    private var importTask: Task<Void, Never>?
+
+    var isImporting: Bool {
+        importPhase == .scanning || importPhase == .importing
+    }
+
+    var hasErrors: Bool {
+        !importErrors.isEmpty
+    }
+
     // MARK: - 导入
-    
+
     func showColorAdjust(_ wallpaper: Wallpaper) {
         colorAdjustRequest = wallpaper
     }
 
-    /// 主导入入口：先扫描重复，再实际导入
+    func importFiles(urls: [URL], context: ModelContext) {
+        importTask?.cancel()
+        importTask = Task {
+            await performImport(urls: urls, context: context)
+        }
+    }
 
-    /// 主导入入口：先扫描重复，再实际导入
-    func importFiles(urls: [URL], context: ModelContext) async {
+    func cancelImport() {
+        importTask?.cancel()
+        importTask = nil
+        importPhase = .cancelled
+    }
+
+    private func performImport(urls: [URL], context: ModelContext) async {
         let store = WallpaperStore(modelContext: context)
-        isImporting = true
+
+        importPhase = .scanning
         importProgress = 0
-        importErrorMessage = nil
-        defer { isImporting = false }
+        importErrors = []
+        importedCount = 0
+        skippedCount = 0
+        currentImportFileName = ""
 
         var unique: [URL] = []
-        var dupes: [URL] = []
+        var dupes: [DuplicateItem] = []
 
-        for url in urls {
+        for (idx, url) in urls.enumerated() {
+            if Task.isCancelled { return }
+            currentImportFileName = url.lastPathComponent
+            importProgress = Double(idx + 1) / Double(urls.count)
+
             do {
                 let tempHash = try await quickHash(url: url)
                 if try store.wallpaperExists(fileHash: tempHash) {
-                    dupes.append(url)
+                    let attrs = try FileManager.default.attributesOfItem(atPath: url.path)
+                    let size = (attrs[.size] as? NSNumber)?.int64Value ?? 0
+                    let baseName = url.deletingPathExtension().lastPathComponent
+                    let existingName = try findExistingName(fileHash: tempHash, store: store) ?? baseName
+                    dupes.append(DuplicateItem(
+                        url: url,
+                        fileName: url.lastPathComponent,
+                        fileSize: size,
+                        existingName: existingName
+                    ))
                 } else {
                     unique.append(url)
                 }
             } catch {
-                continue
+                importErrors.append(ImportError(
+                    fileName: url.lastPathComponent,
+                    message: error.localizedDescription
+                ))
             }
         }
 
-        // 先导入不重复的
-        await actuallyImport(urls: unique, context: context, allowSuffix: false)
+        if !unique.isEmpty {
+            importPhase = .importing
+            await actuallyImport(urls: unique, context: context, allowSuffix: false, store: store)
+        }
 
-        // 把重复的暂存，等用户确认
         if !dupes.isEmpty {
             pendingDuplicates = dupes
+            importPhase = .duplicateReview
+        } else if importErrors.isEmpty {
+            importPhase = .completed
+        } else {
+            importPhase = .completed
         }
     }
 
-    /// 用户确认重复导入：自动加 (2) 后缀
     func confirmDuplicates(context: ModelContext) async {
-        let urls = pendingDuplicates
+        let items = pendingDuplicates
         pendingDuplicates = []
-        await actuallyImport(urls: urls, context: context, allowSuffix: true)
-    }
-
-    /// 取消重复导入
-    func cancelDuplicates() {
-        pendingDuplicates = []
-    }
-
-    private func actuallyImport(urls: [URL], context: ModelContext, allowSuffix: Bool) async {
+        importPhase = .importing
+        let urls = items.map { $0.url }
         let store = WallpaperStore(modelContext: context)
+        await actuallyImport(urls: urls, context: context, allowSuffix: true, store: store)
+        importPhase = .completed
+    }
+
+    func cancelDuplicates() {
+        skippedCount += pendingDuplicates.count
+        pendingDuplicates = []
+        importPhase = importErrors.isEmpty ? .completed : .completed
+    }
+
+    private func actuallyImport(urls: [URL], context: ModelContext, allowSuffix: Bool, store: WallpaperStore) async {
         let total = max(urls.count, 1)
 
         for (idx, url) in urls.enumerated() {
+            if Task.isCancelled { return }
             currentImportFileName = url.lastPathComponent
             do {
                 let wallpaper = try await importer.importFile(url: url)
@@ -102,37 +176,43 @@ final class AppViewModel {
                     wallpaper.name = uniqueName(base: wallpaper.name, store: store)
                 }
                 try store.addWallpaper(wallpaper)
+                importedCount += 1
             } catch {
-                importErrorMessage = "导入失败: \(url.lastPathComponent)"
+                importErrors.append(ImportError(
+                    fileName: url.lastPathComponent,
+                    message: error.localizedDescription
+                ))
             }
             importProgress = Double(idx + 1) / Double(total)
         }
     }
 
     private func quickHash(url: URL) async throws -> String {
-        let handle = try FileHandle(forReadingFrom: url)
-        defer { try? handle.close() }
-        let data = try handle.read(upToCount: 1024 * 1024) ?? Data()
-        return data.sha256()
+        return try await importer.quickHash(url: url)
+    }
+
+    private func findExistingName(fileHash: String, store: WallpaperStore) throws -> String? {
+        return try store.findNameByHash(fileHash)
     }
 
     private func uniqueName(base: String, store: WallpaperStore) -> String {
         var candidate = base
         var idx = 2
-        while existingNameCount(name: candidate, store: store) > 0 {
+        while (try? store.nameExists(candidate)) ?? false {
             candidate = "\(base) (\(idx))"
             idx += 1
         }
         return candidate
     }
 
-    private func existingNameCount(name: String, store: WallpaperStore) -> Int {
-        do {
-            let all = try store.fetchAllWallpapers()
-            return all.filter { $0.name == name }.count
-        } catch {
-            return 0
-        }
+    func resetImportState() {
+        importPhase = .idle
+        importProgress = 0
+        currentImportFileName = ""
+        importErrors = []
+        importedCount = 0
+        skippedCount = 0
+        pendingDuplicates = []
     }
 
     // MARK: - 设壁纸
@@ -190,12 +270,5 @@ final class AppViewModel {
                 activeWallpaperPerScreen[screenID] = wallpaper
             }
         }
-    }
-}
-
-private extension Data {
-    func sha256() -> String {
-        let digest = SHA256.hash(data: self)
-        return digest.compactMap { String(format: "%02x", $0) }.joined()
     }
 }

@@ -198,7 +198,7 @@
 				86E26610109B5C3DDAA74367 /* CormorantGaramond-Italic.ttf */,
 				DBBCF7B95A9750898F118A5E /* CormorantGaramond-SemiBoldItalic.ttf */,
 			);
-			path = Fonts;
+			path = Web/Fonts;
 			sourceTree = "<group>";
 		};
 		F5F01C22EC0668E59DE3D0FE /* Storage */ = {

@@ -89,6 +89,14 @@ final class WallpaperStore {
         return try !modelContext.fetch(descriptor).isEmpty
     }
 
+    /// 根据文件哈希查找已有的壁纸名称
+    func findNameByHash(_ fileHash: String) throws -> String? {
+        let descriptor = FetchDescriptor<Wallpaper>(
+            predicate: #Predicate { $0.fileHash == fileHash }
+        )
+        return try modelContext.fetch(descriptor).first?.name
+    }
+
     /// 获取最近使用的壁纸
     func fetchRecentWallpapers(limit: Int = 10) throws -> [Wallpaper] {
         var descriptor = FetchDescriptor<Wallpaper>(

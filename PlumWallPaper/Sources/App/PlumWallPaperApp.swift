@@ -37,6 +37,7 @@ struct PlumWallPaperApp: App {
                     await viewModel.restoreLastSession(context: modelContainer.mainContext)
                 }
         }
+        .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .appTermination) {
                 Button("退出 PlumWallPaper") {

@@ -8,13 +8,13 @@
   <style>
     @font-face {
       font-family: 'Cormorant Garamond';
-      src: url('CormorantGaramond-Italic.ttf') format('truetype');
+      src: url('./CormorantGaramond-Italic.ttf') format('truetype');
       font-style: italic;
       font-weight: 300 500;
     }
     @font-face {
       font-family: 'Cormorant Garamond';
-      src: url('CormorantGaramond-SemiBoldItalic.ttf') format('truetype');
+      src: url('./CormorantGaramond-SemiBoldItalic.ttf') format('truetype');
       font-style: italic;
       font-weight: 600 700;
     }
@@ -41,7 +41,7 @@
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
 
     body {
-      background: #000;
+      background: #0d0e12;
       color: var(--fg);
       font-family: var(--font-ui);
       overflow: hidden;
@@ -96,6 +96,49 @@
 </head>
 <body>
   <div id="root"></div>
+
+  <script>
+    (function() {
+      var frozenW = 0, frozenH = 0;
+
+      window.__freezeForResize = function() {
+        if (frozenW) return;
+        var root = document.getElementById('root');
+        frozenW = window.innerWidth;
+        frozenH = window.innerHeight;
+        root.style.position = 'fixed';
+        root.style.left = '0';
+        root.style.top = '0';
+        root.style.width = frozenW + 'px';
+        root.style.height = frozenH + 'px';
+        root.style.transformOrigin = '0 0';
+        root.style.overflow = 'hidden';
+      };
+
+      window.__unfreezeAfterResize = function() {
+        if (!frozenW) return;
+        var root = document.getElementById('root');
+        root.style.position = '';
+        root.style.left = '';
+        root.style.top = '';
+        root.style.width = '';
+        root.style.height = '';
+        root.style.transformOrigin = '';
+        root.style.transform = '';
+        root.style.overflow = '';
+        frozenW = 0;
+        frozenH = 0;
+      };
+
+      window.addEventListener('resize', function() {
+        if (!frozenW) return;
+        var root = document.getElementById('root');
+        var sx = window.innerWidth / frozenW;
+        var sy = window.innerHeight / frozenH;
+        root.style.transform = 'scale(' + sx + ',' + sy + ')';
+      });
+    })();
+  </script>
 
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
@@ -257,7 +300,7 @@
           {[
             { id: 'search', icon: 'search', action: onSearchClick },
             { id: 'import', icon: 'plus', action: onImportClick },
-            { id: 'settings', icon: 'settings', action: () => setView('settings'), active: currentView === 'settings' }
+            { id: 'settings', icon: currentView === 'settings' ? 'close' : 'settings', action: () => setView(currentView === 'settings' ? 'home' : 'settings'), active: currentView === 'settings' }
           ].map(btn => (
             <button 
               key={btn.id}
@@ -396,7 +439,11 @@
           <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(20px)', padding: '8px 24px', borderRadius: 100, border: '1px solid rgba(255,255,255,0.1)', fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>Immersive Preview</div>
           <button onClick={onClose} className="btn" style={{ borderRadius: '50%', width: 44, height: 44, justifyContent: 'center', background: 'rgba(255,255,255,0.1)', border: 'none', backdropFilter: 'blur(10px)' }}><Icon name="close" /></button>
         </div>
-        <img src={wallpaper.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {wallpaper.type === 'video' ? (
+          <video src={wallpaper.filePath} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <img src={wallpaper.filePath} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        )}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 280, background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <span style={{ padding: '4px 12px', background: 'var(--accent)', borderRadius: 6, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{wallpaper.tags && wallpaper.tags[0] && (wallpaper.tags[0].name || wallpaper.tags[0])}</span>
@@ -461,7 +508,11 @@
           {/* Hero Section */}
           <section style={{ height: '85vh', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
-              <img src={hero.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover', transition: '1.2s cubic-bezier(0.2, 1, 0.3, 1)' }} />
+              {hero.type === 'video' ? (
+                <video src={hero.filePath} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover', transition: '1.2s cubic-bezier(0.2, 1, 0.3, 1)' }} />
+              ) : (
+                <img src={hero.filePath} style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover', transition: '1.2s cubic-bezier(0.2, 1, 0.3, 1)' }} />
+              )}
               
               {/* Noise Overlay - Jewel Texture */}
               <div style={{ 
@@ -784,6 +835,16 @@
       );
     };
 
+    const SliderControl = ({ label, value, min, max, onChange, displayValue }) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <span className="control-label">{label}</span>
+          <span className="control-val">{displayValue || value}</span>
+        </div>
+        <input type="range" min={min} max={max} value={value} onChange={e => onChange(Number(e.target.value))} />
+      </div>
+    );
+
     const ColorPage = ({ wallpaper, setView, onSave }) => {
       const [hue, setHue] = useState(0);
       const [sat, setSat] = useState(100);
@@ -795,9 +856,62 @@
       const [expo, setExpo] = useState(100);
       const [grain, setGrain] = useState(0);
       const [vignette, setVignette] = useState(0);
-      
+
       const [showSavePopup, setShowSavePopup] = useState(false);
       const [presetName, setPresetName] = useState('我的自定义色调');
+
+      const mediaRef = useRef(null);
+      const canvasRef = useRef(document.createElement('canvas'));
+      const [panelTheme, setPanelTheme] = useState({ mode: 'difference', color: '#fff', sub: 'rgba(255,255,255,0.7)', track: 'rgba(255,255,255,0.4)' });
+
+      useEffect(() => {
+        let raf;
+        const sample = () => {
+          const el = mediaRef.current;
+          if (!el || !el.complete && !el.videoWidth) { raf = requestAnimationFrame(sample); return; }
+          const cvs = canvasRef.current;
+          const ctx = cvs.getContext('2d', { willReadFrequently: true });
+          const sw = el.videoWidth || el.naturalWidth || el.width;
+          const sh = el.videoHeight || el.naturalHeight || el.height;
+          if (!sw || !sh) { raf = requestAnimationFrame(sample); return; }
+
+          const panelRatio = 400 / window.innerWidth;
+          const sampleX = Math.floor(sw * (1 - panelRatio));
+          const sampleW = sw - sampleX;
+          cvs.width = 32; cvs.height = 32;
+          ctx.drawImage(el, sampleX, 0, sampleW, sh, 0, 0, 32, 32);
+          const data = ctx.getImageData(0, 0, 32, 32).data;
+
+          let totalLum = 0;
+          const count = data.length / 4;
+          for (let i = 0; i < data.length; i += 4) {
+            totalLum += data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
+          }
+          const avgLum = totalLum / count;
+
+          let theme;
+          if (avgLum < 85) {
+            theme = { mode: 'difference', color: '#fff', sub: 'rgba(255,255,255,0.7)', track: 'rgba(255,255,255,0.4)' };
+          } else if (avgLum > 170) {
+            theme = { mode: 'difference', color: '#fff', sub: 'rgba(255,255,255,0.7)', track: 'rgba(255,255,255,0.4)' };
+          } else {
+            const useWhite = avgLum < 128;
+            if (useWhite) {
+              theme = { mode: 'normal', color: '#fff', sub: 'rgba(255,255,255,0.85)', track: 'rgba(255,255,255,0.5)' };
+            } else {
+              theme = { mode: 'normal', color: '#000', sub: 'rgba(0,0,0,0.75)', track: 'rgba(0,0,0,0.4)' };
+            }
+          }
+
+          setPanelTheme(prev => {
+            if (prev.mode === theme.mode && prev.color === theme.color) return prev;
+            return theme;
+          });
+          raf = requestAnimationFrame(sample);
+        };
+        raf = requestAnimationFrame(sample);
+        return () => cancelAnimationFrame(raf);
+      }, [hue, sat, bri, con, blur, gray, inv, expo]);
 
       const reset = () => {
         setHue(0); setSat(100); setBri(100); setCon(100); setBlur(0);
@@ -816,120 +930,108 @@
       `;
 
       return (
-        <div className="animate-in" style={{ height: '100vh', position: 'relative', display: 'flex', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', inset: -50, zIndex: -1 }}>
-            <img src={wallpaper.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(80px) brightness(0.4)' }} />
-          </div>
-          {/* 左侧 75%：实时预览 */}
-          <div style={{ flex: 0.75, height: '100%', position: 'relative', transition: '0.1s', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
-            <img src={wallpaper.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: filterString }} />
+        <div className="hudson-base adaptive-blend animate-in" style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', '--text-main': panelTheme.color, '--text-sub': panelTheme.sub, '--accent': panelTheme.color, '--track-bg': panelTheme.track, '--blend-mode': panelTheme.mode }}>
+          <style>{`
+            .hudson-base.adaptive-blend {
+              --shadow-text: none;
+              --shadow-ui: none;
+            }
+            .floating-panel { 
+              position: absolute; top: 0; right: 0; bottom: 0; width: 400px;
+              padding: 80px 48px; background: transparent; overflow-y: auto; pointer-events: auto;
+              mix-blend-mode: var(--blend-mode); transition: mix-blend-mode 0.3s;
+            }
+            .group-title { font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 300; font-size: 32px; color: var(--text-main); text-shadow: var(--shadow-text); margin-bottom: 28px; letter-spacing: -0.02em; transition: color 0.4s, text-shadow 0.4s; }
+            .control-label { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.1em; color: var(--text-sub); text-transform: uppercase; text-shadow: var(--shadow-text); transition: color 0.4s, text-shadow 0.4s; }
+            .control-val { font-family: 'Cormorant Garamond', serif; font-size: 16px; color: var(--text-main); text-shadow: var(--shadow-text); transition: color 0.4s, text-shadow 0.4s; }
             
-            {/* 叠加效果层：暗角 */}
+            .hudson-base input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; height: 32px; cursor: pointer; }
+            .hudson-base input[type=range]:focus { outline: none; }
+            .hudson-base input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 1px; background: var(--track-bg); box-shadow: var(--shadow-ui); transition: 0.4s; }
+            .hudson-base input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: transparent; border: 1.5px solid var(--accent); margin-top: -8.5px; box-shadow: var(--shadow-ui); transition: transform 0.3s, background 0.3s, border-color 0.4s, box-shadow 0.4s; }
+            .hudson-base input[type=range]::-webkit-slider-thumb:hover, .hudson-base input[type=range]:active::-webkit-slider-thumb { transform: scale(1.3); background: rgba(128,128,128,0.15); }
+            
+            .preset-btn { font-family: 'Inter', sans-serif; font-weight: 400; font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-sub); background: transparent; border: none; padding: 10px 0; text-align: left; cursor: pointer; transition: 0.4s; text-shadow: var(--shadow-text); border-bottom: 1px solid transparent; display: block; width: 100%; }
+            .preset-btn:hover { color: var(--accent); border-bottom-color: var(--accent); letter-spacing: 0.2em; }
+          `}</style>
+          
+          {/* 背景全屏壁纸 (完全覆盖) */}
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+            {wallpaper.type === 'video' ? (
+              <video ref={mediaRef} src={wallpaper.filePath} autoPlay loop muted playsInline crossOrigin="anonymous" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: filterString }} />
+            ) : (
+              <img ref={mediaRef} src={wallpaper.filePath} crossOrigin="anonymous" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: filterString }} />
+            )}
+            
             <div style={{ 
               position: 'absolute', inset: 0, 
               background: `radial-gradient(circle, transparent ${100 - vignette}%, rgba(0,0,0,${vignette/100}))`,
-              pointerEvents: 'none'
             }} />
-            
-            {/* 叠加效果层：颗粒感 */}
             {grain > 0 && (
               <div style={{ 
-                position: 'absolute', inset: 0, opacity: grain / 100, pointerEvents: 'none',
+                position: 'absolute', inset: 0, opacity: grain / 100,
                 backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
               }} />
             )}
-
-            <div style={{ position: 'absolute', top: 32, left: 32, zIndex: 100 }}>
-              <button onClick={() => setView('home')} className="btn" style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(20px)', borderRadius: '50%', width: 44, height: 44, padding: 0, justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)' }}><Icon name="close" /></button>
-            </div>
           </div>
 
-          {/* 右侧 25%：调节面板 */}
-          <div className="no-scrollbar" style={{ 
-            flex: 0.25, height: '100%',
-            background: 'rgba(13, 14, 18, 0.25)',
-            backdropFilter: 'blur(30px) saturate(120%)',
-            WebkitBackdropFilter: 'blur(30px) saturate(120%)',
-            padding: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column'
-          }}>
-            <div style={{ padding: '40px 32px 16px' }}>
+          <div style={{ position: 'absolute', top: 32, left: 32, zIndex: 100 }}>
+            <button onClick={() => setView('home')} className="btn" style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(20px)', borderRadius: '50%', width: 44, height: 44, padding: 0, justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)' }}><Icon name="close" /></button>
+          </div>
+
+          {/* 右侧完全悬浮面板 (无 background, 无 blur) */}
+          <div className="floating-panel no-scrollbar">
+            <div style={{ marginBottom: 56 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <span style={{ padding: '2px 8px', background: 'var(--accent)', borderRadius: 4, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#fff' }}>{wallpaper.tags && wallpaper.tags[0] && (wallpaper.tags[0].name || wallpaper.tags[0])}</span>
+                <span style={{ padding: '2px 8px', border: '1px solid var(--accent)', borderRadius: 4, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-main)' }}>{wallpaper.tags && wallpaper.tags[0] && (wallpaper.tags[0].name || wallpaper.tags[0])}</span>
                 {wallpaper.isFavorite && <Icon name="heart" size={12} color="var(--accent)" />}
               </div>
-              <h2 style={{ fontSize: 28, fontFamily: 'var(--font-display)', fontStyle: 'italic', marginBottom: 8, lineHeight: 1.2 }}>{wallpaper.name}</h2>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>Color Grading Studio</div>
+              <h2 className="group-title" style={{ marginBottom: 8, lineHeight: 1.2 }}>{wallpaper.name}</h2>
+              <div style={{ fontSize: 11, color: 'var(--text-sub)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500 }}>Color Grading Studio</div>
             </div>
 
-            <div style={{ padding: '0 32px 40px' }}>
-              <div style={{ marginBottom: 40 }}>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 24, fontWeight: 700 }}>基础校正 / Basic</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                  <Slider label="曝光度" val={expo} set={setExpo} min={0} max={200} />
-                  <Slider label="对比度" val={con} set={setCon} min={50} max={150} />
-                  <Slider label="饱和度" val={sat} set={setSat} min={0} max={200} />
-                  <Slider label="色调" val={hue} set={setHue} min={-180} max={180} />
-                </div>
-              </div>
+            <div style={{ marginBottom: 64 }}>
+              <div className="group-title">Basic</div>
+              <SliderControl label="Exposure" value={expo} min={0} max={200} onChange={setExpo} displayValue={`${expo}%`} />
+              <SliderControl label="Contrast" value={con} min={50} max={150} onChange={setCon} displayValue={`${con}%`} />
+              <SliderControl label="Saturation" value={sat} min={0} max={200} onChange={setSat} displayValue={`${sat}%`} />
+              <SliderControl label="Hue" value={hue} min={-180} max={180} onChange={setHue} displayValue={`${hue}°`} />
+            </div>
 
-              <div style={{ marginBottom: 40 }}>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 24, fontWeight: 700 }}>艺术效果 / Artistic</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                  <Slider label="模糊" val={blur} set={setBlur} min={0} max={20} unit="px" />
-                  <Slider label="颗粒感" val={grain} set={setGrain} min={0} max={100} />
-                  <Slider label="暗角" val={vignette} set={setVignette} min={0} max={100} />
-                </div>
-              </div>
+            <div style={{ marginBottom: 64 }}>
+              <div className="group-title">Artistic</div>
+              <SliderControl label="Blur" value={blur} min={0} max={20} onChange={setBlur} displayValue={`${blur}px`} />
+              <SliderControl label="Grain" value={grain} min={0} max={100} onChange={setGrain} displayValue={`${grain}%`} />
+              <SliderControl label="Vignette" value={vignette} min={0} max={100} onChange={setVignette} displayValue={`${vignette}%`} />
+            </div>
 
-              <div style={{ marginBottom: 40 }}>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 24, fontWeight: 700 }}>风格转换 / Filters</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                  <Slider label="灰度" val={gray} set={setGray} min={0} max={100} />
-                  <Slider label="反转" val={inv} set={setInv} min={0} max={100} />
-                </div>
-              </div>
+            <div style={{ marginBottom: 64 }}>
+              <div className="group-title">Filters</div>
+              <SliderControl label="Grayscale" value={gray} min={0} max={100} onChange={setGray} displayValue={`${gray}%`} />
+              <SliderControl label="Invert" value={inv} min={0} max={100} onChange={setInv} displayValue={`${inv}%`} />
+            </div>
 
-              <div style={{ marginTop: 24, padding: '32px 0', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>收藏预设</div>
-                  <button onClick={() => setShowSavePopup(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>+ 保存当前</button>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-                  {[
-                    { n: '胶片', h: 0, s: 80, b: 90, c: 110, bl: 0, g: 10, i: 0, e: 105, gr: 15, v: 20 },
-                    { n: '冷色', h: 10, s: 70, b: 105, c: 105, bl: 0, g: 0, i: 0, e: 100, gr: 0, v: 10 },
-                    { n: '黑白', h: 0, s: 0, b: 100, c: 120, bl: 0, g: 100, i: 0, e: 110, gr: 20, v: 40 },
-                    { n: '通透', h: 0, s: 120, b: 110, c: 115, bl: 0, g: 0, i: 0, e: 115, gr: 0, v: 0 },
-                    { n: '梦幻', h: -10, s: 130, b: 105, c: 90, bl: 8, g: 0, i: 0, e: 110, gr: 0, v: 15 },
-                    { n: '深夜', h: 20, s: 60, b: 70, c: 130, bl: 2, g: 0, i: 0, e: 80, gr: 5, v: 60 }
-                  ].map(p => (
-                    <button 
-                      key={p.n} 
-                      className="btn" 
-                      style={{ fontSize: 11, padding: '10px 4px', justifyContent: 'center', fontWeight: 600, background: 'rgba(255,255,255,0.03)' }}
-                      onClick={() => {
-                        setHue(p.h); setSat(p.s); setBri(p.b); setCon(p.c);
-                        setBlur(p.bl); setGray(p.g); setInv(p.i); setExpo(p.e);
-                        setGrain(p.gr); setVignette(p.v);
-                      }}
-                    >
-                      {p.n}
-                    </button>
-                  ))}
-                </div>
+            <div style={{ marginBottom: 40 }}>
+              <div className="group-title">Presets</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button className="preset-btn" onClick={() => { setHue(0); setSat(80); setBri(90); setCon(110); setBlur(0); setGray(10); setInv(0); setExpo(105); setGrain(15); setVignette(20); }}>Kodak Portra 400</button>
+                <button className="preset-btn" onClick={() => { setHue(10); setSat(70); setBri(105); setCon(105); setBlur(0); setGray(0); setInv(0); setExpo(100); setGrain(0); setVignette(10); }}>Fujifilm Superia</button>
+                <button className="preset-btn" onClick={() => { setHue(0); setSat(120); setBri(110); setCon(115); setBlur(0); setGray(0); setInv(0); setExpo(115); setGrain(0); setVignette(0); }}>Cinematic Teal</button>
+                <button className="preset-btn" onClick={() => { setHue(0); setSat(0); setBri(100); setCon(120); setBlur(0); setGray(100); setInv(0); setExpo(110); setGrain(20); setVignette(40); }}>Monochrome Noir</button>
+                <button className="preset-btn" onClick={() => setShowSavePopup(true)}>+ Save Current</button>
               </div>
+            </div>
 
-              <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-                <button className="btn-primary btn breathing-glow" style={{ flex: 1.5, justifyContent: 'center', height: 50, fontSize: 15 }} onClick={() => { onSave(); setView('home'); }}>应用所有更改</button>
-                <button className="btn" style={{ flex: 1, justifyContent: 'center', height: 50, fontSize: 15, background: 'rgba(255,255,255,0.05)' }} onClick={reset}>重置</button>
-              </div>
+            <div style={{ display: 'flex', gap: 12, marginTop: 40 }}>
+              <button className="btn" style={{ flex: 1.5, justifyContent: 'center', height: 44, fontSize: 13, background: 'var(--accent)', color: '#000', border: 'none', fontWeight: 600 }} onClick={() => { onSave(); setView('home'); }}>Apply</button>
+              <button className="btn" style={{ flex: 1, justifyContent: 'center', height: 44, fontSize: 13, background: 'transparent', border: '1px solid var(--text-sub)', color: 'var(--text-main)' }} onClick={reset}>Reset</button>
             </div>
           </div>
 
           {showSavePopup && (
-            <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', mixBlendMode: 'normal' }}>
               <div className="animate-in" style={{ width: 340, background: '#1a1b1e', borderRadius: 28, border: '1px solid var(--glass-border)', padding: 32, boxShadow: '0 50px 100px rgba(0,0,0,0.6)' }}>
-                <div style={{ fontSize: 20, fontFamily: 'var(--font-display)', fontStyle: 'italic', marginBottom: 8 }}>保存预设</div>
+                <div style={{ fontSize: 20, fontFamily: 'var(--font-display)', fontStyle: 'italic', marginBottom: 8, color: '#fff' }}>保存预设</div>
                 <input 
                   autoFocus
                   placeholder="预设名称..."
@@ -948,17 +1050,7 @@
       );
     };
 
-    const Slider = ({ label, val, set, min, max, unit = '%' }) => (
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 10 }}>
-          <span>{label}</span>
-          <span style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>{val}{unit}</span>
-        </div>
-        <input type="range" min={min} max={max} value={val} onChange={e => set(e.target.value)} style={{ width: '100%', accentColor: 'var(--accent)' }} />
-      </div>
-    );
-
-    const SettingsPage = ({ fitMode, setFitMode, monitors }) => {
+    const SettingsPage = ({ fitMode, setFitMode, monitors, onClose }) => {
       const [activeTab, setActiveTab] = useState('通用');
       const [performanceData, setPerformanceData] = useState(
         [...Array(24)].map(() => 25 + Math.random() * 75)
@@ -1025,10 +1117,13 @@
       );
 
       return (
-        <div className="animate-in" style={{ 
-          height: '100vh', padding: '0 80px', background: '#0d0e12', 
-          display: 'flex', gap: 40, overflow: 'hidden', alignItems: 'flex-start' 
+        <div className="animate-in" style={{
+          height: '100vh', padding: '0 80px', background: '#0d0e12',
+          display: 'flex', gap: 40, overflow: 'hidden', alignItems: 'flex-start', position: 'relative'
         }}>
+          <div style={{ position: 'absolute', top: 32, left: 32, zIndex: 100 }}>
+            <button onClick={onClose} className="btn" style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(20px)', borderRadius: '50%', width: 44, height: 44, padding: 0, justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)' }}><Icon name="close" /></button>
+          </div>
           {/* Pro 级侧边导航 - 采用稳健材质杜绝分裂 Bug */}
           <div style={{ 
             width: 240, 
@@ -1391,7 +1486,7 @@
       const filteredWallpapers = useMemo(() => {
         return wallpapers.filter(w =>
           w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (w.tags && w.tags.some(tag => tag.includes(searchQuery)))
+          (w.tags && w.tags.some(tag => (tag.name || tag).toLowerCase().includes(searchQuery.toLowerCase())))
         );
       }, [searchQuery, wallpapers]);
 
@@ -1445,6 +1540,7 @@
                 fitMode={fitMode}
                 setFitMode={setFitMode}
                 monitors={activeMonitors}
+                onClose={() => setView('home')}
               />
             )}
           </main>

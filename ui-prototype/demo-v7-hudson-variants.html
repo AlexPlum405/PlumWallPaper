@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>Hudson 变体探索 - 完全悬浮</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; 
+      overflow: hidden; 
+      background: #000; 
+      color: white;
+    }
+    
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* 绝对悬浮无背景容器 */
+    .floating-panel {
+      position: absolute; 
+      top: 0; right: 0; bottom: 0; 
+      width: 400px;
+      padding: 80px 48px; 
+      background: transparent; 
+      overflow-y: auto;
+      pointer-events: auto;
+    }
+
+    /* 屏蔽图层事件，确保只点击控件 */
+    .wallpaper-bg { position: absolute; inset: 0; pointer-events: none; }
+
+    /* 通用阴影变量 */
+    :root {
+      --shadow-text: 0 4px 16px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.5);
+      --shadow-ui: 0 2px 12px rgba(0,0,0,0.9);
+    }
+
+    /* -------------------------------------------------------------
+       变体 1: Hudson · Classic (基础升级，更精致的环和排版)
+       ------------------------------------------------------------- */
+    .theme-hudson-classic {
+      --text-main: rgba(255, 255, 255, 0.95);
+      --text-sub: rgba(255, 255, 255, 0.6);
+      --accent: #fff;
+    }
+    .theme-hudson-classic .group-title { font-family: 'Newsreader', serif; font-style: italic; font-weight: 300; font-size: 32px; color: var(--text-main); text-shadow: var(--shadow-text); margin-bottom: 28px; letter-spacing: -0.02em; }
+    .theme-hudson-classic .control-label { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.1em; color: var(--text-sub); text-transform: uppercase; text-shadow: var(--shadow-text); }
+    .theme-hudson-classic .control-val { font-family: 'Newsreader', serif; font-size: 16px; color: var(--text-main); text-shadow: var(--shadow-text); }
+    
+    .theme-hudson-classic input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; height: 32px; cursor: pointer; }
+    .theme-hudson-classic input[type=range]:focus { outline: none; }
+    .theme-hudson-classic input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 1px; background: rgba(255,255,255,0.25); box-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+    .theme-hudson-classic input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: transparent; border: 1.5px solid var(--accent); margin-top: -8.5px; box-shadow: var(--shadow-ui); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s; }
+    .theme-hudson-classic input[type=range]::-webkit-slider-thumb:hover, .theme-hudson-classic input[type=range]:active::-webkit-slider-thumb { transform: scale(1.3); background: rgba(255,255,255,0.15); }
+    
+    .theme-hudson-classic .preset-btn { font-family: 'Inter', sans-serif; font-weight: 400; font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-sub); background: transparent; border: none; padding: 10px 0; text-align: left; cursor: pointer; transition: 0.3s; text-shadow: var(--shadow-text); border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .theme-hudson-classic .preset-btn:hover { color: var(--accent); border-bottom-color: var(--accent); letter-spacing: 0.2em; }
+    
+    /* -------------------------------------------------------------
+       变体 2: Hudson · Editorial (排版驱动，杂志切线，菱形游标)
+       ------------------------------------------------------------- */
+    .theme-hudson-editorial {
+      --text-main: #fff;
+      --text-sub: rgba(255, 255, 255, 0.7);
+      --accent: #fff;
+    }
+    .theme-hudson-editorial .group-title { font-family: 'Newsreader', serif; font-style: italic; font-weight: 400; font-size: 38px; color: var(--text-main); text-shadow: var(--shadow-text); margin-bottom: 32px; line-height: 1.1; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 16px; position: relative; }
+    .theme-hudson-editorial .group-title::after { content: ''; position: absolute; left: 0; bottom: -3px; width: 40px; height: 5px; border-top: 1px solid #fff; border-bottom: 1px solid #fff; }
+    
+    .theme-hudson-editorial .control-label { font-family: 'Newsreader', serif; font-size: 14px; font-weight: 400; color: var(--text-main); text-shadow: var(--shadow-text); }
+    .theme-hudson-editorial .control-val { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.05em; color: var(--text-main); text-shadow: var(--shadow-text); background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); }
+    
+    .theme-hudson-editorial input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; height: 32px; cursor: pointer; }
+    .theme-hudson-editorial input[type=range]:focus { outline: none; }
+    /* 虚线轨道，像纸张的裁剪线 */
+    .theme-hudson-editorial input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 1px; background: transparent; border-top: 1px dashed rgba(255,255,255,0.4); }
+    /* 细高的胶囊游标 */
+    .theme-hudson-editorial input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 6px; border-radius: 3px; background: transparent; border: 1px solid var(--accent); margin-top: -8px; box-shadow: var(--shadow-ui); transition: 0.2s; }
+    .theme-hudson-editorial input[type=range]::-webkit-slider-thumb:hover { background: var(--accent); transform: scaleY(1.5); }
+
+    .theme-hudson-editorial .preset-btn { font-family: 'Newsreader', serif; font-style: italic; font-size: 18px; color: var(--text-sub); background: transparent; border: none; padding: 6px 0; text-align: left; cursor: pointer; transition: 0.3s; text-shadow: var(--shadow-text); }
+    .theme-hudson-editorial .preset-btn:hover { color: var(--accent); transform: translateX(8px); }
+
+    /* -------------------------------------------------------------
+       变体 3: Hudson · Minimal (减法极限，隐藏轨道，悬停显影)
+       ------------------------------------------------------------- */
+    .theme-hudson-minimal {
+      --text-main: rgba(255, 255, 255, 0.85);
+      --text-sub: rgba(255, 255, 255, 0.4);
+      --accent: #fff;
+    }
+    .theme-hudson-minimal .floating-panel { padding-right: 60px; /* 给极简留出更多右侧呼吸空间 */ }
+    .theme-hudson-minimal .group-title { font-family: 'Inter', sans-serif; font-weight: 300; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3em; color: var(--text-sub); text-shadow: var(--shadow-text); margin-bottom: 40px; }
+    
+    .theme-hudson-minimal .control-label { font-family: 'Newsreader', serif; font-size: 18px; font-weight: 300; color: var(--text-main); text-shadow: var(--shadow-text); transition: color 0.3s; }
+    .theme-hudson-minimal .control-val { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 300; color: var(--text-sub); text-shadow: var(--shadow-text); transition: color 0.3s; }
+    
+    .theme-hudson-minimal .slider-container:hover .control-label,
+    .theme-hudson-minimal .slider-container:hover .control-val { color: #fff; }
+
+    .theme-hudson-minimal input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; height: 32px; cursor: pointer; }
+    .theme-hudson-minimal input[type=range]:focus { outline: none; }
+    /* 默认隐藏轨道，hover 容器时才显示极淡的线 */
+    .theme-hudson-minimal input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 1px; background: transparent; transition: background 0.3s; }
+    .theme-hudson-minimal .slider-container:hover input[type=range]::-webkit-slider-runnable-track { background: rgba(255,255,255,0.1); }
+    
+    /* 极小的点，拖拽时拉长 */
+    .theme-hudson-minimal input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 8px; width: 8px; border-radius: 50%; background: var(--text-sub); margin-top: -3.5px; box-shadow: var(--shadow-ui); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+    .theme-hudson-minimal .slider-container:hover input[type=range]::-webkit-slider-thumb { background: var(--accent); transform: scale(1.5); }
+    .theme-hudson-minimal input[type=range]:active::-webkit-slider-thumb { transform: scaleX(2) scaleY(0.8); border-radius: 4px; }
+
+    .theme-hudson-minimal .preset-btn { font-family: 'Inter', sans-serif; font-weight: 300; font-size: 12px; color: var(--text-sub); background: transparent; border: none; padding: 8px 0; text-align: left; cursor: pointer; transition: 0.3s; text-shadow: var(--shadow-text); }
+    .theme-hudson-minimal .preset-btn:hover { color: var(--accent); }
+    .theme-hudson-minimal .preset-btn::before { content: '—'; margin-right: 12px; opacity: 0; transition: 0.3s; transform: translateX(-10px); display: inline-block; }
+    .theme-hudson-minimal .preset-btn:hover::before { opacity: 1; transform: translateX(0); }
+
+
+    /* 顶部导航 Tabs */
+    .demo-tabs {
+      position: absolute; top: 24px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 4px; z-index: 1000;
+      background: rgba(0,0,0,0.6); padding: 6px; border-radius: 8px;
+      backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1);
+    }
+    .demo-tab {
+      background: transparent; border: none; color: rgba(255,255,255,0.6);
+      padding: 6px 16px; border-radius: 4px; font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: 0.2s;
+    }
+    .demo-tab:hover { color: white; }
+    .demo-tab.active { background: rgba(255,255,255,0.15); color: white; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState } = React;
+
+    const SliderControl = ({ label, value, min, max, onChange, displayValue }) => (
+      <div className="slider-container" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <span className="control-label">{label}</span>
+          <span className="control-val">{displayValue || value}</span>
+        </div>
+        <input type="range" min={min} max={max} value={value} onChange={e => onChange(Number(e.target.value))} />
+      </div>
+    );
+
+    const SettingsPanel = ({ theme }) => {
+      const [expo, setExpo] = useState(100);
+      const [con, setCon] = useState(100);
+      const [sat, setSat] = useState(100);
+      const [hue, setHue] = useState(0);
+      const [blur, setBlur] = useState(0);
+      const [vignette, setVignette] = useState(0);
+
+      const filterStr = `brightness(${expo}%) contrast(${con}%) saturate(${sat}%) hue-rotate(${hue}deg) blur(${blur}px)`;
+
+      return (
+        <div className={theme} style={{ width: '100vw', height: '100vh', position: 'relative' }}>
+          
+          <div className="wallpaper-bg">
+            <img 
+              src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2564&auto=format&fit=crop" 
+              style={{ width: '100%', height: '100%', objectFit: 'cover', filter: filterStr, transform: 'scale(1.05)' }} 
+            />
+            <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle, transparent ${100 - vignette}%, rgba(0,0,0,${vignette/100}))` }} />
+          </div>
+
+          <div className="floating-panel no-scrollbar">
+            
+            <div style={{ marginBottom: 64 }}>
+              <div className="group-title">Color Grading</div>
+              <SliderControl label="Exposure" value={expo} min={50} max={150} onChange={setExpo} displayValue={`${expo}%`} />
+              <SliderControl label="Contrast" value={con} min={50} max={150} onChange={setCon} displayValue={`${con}%`} />
+              <SliderControl label="Saturation" value={sat} min={0} max={200} onChange={setSat} displayValue={`${sat}%`} />
+              <SliderControl label="Hue" value={hue} min={-180} max={180} onChange={setHue} displayValue={`${hue}°`} />
+            </div>
+
+            <div style={{ marginBottom: 64 }}>
+              <div className="group-title">Lens Effects</div>
+              <SliderControl label="Blur Radius" value={blur} min={0} max={20} onChange={setBlur} displayValue={`${blur}px`} />
+              <SliderControl label="Vignette" value={vignette} min={0} max={100} onChange={setVignette} displayValue={`${vignette}%`} />
+            </div>
+
+            <div style={{ marginBottom: 40 }}>
+              <div className="group-title">Cinematic LUTs</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {['Kodak Portra 400', 'Fujifilm Superia', 'Cinematic Teal & Orange', 'Monochrome Noir'].map(preset => (
+                  <button key={preset} className="preset-btn">{preset}</button>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      );
+    };
+
+    const App = () => {
+      const [theme, setTheme] = useState('theme-hudson-classic');
+      return (
+        <div>
+          <div className="demo-tabs">
+            <button className={`demo-tab ${theme === 'theme-hudson-classic' ? 'active' : ''}`} onClick={() => setTheme('theme-hudson-classic')}>v6.1 Classic (经典升华)</button>
+            <button className={`demo-tab ${theme === 'theme-hudson-editorial' ? 'active' : ''}`} onClick={() => setTheme('theme-hudson-editorial')}>v6.2 Editorial (杂志排版)</button>
+            <button className={`demo-tab ${theme === 'theme-hudson-minimal' ? 'active' : ''}`} onClick={() => setTheme('theme-hudson-minimal')}>v6.3 Minimal (减法极限)</button>
+          </div>
+          <SettingsPanel key={theme} theme={theme} />
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

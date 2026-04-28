@@ -23,7 +23,7 @@ final class FileImporter {
     func importFile(url: URL) async throws -> Wallpaper {
         let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
         let fileSize = (attributes[.size] as? NSNumber)?.int64Value ?? 0
-        let fileHash = try await calculateFileHash(url: url)
+        let fileHash = try await quickHash(url: url)
         let type = wallpaperType(for: url)
         let thumbnailPath = try await ThumbnailGenerator.shared.generateThumbnail(for: url, type: type)
         let resolution = try await detectResolution(for: url, type: type)
@@ -71,8 +71,10 @@ final class FileImporter {
         return CMTimeGetSeconds(duration)
     }
 
-    private func calculateFileHash(url: URL) async throws -> String {
-        let data = try Data(contentsOf: url)
+    func quickHash(url: URL) async throws -> String {
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        let data = try handle.read(upToCount: 1024 * 1024) ?? Data()
         let digest = SHA256.hash(data: data)
         return digest.compactMap { String(format: "%02x", $0) }.joined()
     }

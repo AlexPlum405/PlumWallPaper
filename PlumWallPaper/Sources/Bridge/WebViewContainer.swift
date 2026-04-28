@@ -11,7 +11,6 @@ import SwiftData
 import AppKit
 import UniformTypeIdentifiers
 
-/// NSViewRepresentable 包装 WKWebView，加载本地 HTML 并注入 WebBridge
 struct WebViewContainer: NSViewRepresentable {
     let viewModel: AppViewModel
     let modelContext: ModelContext
@@ -29,10 +28,10 @@ struct WebViewContainer: NSViewRepresentable {
         let webView = DropEnabledWebView(frame: .zero, configuration: config)
         webView.setValue(false, forKey: "drawsBackground")
         webView.wantsLayer = true
-        webView.layerContentsRedrawPolicy = .onSetNeedsDisplay
         webView.layer?.isOpaque = true
         webView.isInspectable = true
         webView.navigationDelegate = context.coordinator
+        webView.windowCoordinator = context.coordinator
         webView.registerForDraggedTypes([.fileURL])
         webView.onDropFiles = { urls in
             Task { @MainActor in
@@ -49,9 +48,9 @@ struct WebViewContainer: NSViewRepresentable {
 
         let bridge = WebBridge(modelContext: modelContext, webView: webView)
         context.coordinator.bridge = bridge
+        context.coordinator.setWebView(webView)
         contentController.add(bridge, name: "bridge")
 
-        // 捕获 console.log/error
         let consoleScript = """
         (function() {
             const originalLog = console.log;
@@ -89,7 +88,6 @@ struct WebViewContainer: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: WKWebView, context: Context) {
-        // No-op
     }
 
     // MARK: - Coordinator
@@ -97,35 +95,75 @@ struct WebViewContainer: NSViewRepresentable {
     @MainActor
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler, NSWindowDelegate {
         var bridge: WebBridge?
+        private weak var webView: DropEnabledWebView?
+
+        func setWebView(_ webView: DropEnabledWebView) {
+            self.webView = webView
+        }
 
         func configureWindow(_ window: NSWindow) {
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
             window.styleMask.insert(.fullSizeContentView)
-            window.isMovableByWindowBackground = true
-            window.backgroundColor = .clear
-            window.isOpaque = false
+            window.styleMask.insert(.resizable)
+            window.isMovableByWindowBackground = false
+            window.backgroundColor = NSColor(red: 0.051, green: 0.055, blue: 0.071, alpha: 1.0)
+            window.isOpaque = true
             window.hasShadow = true
             if #available(macOS 11.0, *) {
                 window.titlebarSeparatorStyle = .none
             }
         }
 
+        // MARK: - Resize 动画优化
+
+        func windowWillStartLiveResize(_ notification: Notification) {
+            webView?.freezeForResize()
+        }
+
         func windowDidResize(_ notification: Notification) {
             if let window = notification.object as? NSWindow {
                 configureWindow(window)
             }
+            webView?.updateSnapshotFrame()
+        }
+
+        func windowDidEndLiveResize(_ notification: Notification) {
+            if let window = notification.object as? NSWindow {
+                configureWindow(window)
+            }
+            webView?.unfreezeAfterResize()
+        }
+
+        // MARK: - 全屏动画优化
+
+        func windowWillEnterFullScreen(_ notification: Notification) {
+            webView?.freezeForResize()
         }
 
         func windowDidEnterFullScreen(_ notification: Notification) {
             if let window = notification.object as? NSWindow {
                 configureWindow(window)
             }
+            webView?.unfreezeAfterResize()
         }
 
-        func windowDidEndLiveResize(_ notification: Notification) {
-            if let window = notification.object as? NSWindow {
-                configureWindow(window)
+        func windowWillExitFullScreen(_ notification: Notification) {
+            webView?.freezeForResize()
+        }
+
+        func windowDidExitFullScreen(_ notification: Notification) {
+            guard let window = notification.object as? NSWindow else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.configureWindow(window)
+                self.webView?.unfreezeAfterResize()
+            }
+        }
+
+        func windowDidDeminiaturize(_ notification: Notification) {
+            guard let window = notification.object as? NSWindow else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.configureWindow(window)
             }
         }
 
@@ -139,6 +177,12 @@ struct WebViewContainer: NSViewRepresentable {
             if let window = notification.object as? NSWindow {
                 configureWindow(window)
             }
+        }
+
+        // MARK: - 最大化动画时间归零（消除系统动画期间的鬼影）
+
+        func windowWillUseStandardFrame(_ window: NSWindow, newFrame: NSRect) -> NSRect {
+            return newFrame
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -163,72 +207,145 @@ struct WebViewContainer: NSViewRepresentable {
     }
 }
 
-// MARK: - 支持拖拽文件的 WKWebView 子类
+// MARK: - DropEnabledWebView
 
 @MainActor
 final class DropEnabledWebView: WKWebView {
     var onDropFiles: (([URL]) -> Void)?
+    weak var windowCoordinator: WebViewContainer.Coordinator?
 
     private static let supportedExtensions: Set<String> = ["mp4", "mov", "m4v", "heic", "heif"]
-    private var resizeSnapshotView: NSView?
+    private var dragBar: TitlebarDragView?
+
+    // Freeze 快照状态
+    private var isFrozen = false
+    private var frozenSize: NSSize = .zero
+    private var snapshotImageView: NSImageView?
+
+    // Resize 边缘
+    private static let resizeEdgeThickness: CGFloat = 5
+
+    // MARK: - 视图生命周期
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         guard let window = window else { return }
 
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-        window.styleMask.insert(.fullSizeContentView)
-        window.isMovableByWindowBackground = true
-        window.backgroundColor = .clear
-        window.isOpaque = false
-        if #available(macOS 11.0, *) {
-            window.titlebarSeparatorStyle = .none
+        if let coordinator = windowCoordinator {
+            window.delegate = coordinator
+            coordinator.configureWindow(window)
         }
 
+        installDragBar()
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            window.titlebarAppearsTransparent = true
-            window.styleMask.insert(.fullSizeContentView)
-            if #available(macOS 11.0, *) {
-                window.titlebarSeparatorStyle = .none
-            }
+            self.windowCoordinator?.configureWindow(window)
         }
     }
 
-    override var preservesContentDuringLiveResize: Bool {
-        true
+    // MARK: - Resize 边缘
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        let b = bounds
+        let t = Self.resizeEdgeThickness
+
+        if point.x < t || point.x > b.width - t ||
+           point.y < t || point.y > b.height - t {
+            return nil
+        }
+
+        return super.hitTest(point)
+    }
+
+    // MARK: - 拖动条
+
+    private func installDragBar() {
+        guard dragBar == nil else { return }
+        let bar = TitlebarDragView()
+        bar.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(bar)
+        NSLayoutConstraint.activate([
+            bar.topAnchor.constraint(equalTo: topAnchor),
+            bar.leadingAnchor.constraint(equalTo: leadingAnchor),
+            bar.trailingAnchor.constraint(equalTo: trailingAnchor),
+            bar.heightAnchor.constraint(equalToConstant: 52)
+        ])
+        dragBar = bar
+    }
+
+    // MARK: - Freeze / Unfreeze
+
+    func freezeForResize() {
+        guard !isFrozen else { return }
+        isFrozen = true
+        frozenSize = bounds.size
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        layer?.minificationFilter = .trilinear
+        layer?.magnificationFilter = .trilinear
+        CATransaction.commit()
+
+        let config = WKSnapshotConfiguration()
+        config.rect = CGRect(origin: .zero, size: bounds.size)
+        takeSnapshot(with: config) { [weak self] image, _ in
+            guard let self, self.isFrozen, let image else { return }
+            let iv = NSImageView()
+            iv.image = image
+            iv.imageScaling = .scaleProportionallyUpOrDown
+            iv.frame = CGRect(origin: .zero, size: self.frozenSize)
+            iv.wantsLayer = true
+            iv.layer?.minificationFilter = .trilinear
+            iv.layer?.magnificationFilter = .trilinear
+            self.addSubview(iv, positioned: .above, relativeTo: nil)
+            self.snapshotImageView = iv
+        }
+    }
+
+    func updateSnapshotFrame() {
+        guard isFrozen, frozenSize.width > 0, frozenSize.height > 0 else { return }
+        snapshotImageView?.frame = CGRect(origin: .zero, size: frame.size)
+    }
+
+    func unfreezeAfterResize() {
+        guard isFrozen else { return }
+        isFrozen = false
+
+        if let iv = snapshotImageView {
+            if bounds.size != frozenSize {
+                let scaled = NSImage(size: bounds.size)
+                scaled.lockFocus()
+                iv.image?.draw(in: NSRect(origin: .zero, size: bounds.size))
+                scaled.unlockFocus()
+            }
+            NSAnimationContext.runAnimationGroup({ ctx in
+                ctx.duration = 0.15
+                ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                iv.animator().alphaValue = 0
+            }, completionHandler: { [weak self] in
+                self?.snapshotImageView?.removeFromSuperview()
+                self?.snapshotImageView = nil
+            })
+        }
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        layer?.minificationFilter = .linear
+        layer?.magnificationFilter = .linear
+        CATransaction.commit()
     }
 
     override func viewWillStartLiveResize() {
         super.viewWillStartLiveResize()
-        guard resizeSnapshotView == nil, let window = window else { return }
-        guard let rep = bitmapImageRepForCachingDisplay(in: bounds) else { return }
-        cacheDisplay(in: bounds, to: rep)
-        let image = NSImage(size: bounds.size)
-        image.addRepresentation(rep)
-        let imageView = NSImageView(frame: bounds)
-        imageView.image = image
-        imageView.imageScaling = .scaleAxesIndependently
-        imageView.autoresizingMask = [.width, .height]
-        imageView.wantsLayer = true
-        imageView.layer?.backgroundColor = NSColor(red: 0.051, green: 0.055, blue: 0.071, alpha: 1.0).cgColor
-        window.contentView?.addSubview(imageView, positioned: .above, relativeTo: self)
-        resizeSnapshotView = imageView
-        isHidden = true
+        freezeForResize()
     }
 
     override func viewDidEndLiveResize() {
         super.viewDidEndLiveResize()
-        isHidden = false
-        guard let snapshot = resizeSnapshotView else { return }
-        NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.15
-            snapshot.animator().alphaValue = 0
-        }, completionHandler: {
-            snapshot.removeFromSuperview()
-        })
-        resizeSnapshotView = nil
+        unfreezeAfterResize()
     }
+
+    // MARK: - 文件拖拽
 
     override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
         guard hasValidFiles(sender) else { return [] }
@@ -250,5 +367,30 @@ final class DropEnabledWebView: WKWebView {
             .urlReadingFileURLsOnly: true
         ])?.compactMap { ($0 as? URL) }
          .filter { Self.supportedExtensions.contains($0.pathExtension.lowercased()) }
+    }
+}
+
+// MARK: - TitlebarDragView
+
+@MainActor
+final class TitlebarDragView: NSView {
+    override var mouseDownCanMoveWindow: Bool { true }
+
+    override func mouseDown(with event: NSEvent) {
+        window?.performDrag(with: event)
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        let windowWidth = window?.frame.width ?? 1200
+
+        if point.x < 300 {
+            return nil
+        }
+
+        if point.x > windowWidth - 200 {
+            return nil
+        }
+
+        return super.hitTest(point)
     }
 }
