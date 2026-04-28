@@ -293,15 +293,7 @@
       const handleConfirmImport = () => {
         console.log('[Import] Confirming import with metadata:', meta);
         const paths = selectedFiles.map(f => f.path);
-        bridge.call('importFiles', { paths }).then((result) => {
-          console.log('[Import] Import completed:', result);
-          addToast('已导入 ' + result.length + ' 个壁纸');
-          refreshWallpapers();
-          onClose();
-        }).catch((err) => {
-          console.error('[Import] Import error:', err);
-          addToast('导入失败: ' + err.message);
-        });
+        onStartImport(paths);
       };
 
       return (
@@ -1346,12 +1338,13 @@
         });
       };
 
-      const handleImport = () => {
-        console.log('[Import] Calling bridge.call(importFiles)');
-        bridge.call('importFiles').then((result) => {
+      const handleImport = (paths) => {
+        console.log('[Import] Calling bridge.call(importFiles) with paths:', paths);
+        bridge.call('importFiles', { paths }).then((result) => {
           console.log('[Import] Success, imported:', result);
           addToast('已导入 ' + result.length + ' 个壁纸');
-          refreshWallpapers();
+          return refreshWallpapers();
+        }).then(() => {
           setShowImportModal(false);
         }).catch((err) => {
           console.error('[Import] Error:', err);
