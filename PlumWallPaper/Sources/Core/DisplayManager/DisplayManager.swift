@@ -27,7 +27,7 @@ final class DisplayManager {
             let frame = screen.frame
             let resolution = "\(Int(frame.width))×\(Int(frame.height))"
             let isMain = screen == NSScreen.main
-            let name = isMain ? "主显示器" : "显示器 \(index + 1)"
+            let name = screen.localizedName
             return ScreenInfo(id: screenID, name: name, resolution: resolution, isMain: isMain)
         }
     }

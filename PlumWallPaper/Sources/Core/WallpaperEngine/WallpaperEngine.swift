@@ -119,12 +119,17 @@ final class BasicVideoRenderer: WallpaperRenderer {
 
     func stop() {
         player?.pause()
+        player?.replaceCurrentItem(with: nil)
         looper = nil
+        currentItem = nil
         playerLayer?.removeFromSuperlayer()
+        playerLayer?.player = nil
+        playerLayer = nil
+        player = nil
+        hostingWindow?.contentView = nil
+        hostingWindow?.orderOut(nil)
         hostingWindow?.close()
         hostingWindow = nil
-        player = nil
-        playerLayer = nil
     }
 
     func pause() {

@@ -409,7 +409,7 @@
       </div>
     );
 
-    const HomePage = ({ onSetWallpaper, wallpapers, fitMode, onPreview, onEditColor, onToggleFavorite, onDelete }) => {
+    const HomePage = ({ onSetWallpaper, wallpapers, fitMode, onPreview, onEditColor, onToggleFavorite, onDelete, onViewAll }) => {
       const [heroIndex, setHeroIndex] = useState(0);
       const [contextMenu, setContextMenu] = useState(null);
       const safeHeroIndex = Math.min(heroIndex, Math.max(0, wallpapers.length - 1));
@@ -542,7 +542,7 @@
                 <div key={section.title} style={{ marginBottom: 100 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
                     <h2 style={{ fontSize: 38, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500, letterSpacing: '-0.02em' }}>{section.title}</h2>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', transition: '0.3s' }} className="view-all">
+                    <div onClick={() => onViewAll && onViewAll(section.title)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', transition: '0.3s' }} className="view-all">
                       <span>查看全部</span>
                       <Icon name="play" size={10} />
                     </div>
@@ -662,10 +662,16 @@
       );
     };
 
-    const LibraryPage = ({ wallpapers, setView, onSetWallpaper, onPreview, onEditColor, onToggleFavorite, onDelete }) => {
+    const LibraryPage = ({ wallpapers, setView, onSetWallpaper, onPreview, onEditColor, onToggleFavorite, onDelete, initialFilter = '全部' }) => {
       const [contextMenu, setContextMenu] = useState(null);
       const [showTagManager, setShowTagManager] = useState(false);
-      const [activeFilter, setActiveFilter] = useState('全部');
+      const [activeFilter, setActiveFilter] = useState(initialFilter);
+      const sortModes = ['按导入时间', '按名称', '按文件大小'];
+      const [sortIndex, setSortIndex] = useState(0);
+
+      useEffect(() => {
+        setActiveFilter(initialFilter);
+      }, [initialFilter]);
 
       const dynamicTags = useMemo(() => {
         const tagSet = new Set();
@@ -676,11 +682,18 @@
       }, [wallpapers]);
 
       const filteredList = useMemo(() => {
-        if (activeFilter === '全部') return wallpapers;
-        if (activeFilter === '视频') return wallpapers.filter(w => w.type === 'video');
-        if (activeFilter === 'HEIC') return wallpapers.filter(w => w.type === 'heic' || w.type === 'image');
-        return wallpapers.filter(w => w.tags && w.tags.some(t => t.name === activeFilter));
-      }, [wallpapers, activeFilter]);
+        let list;
+        if (activeFilter === '全部') list = wallpapers;
+        else if (activeFilter === '收藏') list = wallpapers.filter(w => w.isFavorite);
+        else if (activeFilter === '视频') list = wallpapers.filter(w => w.type === 'video');
+        else if (activeFilter === 'HEIC') list = wallpapers.filter(w => w.type === 'heic' || w.type === 'image');
+        else list = wallpapers.filter(w => w.tags && w.tags.some(t => t.name === activeFilter));
+        const sorted = [...list];
+        if (sortIndex === 0) sorted.sort((a, b) => new Date(b.importDate) - new Date(a.importDate));
+        else if (sortIndex === 1) sorted.sort((a, b) => a.name.localeCompare(b.name));
+        else if (sortIndex === 2) sorted.sort((a, b) => (b.fileSize || 0) - (a.fileSize || 0));
+        return sorted;
+      }, [wallpapers, activeFilter, sortIndex]);
 
       const handleContextMenu = (e, w) => {
         e.preventDefault();
@@ -716,9 +729,9 @@
               </div>
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,0.3)', fontSize: 13, cursor: 'pointer', padding: '8px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', transition: '0.3s' }} onMouseOver={(e) => e.currentTarget.style.color = '#fff'}>
-                <span>按导入时间排序</span>
-                <Icon name="play" size={8} style={{ transform: 'rotate(90deg)', opacity: 0.5 }} />
+              <div onClick={() => setSortIndex((sortIndex + 1) % sortModes.length)} style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,0.3)', fontSize: 13, cursor: 'pointer', padding: '8px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', transition: '0.3s' }} onMouseOver={(e) => e.currentTarget.style.color = '#fff'} onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}>
+                <span>{sortModes[sortIndex]}</span>
+                <Icon name="play" size={8} />
               </div>
             </div>
           </div>
@@ -1343,6 +1356,7 @@
       const [fitMode, setFitMode] = useState('填充');
       const [activeMonitors, setActiveMonitors] = useState([]);
       const [settings, setSettings] = useState({});
+      const [libraryFilter, setLibraryFilter] = useState('全部');
 
       const refreshWallpapers = () => {
         return bridge.call('getWallpapers').then(data => {
@@ -1475,6 +1489,7 @@
                 onEditColor={handleGoToColor}
                 onToggleFavorite={handleToggleFavorite}
                 onDelete={handleDelete}
+                onViewAll={(tag) => { setLibraryFilter(tag === '收藏' ? '全部' : tag); setView('library'); }}
               />
             )}
             {view === 'library' && (
@@ -1486,6 +1501,7 @@
                 onEditColor={handleGoToColor}
                 onToggleFavorite={handleToggleFavorite}
                 onDelete={handleDelete}
+                initialFilter={libraryFilter}
               />
             )}
             {view === 'color' && selectedWallpaper && (
