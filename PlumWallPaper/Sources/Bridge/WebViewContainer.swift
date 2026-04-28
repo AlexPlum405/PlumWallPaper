@@ -28,6 +28,9 @@ struct WebViewContainer: NSViewRepresentable {
 
         let webView = DropEnabledWebView(frame: .zero, configuration: config)
         webView.setValue(false, forKey: "drawsBackground")
+        webView.wantsLayer = true
+        webView.layerContentsRedrawPolicy = .onSetNeedsDisplay
+        webView.layer?.isOpaque = true
         webView.isInspectable = true
         webView.navigationDelegate = context.coordinator
         webView.registerForDraggedTypes([.fileURL])
@@ -124,6 +127,39 @@ final class DropEnabledWebView: WKWebView {
     var onDropFiles: (([URL]) -> Void)?
 
     private static let supportedExtensions: Set<String> = ["mp4", "mov", "m4v", "heic", "heif"]
+    private var resizeSnapshotView: NSView?
+
+    override var preservesContentDuringLiveResize: Bool {
+        true
+    }
+
+    override func viewWillStartLiveResize() {
+        super.viewWillStartLiveResize()
+        guard resizeSnapshotView == nil else { return }
+        guard let rep = bitmapImageRepForCachingDisplay(in: bounds) else { return }
+        cacheDisplay(in: bounds, to: rep)
+        let image = NSImage(size: bounds.size)
+        image.addRepresentation(rep)
+        let imageView = NSImageView(frame: bounds)
+        imageView.image = image
+        imageView.imageScaling = .scaleAxesIndependently
+        imageView.autoresizingMask = [.width, .height]
+        addSubview(imageView)
+        resizeSnapshotView = imageView
+    }
+
+    override func viewDidEndLiveResize() {
+        super.viewDidEndLiveResize()
+        guard let snapshot = resizeSnapshotView else { return }
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.15
+            snapshot.animator().alphaValue = 0
+        }, completionHandler: {
+            snapshot.removeFromSuperview()
+        })
+        resizeSnapshotView = nil
+        needsDisplay = true
+    }
 
     override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
         guard hasValidFiles(sender) else { return [] }
