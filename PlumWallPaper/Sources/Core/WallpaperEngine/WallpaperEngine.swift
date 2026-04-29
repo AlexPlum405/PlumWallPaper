@@ -22,6 +22,7 @@ final class WallpaperEngine {
     var wallpaperOpacity: Float = 1.0  // 0.5 - 1.0
     var fpsLimit: Int = 0  // 0 = unlimited
     var loopMode: String = "loop"  // "loop" | "once"
+    var audioScreenId: String? = nil  // 指定音频输出屏幕，nil = 主屏幕
     var randomStartPosition: Bool = false
 
     private init() {}
@@ -99,6 +100,78 @@ final class WallpaperEngine {
         }
     }
 
+    /// 细粒度：更新播放速率（即时生效）
+    func updatePlaybackRate(_ rate: Double) {
+        self.playbackRate = Float(rate)
+        for renderer in renderers.values {
+            if let video = renderer as? BasicVideoRenderer {
+                video.setPlaybackRate(Float(rate))
+            }
+        }
+    }
+
+    /// 细粒度：更新全局音量（即时生效，联动所有渲染器）
+    func updateGlobalVolume(_ volume: Int) {
+        self.globalVolume = Float(volume) / 100.0
+        for (screenId, (wallpaper, _)) in activeWallpapers {
+            guard let renderer = renderers[screenId] as? BasicVideoRenderer else { continue }
+            let baseVolume = Float(wallpaper.volumeOverride ?? 100) / 100.0
+            let effective = baseVolume * self.globalVolume
+            renderer.setVolume(effective)
+        }
+    }
+
+    /// 细粒度：更新静音策略（即时生效）
+    func updateMutingPolicy(defaultMuted: Bool, previewOnly: Bool, audioScreenId: String?) {
+        self.defaultMuted = defaultMuted
+        self.previewOnlyAudio = previewOnly
+        updateAudioScreenMuting(audioScreenId: audioScreenId)
+    }
+
+    /// 细粒度：更新音频输出屏幕静音状态（不重建渲染器）
+    func updateAudioScreenMuting(audioScreenId: String?) {
+        self.audioScreenId = audioScreenId
+        for (screenId, renderer) in renderers {
+            guard let video = renderer as? BasicVideoRenderer else { continue }
+            let screenInfo = activeWallpapers[screenId]?.1
+            let isAudioScreen = (audioScreenId == nil && (screenInfo?.isMain ?? false)) ||
+                                (audioScreenId == screenId)
+            if isAudioScreen {
+                video.setMuted(defaultMuted || previewOnlyAudio)
+            } else {
+                video.setMuted(true)
+            }
+        }
+    }
+
+    /// 更新单壁纸音量
+    func updateWallpaperVolume(wallpaperId: UUID) {
+        for (screenId, (wallpaper, _)) in activeWallpapers {
+            guard wallpaper.id == wallpaperId else { continue }
+            guard let renderer = renderers[screenId] as? BasicVideoRenderer else { continue }
+            let baseVolume = Float(wallpaper.volumeOverride ?? 100) / 100.0
+            let effective = baseVolume * globalVolume
+            renderer.setVolume(effective)
+        }
+    }
+
+    /// 枚举所有渲染器
+    func enumerateRenderers(_ block: (String, WallpaperRenderer) -> Void) {
+        for (key, renderer) in renderers { block(key, renderer) }
+    }
+
+    /// 枚举所有视频渲染器
+    func enumerateAudioRenderer(_ block: (String, BasicVideoRenderer) -> Void) {
+        for (key, renderer) in renderers {
+            if let video = renderer as? BasicVideoRenderer { block(key, video) }
+        }
+    }
+
+    /// 当前所有屏幕正在显示的壁纸 ID
+    var activeWallpaperIds: Set<UUID> {
+        Set(activeWallpapers.values.map { $0.0.id })
+    }
+
     /// 重载所有活跃渲染器（用于设置变更后即时生效）
     func reloadAllRenderers() {
         let snapshot = activeWallpapers  // 复制字典避免迭代时修改
@@ -115,6 +188,14 @@ final class WallpaperEngine {
         guard let screen = DisplayManager.shared.screen(for: screenInfo) else { return }
         let key = screenInfo.id
 
+        // 如果是同一壁纸，跳转到开头而不是重建渲染器
+        if let (currentWallpaper, _) = activeWallpapers[key], currentWallpaper.id == wallpaper.id {
+            if let videoRenderer = renderers[key] as? BasicVideoRenderer {
+                videoRenderer.seekToBeginning()
+            }
+            return
+        }
+
         if let old = renderers.removeValue(forKey: key) {
             old.stop()
         }
@@ -129,13 +210,19 @@ final class WallpaperEngine {
         let renderer: WallpaperRenderer
         switch wallpaper.type {
         case .video:
+            // 计算音量和静音状态
+            let baseVolume = Float(wallpaper.volumeOverride ?? 100) / 100.0
+            let effectiveVolume = baseVolume * globalVolume
+            let isAudioScreen = (audioScreenId == nil && screenInfo.isMain) || (audioScreenId == key)
+            let shouldMute = isAudioScreen ? (defaultMuted || previewOnlyAudio) : true
+
             renderer = BasicVideoRenderer(
                 wallpaper: wallpaper,
                 screen: screen,
                 colorSpace: activeColorSpace,
                 performanceMode: performanceMode,
-                volume: globalVolume,
-                muted: defaultMuted || previewOnlyAudio,
+                volume: effectiveVolume,
+                muted: shouldMute,
                 playbackRate: playbackRate,
                 opacity: wallpaperOpacity,
                 loopMode: loopMode,
@@ -201,14 +288,20 @@ final class WallpaperEngine {
             let renderer: WallpaperRenderer
             switch wallpaper.type {
             case .video:
+                // 计算音量和静音状态
+                let baseVolume = Float(wallpaper.volumeOverride ?? 100) / 100.0
+                let effectiveVolume = baseVolume * globalVolume
+                let isAudioScreen = (audioScreenId == nil && screenInfo.isMain) || (audioScreenId == key)
+                let shouldMute = isAudioScreen ? (defaultMuted || previewOnlyAudio) : true
+
                 renderer = BasicVideoRenderer(
                     wallpaper: wallpaper,
                     screen: screen,
                     colorSpace: activeColorSpace,
                     performanceMode: performanceMode,
                     panoramaCrop: cropRect,
-                    volume: globalVolume,
-                    muted: defaultMuted || previewOnlyAudio,
+                    volume: effectiveVolume,
+                    muted: shouldMute,
                     playbackRate: playbackRate,
                     opacity: wallpaperOpacity,
                     loopMode: loopMode,
