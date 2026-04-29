@@ -53,31 +53,31 @@ final class MenuBarManager {
         let image = NSImage(size: size)
         image.lockFocus()
 
-        // 李子主体：从 SVG path 精确缩放（40×40 → 18×18，缩放系数 0.45）
+        // 李子主体：SVG path 缩放 0.45 + Y 轴翻转（SVG Y↓, NSBezierPath Y↑）
         // 原始 SVG: M20 36C28 36 34 30 34 22C34 14 20 6 20 6C20 6 6 14 6 22C6 30 12 36 20 36Z
         let plumPath = NSBezierPath()
-        plumPath.move(to: NSPoint(x: 9.0, y: 16.2))  // M20 36 → (20*0.45, 36*0.45)
-        plumPath.curve(to: NSPoint(x: 15.3, y: 9.9),  // C28 36 34 30 34 22
-                       controlPoint1: NSPoint(x: 12.6, y: 16.2),
-                       controlPoint2: NSPoint(x: 15.3, y: 13.5))
-        plumPath.curve(to: NSPoint(x: 9.0, y: 2.7),   // C34 14 20 6 20 6
-                       controlPoint1: NSPoint(x: 15.3, y: 6.3),
-                       controlPoint2: NSPoint(x: 9.0, y: 2.7))
-        plumPath.curve(to: NSPoint(x: 2.7, y: 9.9),   // C20 6 6 14 6 22
-                       controlPoint1: NSPoint(x: 9.0, y: 2.7),
-                       controlPoint2: NSPoint(x: 2.7, y: 6.3))
-        plumPath.curve(to: NSPoint(x: 9.0, y: 16.2),  // C6 30 12 36 20 36
-                       controlPoint1: NSPoint(x: 2.7, y: 13.5),
-                       controlPoint2: NSPoint(x: 5.4, y: 16.2))
+        plumPath.move(to: NSPoint(x: 9.0, y: 1.8))
+        plumPath.curve(to: NSPoint(x: 15.3, y: 8.1),
+                       controlPoint1: NSPoint(x: 12.6, y: 1.8),
+                       controlPoint2: NSPoint(x: 15.3, y: 4.5))
+        plumPath.curve(to: NSPoint(x: 9.0, y: 15.3),
+                       controlPoint1: NSPoint(x: 15.3, y: 11.7),
+                       controlPoint2: NSPoint(x: 9.0, y: 15.3))
+        plumPath.curve(to: NSPoint(x: 2.7, y: 8.1),
+                       controlPoint1: NSPoint(x: 9.0, y: 15.3),
+                       controlPoint2: NSPoint(x: 2.7, y: 11.7))
+        plumPath.curve(to: NSPoint(x: 9.0, y: 1.8),
+                       controlPoint1: NSPoint(x: 2.7, y: 4.5),
+                       controlPoint2: NSPoint(x: 5.4, y: 1.8))
         plumPath.close()
         NSColor.black.setFill()
         plumPath.fill()
 
-        // 茎：M20 2V8 → (9, 0.9) to (9, 3.6)
+        // 茎：从李子顶部向上延伸
         let stemPath = NSBezierPath()
-        stemPath.move(to: NSPoint(x: 9.0, y: 0.9))
-        stemPath.line(to: NSPoint(x: 9.0, y: 3.6))
-        stemPath.lineWidth = 1.35  // strokeWidth 3 * 0.45
+        stemPath.move(to: NSPoint(x: 9.0, y: 14.4))
+        stemPath.line(to: NSPoint(x: 9.0, y: 17.1))
+        stemPath.lineWidth = 1.35
         stemPath.lineCapStyle = .round
         NSColor.black.setStroke()
         stemPath.stroke()
