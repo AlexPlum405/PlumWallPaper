@@ -447,7 +447,6 @@ final class BasicVideoRenderer: WallpaperRenderer {
 
     private func applyEffectiveRate() {
         guard let player = player else { return }
-        if player.timeControlStatus == .paused { return }
         // 根据 FPS 上限调整播放速率，确保实际帧率不超过限制
         if currentFPSLimit > 0 && nominalFrameRate > 0 {
             player.rate = min(rate, Float(currentFPSLimit) / nominalFrameRate * rate)
