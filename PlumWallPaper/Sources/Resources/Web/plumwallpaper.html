@@ -415,7 +415,7 @@
 
     // --- Pages ---
 
-    const ImportModal = ({ onClose, onStartImport, initialFiles = [], customTags = [], onAddCustomTag }) => {
+    const ImportModal = ({ onClose, onStartImport, initialFiles = [], customTags = [], onAddCustomTag, addToast }) => {
       const [step, setStep] = useState(initialFiles.length > 0 ? 2 : 1);
       const [selectedFiles, setSelectedFiles] = useState(initialFiles);
       const [duplicates, setDuplicates] = useState([]);
@@ -461,7 +461,21 @@
         setChecking(true);
         const paths = files.map(f => f.path);
         bridge.call('checkDuplicates', { paths }).then(dupes => {
-          setDuplicates(dupes || []);
+          const dupePaths = new Set((dupes || []).map(d => d.path));
+          const uniqueFiles = files.filter(f => !dupePaths.has(f.path));
+          if (dupes && dupes.length > 0) {
+            if (window.__showToast) window.__showToast(`已跳过 ${dupes.length} 个重复壁纸`);
+            if (addToast) addToast(`已跳过 ${dupes.length} 个重复壁纸`);
+          }
+          if (uniqueFiles.length === 0) {
+            setChecking(false);
+            if (window.__showToast) window.__showToast('所有文件均已存在，无需导入');
+            if (addToast) addToast('所有文件均已存在，无需导入');
+            onClose();
+            return;
+          }
+          setSelectedFiles(uniqueFiles);
+          setDuplicates([]);
           setChecking(false);
           setStep(2);
         }).catch(() => { setChecking(false); setStep(2); });
@@ -543,17 +557,6 @@
                 </div>
               ) : (
                 <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                  {duplicates.length > 0 && (
-                    <div style={{ background: 'rgba(224,62,62,0.08)', border: '1px solid rgba(224,62,62,0.2)', borderRadius: 16, padding: '16px 20px' }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginBottom: 8 }}>检测到 {duplicates.length} 个重复文件</div>
-                      {duplicates.map(d => (
-                        <div key={d.path} style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>
-                          "{d.name}" 已存在（库中名称: {d.existingName}）
-                        </div>
-                      ))}
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 8 }}>修改下方名称后仍可导入，系统会自动追加编号避免冲突</div>
-                    </div>
-                  )}
                   <div>
                     <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 8 }}>资源名称</div>
                     <input value={meta.name} onChange={e => setMeta({...meta, name: e.target.value})} style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: 12, padding: '12px 16px', color: '#fff', outline: 'none' }} />
@@ -598,7 +601,7 @@
                   {step === 1 ? '取消' : '返回上一步'}
                 </button>
                 <button onClick={handleImportClick} className="btn-primary btn" style={{ padding: '10px 32px' }}>
-                  {step === 1 ? '选择文件' : (duplicates.length > 0 ? '仍然导入' : '确认并导入')}
+                  {step === 1 ? '选择文件' : '确认并导入'}
                 </button>
               </div>
             </div>
@@ -2852,6 +2855,7 @@
               initialFiles={droppedImportFiles}
               customTags={customTags}
               onAddCustomTag={handleAddCustomTag}
+              addToast={addToast}
             />
           )}
 
