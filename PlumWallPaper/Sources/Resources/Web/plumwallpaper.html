@@ -1607,6 +1607,7 @@
       const [showCustomFPS, setShowCustomFPS] = useState(false);
       const [customFPSValue, setCustomFPSValue] = useState('');
       const [appInfo, setAppInfo] = useState(null);
+      const [screens, setScreens] = useState([]);
 
       const s = settings || {};
 
@@ -1628,6 +1629,7 @@
       useEffect(() => {
         bridge.call('getTags').then(tags => setAllTags(tags || []));
         bridge.call('getAppInfo').then(info => setAppInfo(info)).catch(() => {});
+        bridge.call('getScreens').then(list => setScreens(list || [])).catch(() => {});
       }, []);
 
       const storageStats = useMemo(() => {
@@ -1874,12 +1876,24 @@
                       style={{ width: '100%', accentColor: 'var(--accent)' }} />
                   </div>
 
+                  <SettingRow title="音频输出屏幕" desc="多屏幕时仅允许选定屏幕的壁纸播放音频">
+                    <select value={s.audioScreenId || ''} onChange={e => updateSetting('audioScreenId', e.target.value || null)}
+                      style={{
+                        background: 'var(--glass)', color: 'var(--fg)', border: '1px solid var(--glass-border)',
+                        borderRadius: 8, padding: '6px 12px', fontSize: 13, outline: 'none',
+                        cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none',
+                        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'rgba(255,255,255,0.4)\' stroke-width=\'2\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'/%3E%3C/svg%3E")',
+                        backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center', paddingRight: 28
+                      }}>
+                      <option value="">主屏幕</option>
+                      {screens.map(scr => <option key={scr.id} value={scr.id}>{scr.name || scr.id}</option>)}
+                    </select>
+                  </SettingRow>
                   <SettingRow title="默认静音启动" desc="首次应用有声壁纸时默认不直接发声"><Switch active={!!s.defaultMuted} onToggle={() => updateSetting('defaultMuted', !s.defaultMuted)} /></SettingRow>
                   <SettingRow title="仅预览时允许声音" desc="桌面常驻时静音，仅在预览和调色页允许试听"><Switch active={!!s.previewOnlyAudio} onToggle={() => updateSetting('previewOnlyAudio', !s.previewOnlyAudio)} /></SettingRow>
-                  <div style={{ opacity: 0.35, pointerEvents: 'none', position: 'relative' }}>
-                    <SettingRow title="音频闪避 (Audio Ducking)" desc="当其他应用播放音频时自动静音壁纸"><Switch active={false} /></SettingRow>
-                    <div style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--fg-tertiary)', background: 'var(--glass)', padding: '3px 10px', borderRadius: 6, border: '1px solid var(--glass-border)' }}>后续版本</div>
-                  </div>
+                  <SettingRow title="音频闪避 (Audio Ducking)" desc="当其他应用播放音频时自动静音壁纸">
+                    <Switch active={!!s.audioDuckingEnabled} onToggle={() => updateSetting('audioDuckingEnabled', !s.audioDuckingEnabled)} />
+                  </SettingRow>
                 </div>
               </div>
             )}
@@ -1894,26 +1908,76 @@
                   </div>
                 </SettingRow>
 
+                <SettingRow title="循环模式" desc="视频播放完成后的行为">
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {[{v:'loop',l:'循环播放'},{v:'once',l:'播完停止'}].map(({v,l}) =>
+                      <button key={v} className="btn"
+                        onClick={() => updateSetting('loopMode', v)}
+                        style={{
+                          padding: '6px 12px', fontSize: 12,
+                          background: (s.loopMode || 'loop') === v ? 'rgba(255,255,255,0.14)' : undefined,
+                          color: (s.loopMode || 'loop') === v ? '#fff' : undefined,
+                          fontWeight: (s.loopMode || 'loop') === v ? 700 : undefined,
+                          borderColor: (s.loopMode || 'loop') === v ? 'rgba(255,255,255,0.24)' : undefined
+                        }}>{l}</button>
+                    )}
+                  </div>
+                </SettingRow>
+
+                <SettingRow title="随机起始位置" desc="循环播放时从视频随机位置开始">
+                  <Switch active={!!s.randomStartPosition} onToggle={() => updateSetting('randomStartPosition', !s.randomStartPosition)} />
+                </SettingRow>
+
                 <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 32, marginTop: 32 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fg-quaternary)', marginBottom: 24, textTransform: 'uppercase', letterSpacing: '0.15em' }}>自动轮播</div>
-                  <div style={{ opacity: 0.35, pointerEvents: 'none' }}>
                     <SettingRow title="启用播放列表" desc="从收藏或标签创建壁纸播放列表，自动轮换">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <span style={{ fontSize: 11, color: 'var(--fg-tertiary)', background: 'var(--glass)', padding: '3px 10px', borderRadius: 6, border: '1px solid var(--glass-border)' }}>后续版本</span>
-                        <Switch active={false} />
+                      <Switch active={!!s.slideshowEnabled} onToggle={() => updateSetting('slideshowEnabled', !s.slideshowEnabled)} />
+                    </SettingRow>
+                    <SettingRow title="播放列表来源" desc="选择参与轮播的壁纸范围">
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {[{v:'all',l:'全部'},{v:'favorites',l:'收藏'},{v:'tag',l:'指定标签'}].map(({v,l}) =>
+                          <button key={v} className="btn"
+                            onClick={() => updateSetting('slideshowSource', v)}
+                            style={{
+                              padding: '6px 12px', fontSize: 12,
+                              background: (s.slideshowSource || 'all') === v ? 'rgba(255,255,255,0.14)' : undefined,
+                              color: (s.slideshowSource || 'all') === v ? '#fff' : undefined,
+                              fontWeight: (s.slideshowSource || 'all') === v ? 700 : undefined,
+                              borderColor: (s.slideshowSource || 'all') === v ? 'rgba(255,255,255,0.24)' : undefined
+                            }}>{l}</button>
+                        )}
                       </div>
                     </SettingRow>
                     <SettingRow title="轮播间隔" desc="每张壁纸的展示时长">
                       <div style={{ display: 'flex', gap: 8 }}>
-                        {['5 分钟','15 分钟','30 分钟','1 小时','2 小时'].map(l => <button key={l} className="btn" style={{ padding: '6px 12px', fontSize: 12 }}>{l}</button>)}
+                        {[{v:300,l:'5 分钟'},{v:900,l:'15 分钟'},{v:1800,l:'30 分钟'},{v:3600,l:'1 小时'},{v:7200,l:'2 小时'}].map(({v,l}) =>
+                          <button key={v} className="btn"
+                            onClick={() => updateSetting('slideshowInterval', v)}
+                            style={{
+                              padding: '6px 12px', fontSize: 12,
+                              background: (s.slideshowInterval || 1800) === v ? 'rgba(255,255,255,0.14)' : undefined,
+                              color: (s.slideshowInterval || 1800) === v ? '#fff' : undefined,
+                              fontWeight: (s.slideshowInterval || 1800) === v ? 700 : undefined,
+                              borderColor: (s.slideshowInterval || 1800) === v ? 'rgba(255,255,255,0.24)' : undefined
+                            }}>{l}</button>
+                        )}
                       </div>
                     </SettingRow>
                     <SettingRow title="轮播顺序" desc="壁纸切换的排列方式">
                       <div style={{ display: 'flex', gap: 8 }}>
-                        {['顺序','随机','收藏优先'].map(l => <button key={l} className="btn" style={{ padding: '6px 12px', fontSize: 12 }}>{l}</button>)}
+                        {[{v:'sequential',l:'顺序'},{v:'random',l:'随机'},{v:'favoritesFirst',l:'收藏优先'}].map(({v,l}) =>
+                          <button key={v} className="btn"
+                            onClick={() => updateSetting('slideshowOrder', v)}
+                            style={{
+                              padding: '6px 12px', fontSize: 12,
+                              background: (s.slideshowOrder || 'sequential') === v ? 'rgba(255,255,255,0.14)' : undefined,
+                              color: (s.slideshowOrder || 'sequential') === v ? '#fff' : undefined,
+                              fontWeight: (s.slideshowOrder || 'sequential') === v ? 700 : undefined,
+                              borderColor: (s.slideshowOrder || 'sequential') === v ? 'rgba(255,255,255,0.24)' : undefined
+                            }}>{l}</button>
+                        )}
                       </div>
                     </SettingRow>
-                  </div>
                 </div>
               </div>
             )}
