@@ -1,0 +1,14 @@
+<svg width="44" height="44" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
+  <!-- macOS 菜单栏模板图标：单色黑色前景 + 透明背景 -->
+  <!-- 系统会自动适配深色/浅色模式 -->
+
+  <!-- 李子主体轮廓 -->
+  <path d="M22 38C30.8 38 37 31.8 37 23C37 14.2 22 5 22 5C22 5 7 14.2 7 23C7 31.8 13.2 38 22 38Z"
+        fill="black"/>
+
+  <!-- 叶子茎 -->
+  <path d="M22 2V9"
+        stroke="black"
+        stroke-width="3.5"
+        stroke-linecap="round"/>
+</svg>

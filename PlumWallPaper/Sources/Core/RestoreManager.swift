@@ -39,6 +39,11 @@ final class RestoreManager {
         let mapping = loadSession()
         guard !mapping.isEmpty else { return }
 
+        // 恢复前同步渲染配置
+        let preferencesStore = PreferencesStore(modelContext: context)
+        let settings = (try? preferencesStore.fetchSettings()) ?? Settings()
+        wallpaperEngine.updateRenderingConfig(colorSpace: settings.colorSpace, performanceMode: settings.vSyncEnabled)
+
         for screen in displayManager.availableScreens {
             guard let wallpaperID = mapping[screen.id] else { continue }
             let descriptor = FetchDescriptor<Wallpaper>(

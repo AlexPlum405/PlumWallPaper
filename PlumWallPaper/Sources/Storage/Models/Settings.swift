@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftData
+import CoreGraphics
 
 /// 应用设置数据模型
 @Model
@@ -218,6 +219,14 @@ enum ColorSpace: String, Codable {
         case .p3: return "Display P3"
         case .srgb: return "sRGB"
         case .adobeRGB: return "Adobe RGB"
+        }
+    }
+
+    var cgColorSpace: CGColorSpace {
+        switch self {
+        case .p3: return CGColorSpace(name: CGColorSpace.displayP3)!
+        case .srgb: return CGColorSpace(name: CGColorSpace.sRGB)!
+        case .adobeRGB: return CGColorSpace(name: CGColorSpace.adobeRGB1998)!
         }
     }
 }

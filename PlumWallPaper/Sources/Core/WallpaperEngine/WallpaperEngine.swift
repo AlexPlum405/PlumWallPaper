@@ -10,7 +10,17 @@ final class WallpaperEngine {
     private var renderers: [String: WallpaperRenderer] = [:]
     private let desktopBridge = DesktopBridge()
 
+    // 渲染配置（由 WebBridge 在设置变更时更新）
+    var activeColorSpace: CGColorSpace = CGColorSpace(name: CGColorSpace.displayP3)!
+    var performanceMode: Bool = true
+
     private init() {}
+
+    /// 更新渲染配置
+    func updateRenderingConfig(colorSpace: ColorSpace, performanceMode: Bool) {
+        self.activeColorSpace = colorSpace.cgColorSpace
+        self.performanceMode = performanceMode
+    }
 
     /// 为指定显示器设置壁纸
     func setWallpaper(_ wallpaper: Wallpaper, for screenInfo: ScreenInfo) {
@@ -24,7 +34,7 @@ final class WallpaperEngine {
         let renderer: WallpaperRenderer
         switch wallpaper.type {
         case .video:
-            renderer = BasicVideoRenderer(wallpaper: wallpaper, screen: screen)
+            renderer = BasicVideoRenderer(wallpaper: wallpaper, screen: screen, colorSpace: activeColorSpace, performanceMode: performanceMode)
         case .heic:
             renderer = HEICRenderer(wallpaper: wallpaper, screen: screen, desktopBridge: desktopBridge)
         }
@@ -68,20 +78,30 @@ final class WallpaperEngine {
 final class BasicVideoRenderer: WallpaperRenderer {
     private let wallpaper: Wallpaper
     private let screen: NSScreen
+    private let colorSpace: CGColorSpace
+    private let performanceMode: Bool
     private var player: AVQueuePlayer?
     private var playerLayer: AVPlayerLayer?
     private var hostingWindow: NSWindow?
     private var looper: AVPlayerLooper?
     private var currentItem: AVPlayerItem?
 
-    init(wallpaper: Wallpaper, screen: NSScreen) {
+    init(wallpaper: Wallpaper, screen: NSScreen, colorSpace: CGColorSpace, performanceMode: Bool) {
         self.wallpaper = wallpaper
         self.screen = screen
+        self.colorSpace = colorSpace
+        self.performanceMode = performanceMode
     }
 
     func start() {
         let asset = AVAsset(url: URL(fileURLWithPath: wallpaper.filePath))
         let item = AVPlayerItem(asset: asset)
+
+        // 性能模式：省电模式下限制解码分辨率为 1080p
+        if !performanceMode {
+            item.preferredMaximumResolution = CGSize(width: 1920, height: 1080)
+        }
+
         if let preset = wallpaper.filterPreset {
             item.videoComposition = FilterEngine.shared.videoComposition(for: asset, preset: preset)
         }
@@ -103,6 +123,9 @@ final class BasicVideoRenderer: WallpaperRenderer {
         window.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         window.ignoresMouseEvents = true
 
+        // 应用色彩空间
+        window.colorSpace = NSColorSpace(cgColorSpace: colorSpace)
+
         let contentView = NSView(frame: CGRect(origin: .zero, size: screen.frame.size))
         contentView.wantsLayer = true
         contentView.autoresizingMask = [.width, .height]
@@ -110,6 +133,7 @@ final class BasicVideoRenderer: WallpaperRenderer {
         layer.frame = contentView.bounds
         layer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
         layer.videoGravity = .resizeAspectFill
+
         contentView.layer?.addSublayer(layer)
         window.setFrame(screen.frame, display: false)
         window.contentView = contentView

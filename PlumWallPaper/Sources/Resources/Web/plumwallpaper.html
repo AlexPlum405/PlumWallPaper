@@ -216,20 +216,20 @@
               </div>
               <button onClick={onCancel} className="btn" style={{ borderRadius: '50%', width: 40, height: 40, padding: 0, justifyContent: 'center' }}><Icon name="close" /></button>
             </div>
-            
+
             <div style={{ padding: '48px 60px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 32, marginBottom: 40 }}>
                 {monitors.map(m => (
-                  <div key={m.id} 
+                  <div key={m.id}
                     onClick={() => setSelectedMonitor(m.id)}
                     className="screen-card-v2"
-                    style={{ 
-                      border: '2px solid ' + (selectedMonitor === m.id ? 'var(--accent)' : 'rgba(255,255,255,0.05)'), 
-                      borderRadius: 24, padding: 24, background: selectedMonitor === m.id ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)', 
+                    style={{
+                      border: '2px solid ' + (selectedMonitor === m.id ? 'var(--accent)' : 'rgba(255,255,255,0.05)'),
+                      borderRadius: 24, padding: 24, background: selectedMonitor === m.id ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)',
                       cursor: 'pointer', position: 'relative', transition: '0.4s cubic-bezier(0.2, 1, 0.3, 1)',
                       textAlign: 'center'
                     }}>
-                    
+
                     {/* Aura Glow */}
                     {selectedMonitor === m.id && (
                       <div style={{ position: 'absolute', inset: -15, background: 'radial-gradient(circle, var(--accent) 0%, transparent 70%)', opacity: 0.15, zIndex: -1, filter: 'blur(20px)' }} />
@@ -256,11 +256,68 @@
                  <button className="btn-primary btn" style={{ padding: '10px 32px' }} onClick={() => onApply(selectedMonitor)}>确认分配</button>
                </div>
             </div>
-            
+
             <style>{`
               .screen-card-v2:hover { transform: translateY(-8px); background: rgba(255,255,255,0.06); }
               .screen-card-v2:hover img { opacity: 0.8 !important; }
             `}</style>
+          </div>
+        </div>
+      );
+    };
+
+    const PanoramaPreview = ({ onCancel, onApply, wallpaper, monitors }) => {
+      return (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(40px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+          <div className="animate-in" style={{ background: '#1a1b1e', width: '100%', maxWidth: 900, borderRadius: 32, border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', boxShadow: '0 50px 100px rgba(0,0,0,0.6)' }}>
+            <div style={{ padding: '32px 40px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontSize: 26, fontStyle: 'italic', fontWeight: 600, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>全景拼接预览</h2>
+                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>壁纸将横跨所有显示器连续展示</p>
+              </div>
+              <button onClick={onCancel} className="btn" style={{ borderRadius: '50%', width: 40, height: 40, padding: 0, justifyContent: 'center' }}><Icon name="close" /></button>
+            </div>
+
+            <div style={{ padding: '48px 60px' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', justifyContent: 'center', marginBottom: 40, position: 'relative' }}>
+                {monitors.map((m, idx) => (
+                  <div key={m.id} style={{ position: 'relative', textAlign: 'center' }}>
+                    <div style={{
+                      width: m.isMain ? 180 : 140,
+                      aspectRatio: '16/10',
+                      background: '#000',
+                      borderRadius: 12,
+                      border: '2px solid ' + (m.isMain ? 'var(--accent)' : 'rgba(255,255,255,0.1)'),
+                      overflow: 'hidden',
+                      position: 'relative',
+                      boxShadow: m.isMain ? '0 0 40px rgba(224,62,62,0.25)' : '0 10px 30px rgba(0,0,0,0.5)'
+                    }}>
+                      <img src={wallpaper.thumbnailPath} style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        objectPosition: `${(idx / (monitors.length - 1)) * 100}% center`,
+                        filter: getFilterCSS(wallpaper.filterPreset)
+                      }} />
+                      <div style={{ position: 'absolute', top: 8, right: 8, fontSize: 9, background: 'rgba(0,0,0,0.6)', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>{idx + 1}</div>
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 600, marginTop: 12 }}>{m.name}</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>{m.resolution}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: 20, border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>
+                  <Icon name="info" size={16} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+                  全景模式将壁纸横向拉伸并裁切，使其连续跨越所有显示器。当前为预览效果，实际渲染将根据显示器物理排列自动调整。
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: '32px 48px', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 16 }}>
+              <button className="btn" style={{ padding: '10px 24px' }} onClick={onCancel}>取消</button>
+              <button className="btn-primary btn" style={{ padding: '10px 32px' }} onClick={() => onApply('all')}>确认应用</button>
+            </div>
           </div>
         </div>
       );
@@ -1603,7 +1660,7 @@
                   <SettingRow title="色彩空间" desc="壁纸渲染使用的色域">
                     {[{v:'p3',l:'Display P3'},{v:'srgb',l:'sRGB'},{v:'adobeRGB',l:'Adobe RGB'}].map(({v,l}) => <button key={v} className="btn" onClick={() => updateSetting('colorSpace', v)} style={{ padding: '8px 16px', fontSize: 13, background: (s.colorSpace || 'p3') === v ? 'rgba(255,255,255,0.14)' : undefined, color: (s.colorSpace || 'p3') === v ? '#fff' : undefined, fontWeight: (s.colorSpace || 'p3') === v ? 700 : undefined, borderColor: (s.colorSpace || 'p3') === v ? 'rgba(255,255,255,0.24)' : undefined, boxShadow: (s.colorSpace || 'p3') === v ? '0 10px 24px rgba(0,0,0,0.22), 0 0 0 1px rgba(255,255,255,0.05)' : 'none' }}>{l}</button>)}
                   </SettingRow>
-                  <SettingRow title="垂直同步" desc="启用 VSync 减少画面撕裂"><Switch active={s.vSyncEnabled !== false} onToggle={() => updateSetting('vSyncEnabled', !s.vSyncEnabled)} /></SettingRow>
+                  <SettingRow title="高性能模式" desc="开启后 60fps 全质量播放，关闭后省电模式（30fps 或允许掉帧）"><Switch active={s.vSyncEnabled !== false} onToggle={() => updateSetting('vSyncEnabled', !s.vSyncEnabled)} /></SettingRow>
                 </div>
               </div>
             )}
@@ -1844,6 +1901,7 @@
       const [view, setView] = useState('home');
       const [libraryInitialFilter, setLibraryInitialFilter] = useState('全部');
       const [showMonitorPopup, setShowMonitorPopup] = useState(false);
+      const [showPanoramaPreview, setShowPanoramaPreview] = useState(false);
       const [showImportModal, setShowImportModal] = useState(false);
       const [droppedImportFiles, setDroppedImportFiles] = useState([]);
       const [librarySortBy, setLibrarySortBy] = useState('importDate');
@@ -1931,7 +1989,18 @@
 
       const handleSetWallpaper = (w) => {
         setSelectedWallpaper(w);
-        setShowMonitorPopup(true);
+        const topology = settings.displayTopology || 'independent';
+
+        if (topology === 'mirror') {
+          // 镜像模式：直接应用到所有显示器
+          handleApplyWallpaper('all');
+        } else if (topology === 'panorama') {
+          // 全景模式：显示全景预览面板
+          setShowPanoramaPreview(true);
+        } else {
+          // 独立模式：显示显示器选择器
+          setShowMonitorPopup(true);
+        }
       };
 
       const handleApplyWallpaper = (monitorId) => {
@@ -2227,6 +2296,18 @@
               onCancel={() => setShowMonitorPopup(false)}
               onApply={(type) => {
                 setShowMonitorPopup(false);
+                handleApplyWallpaper(type);
+              }}
+            />
+          )}
+
+          {showPanoramaPreview && selectedWallpaper && activeMonitors.length > 0 && (
+            <PanoramaPreview
+              wallpaper={selectedWallpaper}
+              monitors={activeMonitors}
+              onCancel={() => setShowPanoramaPreview(false)}
+              onApply={(type) => {
+                setShowPanoramaPreview(false);
                 handleApplyWallpaper(type);
               }}
             />

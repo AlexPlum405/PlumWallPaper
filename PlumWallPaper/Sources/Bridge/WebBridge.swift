@@ -177,8 +177,21 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
 
             // 5. setWallpaper
             case "setWallpaper":
-                let (wallpaper, screenInfo) = try resolveWallpaperAndScreen(params)
-                WallpaperEngine.shared.setWallpaper(wallpaper, for: screenInfo)
+                let wallpaper = try resolveWallpaper(params)
+
+                // 同步渲染配置
+                let settings = try preferencesStore.fetchSettings()
+                WallpaperEngine.shared.updateRenderingConfig(colorSpace: settings.colorSpace, performanceMode: settings.vSyncEnabled)
+
+                if let screenId = params["screenId"] as? String {
+                    guard let screenInfo = DisplayManager.shared.availableScreens.first(where: { $0.id == screenId }) else {
+                        return fail("Screen not found")
+                    }
+                    WallpaperEngine.shared.setWallpaper(wallpaper, for: screenInfo)
+                } else {
+                    WallpaperEngine.shared.setWallpaperToAllScreens(wallpaper)
+                }
+
                 wallpaper.lastUsedDate = Date()
                 try wallpaperStore.updateWallpaper()
                 return success([:] as [String: Any])
