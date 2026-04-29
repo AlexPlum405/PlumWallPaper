@@ -183,11 +183,15 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 let settings = try preferencesStore.fetchSettings()
                 WallpaperEngine.shared.updateRenderingConfig(colorSpace: settings.colorSpace, performanceMode: settings.vSyncEnabled)
 
+                let mode = params["mode"] as? String
+
                 if let screenId = params["screenId"] as? String {
                     guard let screenInfo = DisplayManager.shared.availableScreens.first(where: { $0.id == screenId }) else {
                         return fail("Screen not found")
                     }
                     WallpaperEngine.shared.setWallpaper(wallpaper, for: screenInfo)
+                } else if mode == "panorama" {
+                    WallpaperEngine.shared.setWallpaperPanorama(wallpaper)
                 } else {
                     WallpaperEngine.shared.setWallpaperToAllScreens(wallpaper)
                 }
@@ -247,8 +251,17 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                     return fail("Missing settings parameter")
                 }
                 let settings = try preferencesStore.fetchSettings()
+                let oldColorSpace = settings.colorSpace
+                let oldPerformanceMode = settings.vSyncEnabled
                 applySettingsUpdate(settings, from: settingsData)
                 try preferencesStore.updateSettings()
+
+                // 渲染相关设置变化时即时重载
+                if settings.colorSpace != oldColorSpace || settings.vSyncEnabled != oldPerformanceMode {
+                    WallpaperEngine.shared.updateRenderingConfig(colorSpace: settings.colorSpace, performanceMode: settings.vSyncEnabled)
+                    WallpaperEngine.shared.reloadAllRenderers()
+                }
+
                 return success([:] as [String: Any])
 
             // 11. getTags

@@ -8,6 +8,7 @@ final class WallpaperEngine {
     static let shared = WallpaperEngine()
 
     private var renderers: [String: WallpaperRenderer] = [:]
+    private var activeWallpapers: [String: (Wallpaper, ScreenInfo)] = [:]  // 保存活跃壁纸信息用于重载
     private let desktopBridge = DesktopBridge()
 
     // 渲染配置（由 WebBridge 在设置变更时更新）
@@ -22,6 +23,16 @@ final class WallpaperEngine {
         self.performanceMode = performanceMode
     }
 
+    /// 重载所有活跃渲染器（用于设置变更后即时生效）
+    func reloadAllRenderers() {
+        for (screenId, (wallpaper, screenInfo)) in activeWallpapers {
+            if let old = renderers.removeValue(forKey: screenId) {
+                old.stop()
+            }
+            setWallpaper(wallpaper, for: screenInfo)
+        }
+    }
+
     /// 为指定显示器设置壁纸
     func setWallpaper(_ wallpaper: Wallpaper, for screenInfo: ScreenInfo) {
         guard let screen = DisplayManager.shared.screen(for: screenInfo) else { return }
@@ -30,6 +41,8 @@ final class WallpaperEngine {
         if let old = renderers.removeValue(forKey: key) {
             old.stop()
         }
+
+        activeWallpapers[key] = (wallpaper, screenInfo)
 
         let renderer: WallpaperRenderer
         switch wallpaper.type {
@@ -50,6 +63,43 @@ final class WallpaperEngine {
         }
     }
 
+    /// 全景模式：壁纸横跨所有显示器，每个屏幕显示对应的裁切区域
+    func setWallpaperPanorama(_ wallpaper: Wallpaper) {
+        let screens = DisplayManager.shared.availableScreens
+        guard !screens.isEmpty else { return }
+
+        let totalCount = CGFloat(screens.count)
+        for (index, screenInfo) in screens.enumerated() {
+            guard let screen = DisplayManager.shared.screen(for: screenInfo) else { continue }
+            let key = screenInfo.id
+
+            if let old = renderers.removeValue(forKey: key) {
+                old.stop()
+            }
+
+            activeWallpapers[key] = (wallpaper, screenInfo)
+
+            // 每个屏幕显示 1/N 的横向切片
+            let cropRect = CGRect(
+                x: CGFloat(index) / totalCount,
+                y: 0,
+                width: 1.0 / totalCount,
+                height: 1.0
+            )
+
+            let renderer: WallpaperRenderer
+            switch wallpaper.type {
+            case .video:
+                renderer = BasicVideoRenderer(wallpaper: wallpaper, screen: screen, colorSpace: activeColorSpace, performanceMode: performanceMode, panoramaCrop: cropRect)
+            case .heic:
+                renderer = HEICRenderer(wallpaper: wallpaper, screen: screen, desktopBridge: desktopBridge)
+            }
+
+            renderers[key] = renderer
+            renderer.start()
+        }
+    }
+
     /// 暂停所有渲染
     func pauseAll() {
         renderers.values.forEach { $0.pause() }
@@ -64,6 +114,7 @@ final class WallpaperEngine {
     func stopAll() {
         renderers.values.forEach { $0.stop() }
         renderers.removeAll()
+        activeWallpapers.removeAll()
     }
 
     /// 对正在显示的壁纸应用滤镜
@@ -80,17 +131,19 @@ final class BasicVideoRenderer: WallpaperRenderer {
     private let screen: NSScreen
     private let colorSpace: CGColorSpace
     private let performanceMode: Bool
+    private let panoramaCrop: CGRect?  // 归一化裁切区域 (0~1)，nil 表示不裁切
     private var player: AVQueuePlayer?
     private var playerLayer: AVPlayerLayer?
     private var hostingWindow: NSWindow?
     private var looper: AVPlayerLooper?
     private var currentItem: AVPlayerItem?
 
-    init(wallpaper: Wallpaper, screen: NSScreen, colorSpace: CGColorSpace, performanceMode: Bool) {
+    init(wallpaper: Wallpaper, screen: NSScreen, colorSpace: CGColorSpace, performanceMode: Bool, panoramaCrop: CGRect? = nil) {
         self.wallpaper = wallpaper
         self.screen = screen
         self.colorSpace = colorSpace
         self.performanceMode = performanceMode
+        self.panoramaCrop = panoramaCrop
     }
 
     func start() {
@@ -129,10 +182,26 @@ final class BasicVideoRenderer: WallpaperRenderer {
         let contentView = NSView(frame: CGRect(origin: .zero, size: screen.frame.size))
         contentView.wantsLayer = true
         contentView.autoresizingMask = [.width, .height]
+        contentView.layer?.masksToBounds = true
         let layer = AVPlayerLayer(player: queuePlayer)
-        layer.frame = contentView.bounds
-        layer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
-        layer.videoGravity = .resizeAspectFill
+
+        if let crop = panoramaCrop {
+            // 全景模式：放大 layer 并偏移，只显示对应的裁切区域
+            let viewSize = contentView.bounds.size
+            let scaledWidth = viewSize.width / crop.width
+            let scaledHeight = viewSize.height / crop.height
+            layer.frame = CGRect(
+                x: -crop.origin.x * scaledWidth,
+                y: -crop.origin.y * scaledHeight,
+                width: scaledWidth,
+                height: scaledHeight
+            )
+            layer.videoGravity = .resizeAspectFill
+        } else {
+            layer.frame = contentView.bounds
+            layer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
+            layer.videoGravity = .resizeAspectFill
+        }
 
         contentView.layer?.addSublayer(layer)
         window.setFrame(screen.frame, display: false)
