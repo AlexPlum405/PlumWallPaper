@@ -34,6 +34,12 @@
 		E9352CBB698585F6211516E8 /* bridge.js in Resources */ = {isa = PBXBuildFile; fileRef = DE9247489F0710A84087B5C2 /* bridge.js */; };
 		F334E4A5ADD5FF1A64363891 /* DisplayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ADB412413EAC0832E173D7D /* DisplayManager.swift */; };
 		F43FDE1B9A058397730912A9 /* PreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C772358D777023DF5DDA0881 /* PreferencesStore.swift */; };
+
+		376E1E7D9D2A486AAF2DB82A /* LaunchAtLoginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BB069B249B1428998E3465A /* LaunchAtLoginManager.swift */; };
+		166ED6826A644321A210ED89 /* MenuBarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABAEF8997AA14AE48844CBF9 /* MenuBarManager.swift */; };
+		EF5C41A6D51B4CD98A982A30 /* PauseStrategyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A712C86F40E44822A36DB561 /* PauseStrategyManager.swift */; };
+		CAC0E1FD846341E78A295573 /* GlobalShortcutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6D0C29F2C5F4AA09F3E805C /* GlobalShortcutManager.swift */; };
+		1D0EC22F9A1C4B50A38153C0 /* PerformanceMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5314646D16B48FE86029003 /* PerformanceMonitor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -65,6 +71,12 @@
 		DC71A3853630F86F1CF1A2FA /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		DE9247489F0710A84087B5C2 /* bridge.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = bridge.js; sourceTree = "<group>"; };
 		F831A3D8DFBF129BC31B3368 /* RestoreManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestoreManager.swift; sourceTree = "<group>"; };
+
+		8BB069B249B1428998E3465A /* LaunchAtLoginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManager.swift; sourceTree = "<group>"; };
+		ABAEF8997AA14AE48844CBF9 /* MenuBarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarManager.swift; sourceTree = "<group>"; };
+		A712C86F40E44822A36DB561 /* PauseStrategyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PauseStrategyManager.swift; sourceTree = "<group>"; };
+		D6D0C29F2C5F4AA09F3E805C /* GlobalShortcutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalShortcutManager.swift; sourceTree = "<group>"; };
+		E5314646D16B48FE86029003 /* PerformanceMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMonitor.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -120,7 +132,12 @@
 				BBE5FA06BA9E7ED726E742D2 /* ThumbnailGenerator.swift */,
 				21CFD5E88D93EDADB5905BA4 /* DisplayManager */,
 				7956D0796355DFFB0C388A97 /* WallpaperEngine */,
-			);
+			
+					8BB069B249B1428998E3465A /* LaunchAtLoginManager.swift */,
+					ABAEF8997AA14AE48844CBF9 /* MenuBarManager.swift */,
+					A712C86F40E44822A36DB561 /* PauseStrategyManager.swift */,
+					D6D0C29F2C5F4AA09F3E805C /* GlobalShortcutManager.swift */,
+					E5314646D16B48FE86029003 /* PerformanceMonitor.swift */,);
 			path = Core;
 			sourceTree = "<group>";
 		};
@@ -310,7 +327,12 @@
 				71FBC63BEA5F27C41E73CB10 /* WallpaperStore.swift in Sources */,
 				B99534CF3E13FFBF1ED3E8F3 /* WebBridge.swift in Sources */,
 				A8BEAB8E676EDA2DD7E96AFE /* WebViewContainer.swift in Sources */,
-			);
+			
+					376E1E7D9D2A486AAF2DB82A /* LaunchAtLoginManager.swift in Sources */,
+					166ED6826A644321A210ED89 /* MenuBarManager.swift in Sources */,
+					EF5C41A6D51B4CD98A982A30 /* PauseStrategyManager.swift in Sources */,
+					CAC0E1FD846341E78A295573 /* GlobalShortcutManager.swift in Sources */,
+					1D0EC22F9A1C4B50A38153C0 /* PerformanceMonitor.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */

@@ -92,6 +92,22 @@ final class Settings {
     /// 启用动画
     var animationsEnabled: Bool
 
+    /// 开机启动
+    var launchAtLogin: Bool?
+
+    /// 菜单栏图标
+    var menuBarEnabled: Bool?
+
+    // MARK: - Audio
+    /// 全局壁纸音量 (0-100)
+    var globalVolume: Int?
+
+    /// 默认静音启动
+    var defaultMuted: Bool?
+
+    /// 仅预览时允许声音
+    var previewOnlyAudio: Bool?
+
     init(
         slideshowEnabled: Bool = false,
         slideshowInterval: TimeInterval = 1800, // 30 分钟

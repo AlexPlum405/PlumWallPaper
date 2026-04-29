@@ -32,6 +32,14 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
         self.preferencesStore = PreferencesStore(modelContext: modelContext)
         self.webView = webView
         super.init()
+
+        Task { @MainActor in
+            PauseStrategyManager.shared.startMonitoring { [weak self] in
+                guard let self else { return [:] }
+                let settings = try? self.preferencesStore.fetchSettings()
+                return self.serializeSettings(settings ?? Settings())
+            }
+        }
     }
 
     // MARK: - WKScriptMessageHandler
@@ -286,6 +294,51 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 }
                 return success(duplicates)
 
+            case "selectLibraryPath":
+                let panel = NSOpenPanel()
+                panel.canChooseFiles = false
+                panel.canChooseDirectories = true
+                panel.canCreateDirectories = true
+                panel.allowsMultipleSelection = false
+                panel.message = "选择壁纸资源库存储位置"
+
+                if let window = NSApp.keyWindow {
+                    let response = await panel.beginSheetModal(for: window)
+                    if response == .OK, let url = panel.url {
+                        return success(["path": url.path] as [String: Any])
+                    }
+                }
+                return success([:] as [String: Any])
+
+            case "openURL":
+                guard let urlString = params["url"] as? String,
+                      let url = URL(string: urlString) else {
+                    return fail("Invalid URL parameter")
+                }
+                NSWorkspace.shared.open(url)
+                return success([:] as [String: Any])
+
+            case "getLaunchAtLogin":
+                return success(["enabled": LaunchAtLoginManager.shared.isEnabled])
+
+            case "setLaunchAtLogin":
+                let enabled = params["enabled"] as? Bool ?? false
+                LaunchAtLoginManager.shared.setEnabled(enabled)
+                return success(["enabled": LaunchAtLoginManager.shared.isEnabled])
+
+            case "getMenuBarEnabled":
+                return success(["enabled": MenuBarManager.shared.isEnabled])
+
+            case "setMenuBarEnabled":
+                let enabled = params["enabled"] as? Bool ?? false
+                MenuBarManager.shared.configure(window: NSApp.keyWindow)
+                MenuBarManager.shared.setEnabled(enabled)
+                return success(["enabled": MenuBarManager.shared.isEnabled])
+
+            case "getPerformanceMetrics":
+                let metrics = PerformanceMonitor.shared.getCurrentMetrics()
+                return success(metrics)
+
             default:
                 return fail("Unknown action: \(action)")
             }
@@ -427,7 +480,12 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
             "themeMode": s.themeMode.rawValue,
             "accentColor": s.accentColor,
             "thumbnailSize": s.thumbnailSize.rawValue,
-            "animationsEnabled": s.animationsEnabled
+            "animationsEnabled": s.animationsEnabled,
+            "globalVolume": s.globalVolume ?? 50,
+            "defaultMuted": s.defaultMuted ?? false,
+            "previewOnlyAudio": s.previewOnlyAudio ?? false,
+            "launchAtLogin": s.launchAtLogin ?? LaunchAtLoginManager.shared.isEnabled,
+            "menuBarEnabled": s.menuBarEnabled ?? MenuBarManager.shared.isEnabled
         ]
     }
     // MARK: - Deserialization
@@ -473,6 +531,18 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
         if let v = d["accentColor"] as? String { s.accentColor = v }
         if let v = d["thumbnailSize"] as? String, let e = ThumbnailSize(rawValue: v) { s.thumbnailSize = e }
         if let v = d["animationsEnabled"] as? Bool { s.animationsEnabled = v }
+        if let v = d["globalVolume"] as? Int { s.globalVolume = v }
+        if let v = d["defaultMuted"] as? Bool { s.defaultMuted = v }
+        if let v = d["previewOnlyAudio"] as? Bool { s.previewOnlyAudio = v }
+        if let v = d["launchAtLogin"] as? Bool {
+            s.launchAtLogin = v
+            LaunchAtLoginManager.shared.setEnabled(v)
+        }
+        if let v = d["menuBarEnabled"] as? Bool {
+            s.menuBarEnabled = v
+            MenuBarManager.shared.configure(window: NSApp.keyWindow)
+            MenuBarManager.shared.setEnabled(v)
+        }
     }
 }
 

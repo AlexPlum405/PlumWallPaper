@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import ServiceManagement
 
 @main
 struct PlumWallPaperApp: App {
@@ -26,6 +27,27 @@ struct PlumWallPaperApp: App {
         } catch {
             fatalError("Could not initialize ModelContainer: \(error)")
         }
+
+        GlobalShortcutManager.shared.onNextWallpaper = {
+            // TODO: cycle wallpaper list when playlist support is added
+        }
+        GlobalShortcutManager.shared.onPrevWallpaper = {
+            // TODO: cycle wallpaper list when playlist support is added
+        }
+        GlobalShortcutManager.shared.onTogglePlayback = {
+            WallpaperEngine.shared.pauseAll()
+        }
+        GlobalShortcutManager.shared.onToggleMute = {
+            // TODO: add global audio mute integration
+        }
+        GlobalShortcutManager.shared.onShowWindow = {
+            NSApp.activate(ignoringOtherApps: true)
+            NSApp.windows.first?.makeKeyAndOrderFront(nil)
+        }
+        GlobalShortcutManager.shared.onToggleFavorite = {
+            // TODO: bind to current selected wallpaper in app state
+        }
+        GlobalShortcutManager.shared.start()
     }
 
     var body: some Scene {
