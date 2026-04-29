@@ -607,9 +607,9 @@
       );
     };
 
-    const PreviewPage = ({ wallpaper, onClose }) => {
+    const PreviewPage = ({ wallpaper, onClose, settings }) => {
       const [isMuted, setIsMuted] = useState(true);
-      const [volume, setVolume] = useState(0.5);
+      const [volume, setVolume] = useState(() => (wallpaper.volumeOverride != null ? wallpaper.volumeOverride : 100));
       const [showVolSlider, setShowVolSlider] = useState(false);
       const [progress, setProgress] = useState(0);
       const [duration, setDuration] = useState(0);
@@ -620,7 +620,8 @@
       useEffect(() => {
         if (videoRef.current) {
           videoRef.current.muted = isMuted;
-          videoRef.current.volume = volume;
+          const globalVol = (settings?.globalVolume ?? 50) / 100;
+          videoRef.current.volume = (volume / 100) * globalVol;
         }
       }, [isMuted, volume]);
 
@@ -735,8 +736,8 @@
             onMouseEnter={() => setShowVolSlider(true)} onMouseLeave={() => setShowVolSlider(false)}>
             {showVolSlider && (
               <div className="animate-in" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(20px)', borderRadius: 10, padding: '8px 16px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input type="range" min={0} max={100} value={Math.round(volume * 100)} onChange={e => { setVolume(e.target.value / 100); if (isMuted) setIsMuted(false); }} style={{ width: 100, accentColor: 'var(--accent)' }} />
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', minWidth: 30, textAlign: 'right' }}>{Math.round(volume * 100)}%</span>
+                <input type="range" min={0} max={100} value={volume} onChange={e => { setVolume(Number(e.target.value)); if (isMuted) setIsMuted(false); }} onMouseUp={() => { bridge.call('setWallpaperVolume', { wallpaperId: wallpaper.id, volume: volume }); }} style={{ width: 100, accentColor: 'var(--accent)' }} />
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', minWidth: 30, textAlign: 'right' }}>{volume}%</span>
               </div>
             )}
             <button onClick={() => setIsMuted(!isMuted)} className="btn" style={{ borderRadius: '50%', width: 44, height: 44, padding: 0, justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -1338,7 +1339,7 @@
       </div>
     );
 
-    const ColorPage = ({ wallpaper, setView, onSave, savedPresets = [], onSavePreset, onDeletePreset }) => {
+    const ColorPage = ({ wallpaper, setView, onSave, savedPresets = [], onSavePreset, onDeletePreset, settings }) => {
       const fp = wallpaper.filterPreset;
       const [hue, setHue] = useState(fp ? n(fp.hue, 0) : 0);
       const [sat, setSat] = useState(fp ? n(fp.saturation, 100) : 100);
@@ -1353,7 +1354,8 @@
       const [currentPresetName, setCurrentPresetName] = useState(fp ? fp.name : '自定义调色');
 
       const [colorMuted, setColorMuted] = useState(true);
-      const [colorVolume, setColorVolume] = useState(0.5);
+      const [colorVolume, setColorVolume] = useState(() => (wallpaper.volumeOverride != null ? wallpaper.volumeOverride : 100));
+      const [showColorVolSlider, setShowColorVolSlider] = useState(false);
       const [showSavePopup, setShowSavePopup] = useState(false);
       const [presetName, setPresetName] = useState('我的自定义色调');
       const [showAllSaved, setShowAllSaved] = useState(false);
@@ -1376,9 +1378,10 @@
         const el = mediaRef.current;
         if (el && wallpaper.type === 'video') {
           el.muted = colorMuted;
-          el.volume = colorVolume;
+          const globalVol = (settings?.globalVolume ?? 50) / 100;
+          el.volume = (colorVolume / 100) * globalVol;
         }
-      }, [colorMuted, colorVolume, wallpaper.type]);
+      }, [colorMuted, colorVolume, wallpaper.type, settings?.globalVolume]);
 
       useEffect(() => {
         let raf;
@@ -1517,9 +1520,18 @@
           <div style={{ position: 'absolute', top: 32, left: 32, zIndex: 100, display: 'flex', gap: 12, alignItems: 'center' }}>
             <button onClick={() => setView('home')} className="btn" style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(20px)', borderRadius: '50%', width: 44, height: 44, padding: 0, justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)' }}><Icon name="close" /></button>
             {wallpaper.type === 'video' && wallpaper.hasAudio && (
-              <button onClick={() => setColorMuted(!colorMuted)} className="btn" style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(20px)', borderRadius: '50%', width: 44, height: 44, padding: 0, justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <Icon name={colorMuted ? 'volume-x' : 'volume-1'} size={18} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                onMouseEnter={() => setShowColorVolSlider(true)} onMouseLeave={() => setShowColorVolSlider(false)}>
+                {showColorVolSlider && (
+                  <div className="animate-in" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(20px)', borderRadius: 10, padding: '8px 16px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <input type="range" min={0} max={100} value={colorVolume} onChange={e => { setColorVolume(Number(e.target.value)); if (colorMuted) setColorMuted(false); }} onMouseUp={() => { bridge.call('setWallpaperVolume', { wallpaperId: wallpaper.id, volume: colorVolume }); }} style={{ width: 100, accentColor: 'var(--accent)' }} />
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', minWidth: 30, textAlign: 'right' }}>{colorVolume}%</span>
+                  </div>
+                )}
+                <button onClick={() => setColorMuted(!colorMuted)} className="btn" style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(20px)', borderRadius: '50%', width: 44, height: 44, padding: 0, justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <Icon name={colorMuted ? 'volume-x' : 'volume-1'} size={18} />
+                </button>
+              </div>
             )}
           </div>
 
@@ -2780,12 +2792,14 @@
                     }).catch(() => addToast('应用失败'));
                   }
                 }}
+                settings={settings}
               />
             )}
             {view === 'preview' && selectedWallpaper && (
               <PreviewPage
                 wallpaper={selectedWallpaper}
                 onClose={() => setView('home')}
+                settings={settings}
               />
             )}
             {view === 'settings' && (
