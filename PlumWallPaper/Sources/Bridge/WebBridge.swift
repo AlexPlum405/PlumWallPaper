@@ -56,6 +56,9 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 WallpaperEngine.shared.updateWallpaperOpacity(settings.wallpaperOpacity ?? 100)
                 WallpaperEngine.shared.updateFPSLimit(settings.fpsLimit ?? 0)
                 PerformanceMonitor.shared.startMonitoring()
+                AudioDuckingMonitor.shared.startMonitoring(
+                    enabled: settings.audioDuckingEnabled && !(settings.previewOnlyAudio ?? false)
+                )
             }
 
             // 启动后静默补全缺失的壁纸帧率元数据
@@ -322,6 +325,7 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 let oldSlideshowOrder = settings.slideshowOrder
                 let oldSlideshowSource = settings.slideshowSource
                 let oldSlideshowTagId = settings.slideshowTagId
+                let oldDucking = settings.audioDuckingEnabled
                 applySettingsUpdate(settings, from: settingsData)
                 try preferencesStore.updateSettings()
 
@@ -376,11 +380,12 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                     WallpaperEngine.shared.updateFPSLimit(settings.fpsLimit ?? 0)
                 }
 
-                // 音频闪避变化（注意：AudioDuckingMonitor 还未实现，先注释掉）
-                // let oldDucking = settings.audioDuckingEnabled
-                // if settings.audioDuckingEnabled != oldDucking {
-                //     AudioDuckingMonitor.shared.startMonitoring(...)
-                // }
+                // 音频闪避变化
+                if settings.audioDuckingEnabled != oldDucking || settings.previewOnlyAudio != oldPreviewOnly {
+                    AudioDuckingMonitor.shared.startMonitoring(
+                        enabled: settings.audioDuckingEnabled && !(settings.previewOnlyAudio ?? false)
+                    )
+                }
 
                 // 轮播启用/禁用
                 if settings.slideshowEnabled != oldSlideshowEnabled {

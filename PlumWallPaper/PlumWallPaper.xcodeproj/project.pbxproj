@@ -42,6 +42,7 @@
 		1D0EC22F9A1C4B50A38153C0 /* PerformanceMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5314646D16B48FE86029003 /* PerformanceMonitor.swift */; };
 		B3F7A21E8C9D4F01A5E6D742 /* FrameRateBackfiller.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8A1D3F5E7B24A6D9012F8E3 /* FrameRateBackfiller.swift */; };
 		7E2F9A4B3D1C8E06A4B5C7D8 /* SlideshowScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9D5E1F7C4B2A08D6E3F190 /* SlideshowScheduler.swift */; };
+		A1B2C3D4E5F60718A9B0C1D2 /* AudioDuckingMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4E3D2C1B0A99887C6D5E4F3 /* AudioDuckingMonitor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -81,6 +82,7 @@
 		E5314646D16B48FE86029003 /* PerformanceMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMonitor.swift; sourceTree = "<group>"; };
 		C8A1D3F5E7B24A6D9012F8E3 /* FrameRateBackfiller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameRateBackfiller.swift; sourceTree = "<group>"; };
 		3A9D5E1F7C4B2A08D6E3F190 /* SlideshowScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideshowScheduler.swift; sourceTree = "<group>"; };
+		F4E3D2C1B0A99887C6D5E4F3 /* AudioDuckingMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioDuckingMonitor.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -143,7 +145,8 @@
 					D6D0C29F2C5F4AA09F3E805C /* GlobalShortcutManager.swift */,
 					E5314646D16B48FE86029003 /* PerformanceMonitor.swift */,
 					C8A1D3F5E7B24A6D9012F8E3 /* FrameRateBackfiller.swift */,
-					3A9D5E1F7C4B2A08D6E3F190 /* SlideshowScheduler.swift */,);
+					3A9D5E1F7C4B2A08D6E3F190 /* SlideshowScheduler.swift */,
+					F4E3D2C1B0A99887C6D5E4F3 /* AudioDuckingMonitor.swift */,);
 			path = Core;
 			sourceTree = "<group>";
 		};
@@ -341,7 +344,8 @@
 					CAC0E1FD846341E78A295573 /* GlobalShortcutManager.swift in Sources */,
 					1D0EC22F9A1C4B50A38153C0 /* PerformanceMonitor.swift in Sources */,
 					B3F7A21E8C9D4F01A5E6D742 /* FrameRateBackfiller.swift in Sources */,
-					7E2F9A4B3D1C8E06A4B5C7D8 /* SlideshowScheduler.swift in Sources */,);
+					7E2F9A4B3D1C8E06A4B5C7D8 /* SlideshowScheduler.swift in Sources */,
+					A1B2C3D4E5F60718A9B0C1D2 /* AudioDuckingMonitor.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
