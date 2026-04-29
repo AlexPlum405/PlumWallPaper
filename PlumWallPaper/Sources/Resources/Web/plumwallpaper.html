@@ -1164,63 +1164,62 @@
 
       return (
         <div className="no-scrollbar" style={{ height: 'calc(100vh)', overflowY: 'auto', padding: '160px 80px 80px', background: '#0d0e12' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 60 }}>
-            <div style={{ flex: 1 }}>
-              <h1 style={{ fontSize: 64, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500, letterSpacing: '-0.03em', marginBottom: 32 }}>壁纸库</h1>
-              <div className="no-scrollbar" style={{ display: 'flex', gap: 8, alignItems: 'center', overflowX: 'auto', paddingBottom: 4, maskImage: 'linear-gradient(to right, black calc(100% - 48px), transparent)', WebkitMaskImage: 'linear-gradient(to right, black calc(100% - 48px), transparent)' }}>
-                {availableFilters.slice(0, 4).map(tag => (
-                  <div
-                    key={tag}
-                    onClick={() => setActiveFilter(tag)}
-                    style={{
-                      padding: '6px 18px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: '0.3s cubic-bezier(0.2, 1, 0.3, 1)',
-                      background: activeFilter === tag ? '#fff' : 'rgba(255,255,255,0.03)',
-                      color: activeFilter === tag ? '#000' : 'rgba(255,255,255,0.3)',
-                      boxShadow: activeFilter === tag ? '0 10px 20px rgba(255,255,255,0.1)' : 'none',
-                      whiteSpace: 'nowrap', flexShrink: 0
-                    }}
-                  >
-                    {tag}
-                  </div>
-                ))}
-                {availableFilters.length > 4 && (
-                  <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)', flexShrink: 0, margin: '0 4px' }} />
-                )}
-                {availableFilters.slice(4).map(tag => (
-                  <div
-                    key={tag}
-                    onClick={() => setActiveFilter(tag)}
-                    style={{
-                      padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 500, cursor: 'pointer', transition: '0.3s cubic-bezier(0.2, 1, 0.3, 1)',
-                      background: activeFilter === tag ? 'rgba(255,255,255,0.12)' : 'transparent',
-                      color: activeFilter === tag ? '#fff' : 'rgba(255,255,255,0.25)',
-                      border: activeFilter === tag ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.06)',
-                      whiteSpace: 'nowrap', flexShrink: 0
-                    }}
-                  >
-                    {tag}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 12, position: 'relative' }}>
-              <div onClick={() => setShowSortMenu(!showSortMenu)} style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,0.3)', fontSize: 13, cursor: 'pointer', padding: '8px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', transition: '0.3s' }} onMouseOver={(e) => e.currentTarget.style.color = '#fff'} onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}>
-                <span>按{sortLabels[sortBy]}排序</span>
-                <span style={{ fontSize: 10, opacity: 0.5 }}>{sortOrder === 'desc' ? '↓' : '↑'}</span>
-              </div>
-              <div onClick={onToggleSortOrder} style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'rgba(255,255,255,0.3)', fontSize: 13, cursor: 'pointer', padding: '8px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', transition: '0.3s' }} onMouseOver={(e) => e.currentTarget.style.color = '#fff'} onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}>
-                {sortOrder === 'desc' ? '倒序' : '顺序'}
-              </div>
-              {showSortMenu && (
-                <div className="animate-in" style={{ position: 'absolute', top: '100%', right: 0, marginTop: 8, width: 200, background: 'rgba(20,21,26,0.95)', backdropFilter: 'blur(40px)', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)', padding: 6, zIndex: 100, boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
-                  {Object.entries(sortLabels).map(([key, label]) => (
-                    <div key={key} onClick={() => { onChangeSortBy(key); setShowSortMenu(false); }} style={{ padding: '10px 14px', borderRadius: 8, fontSize: 13, cursor: 'pointer', transition: '0.15s', color: sortBy === key ? '#fff' : 'rgba(255,255,255,0.5)', background: sortBy === key ? 'rgba(255,255,255,0.08)' : 'transparent', fontWeight: sortBy === key ? 600 : 400 }} className="menu-item">
-                      {label}
-                    </div>
-                  ))}
+          <div style={{ marginBottom: 48 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 32 }}>
+              <h1 style={{ fontSize: 64, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500, letterSpacing: '-0.03em' }}>壁纸库</h1>
+              <div style={{ display: 'flex', gap: 12, position: 'relative' }}>
+                <div onClick={() => setShowSortMenu(!showSortMenu)} style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,0.3)', fontSize: 13, cursor: 'pointer', padding: '8px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', transition: '0.3s' }} onMouseOver={(e) => e.currentTarget.style.color = '#fff'} onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}>
+                  <span>按{sortLabels[sortBy]}排序</span>
+                  <span style={{ fontSize: 10, opacity: 0.5 }}>{sortOrder === 'desc' ? '↓' : '↑'}</span>
                 </div>
-              )}
+                <div onClick={onToggleSortOrder} style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'rgba(255,255,255,0.3)', fontSize: 13, cursor: 'pointer', padding: '8px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', transition: '0.3s' }} onMouseOver={(e) => e.currentTarget.style.color = '#fff'} onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}>
+                  {sortOrder === 'desc' ? '倒序' : '顺序'}
+                </div>
+                {showSortMenu && (
+                  <div className="animate-in" style={{ position: 'absolute', top: '100%', right: 0, marginTop: 8, width: 200, background: 'rgba(20,21,26,0.95)', backdropFilter: 'blur(40px)', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)', padding: 6, zIndex: 100, boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
+                    {Object.entries(sortLabels).map(([key, label]) => (
+                      <div key={key} onClick={() => { onChangeSortBy(key); setShowSortMenu(false); }} style={{ padding: '10px 14px', borderRadius: 8, fontSize: 13, cursor: 'pointer', transition: '0.15s', color: sortBy === key ? '#fff' : 'rgba(255,255,255,0.5)', background: sortBy === key ? 'rgba(255,255,255,0.08)' : 'transparent', fontWeight: sortBy === key ? 600 : 400 }} className="menu-item">
+                        {label}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              {availableFilters.slice(0, 4).map(tag => (
+                <div
+                  key={tag}
+                  onClick={() => setActiveFilter(tag)}
+                  style={{
+                    padding: '7px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: '0.3s cubic-bezier(0.2, 1, 0.3, 1)',
+                    background: activeFilter === tag ? '#fff' : 'rgba(255,255,255,0.04)',
+                    color: activeFilter === tag ? '#000' : 'rgba(255,255,255,0.35)',
+                    boxShadow: activeFilter === tag ? '0 8px 20px rgba(255,255,255,0.08)' : 'none'
+                  }}
+                >
+                  {tag}
+                </div>
+              ))}
+              {availableFilters.length > 4 && (
+                <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.08)', margin: '0 6px' }} />
+              )}
+              {availableFilters.slice(4).map(tag => (
+                <div
+                  key={tag}
+                  onClick={() => setActiveFilter(tag)}
+                  style={{
+                    padding: '5px 14px', borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: 'pointer', transition: '0.3s cubic-bezier(0.2, 1, 0.3, 1)',
+                    background: activeFilter === tag ? 'rgba(255,255,255,0.12)' : 'transparent',
+                    color: activeFilter === tag ? '#fff' : 'rgba(255,255,255,0.28)',
+                    border: activeFilter === tag ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.06)'
+                  }}
+                >
+                  {tag}
+                </div>
+              ))}
+            </div>
+          </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${((libSettings || {}).thumbnailSize || 'medium') === 'small' ? '200px' : ((libSettings || {}).thumbnailSize || 'medium') === 'large' ? '380px' : '280px'}, 1fr))`, gap: 32 }}>
