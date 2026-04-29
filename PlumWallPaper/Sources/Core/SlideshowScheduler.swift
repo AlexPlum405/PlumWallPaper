@@ -121,7 +121,7 @@ final class SlideshowScheduler {
 
     private func buildPlaylist(context: ModelContext, settings: Settings) {
         let wallpapers: [Wallpaper]
-        switch settings.slideshowSource {
+        switch settings.slideshowSource ?? .all {
         case .favorites:
             let descriptor = FetchDescriptor<Wallpaper>(predicate: #Predicate { $0.isFavorite == true })
             wallpapers = (try? context.fetch(descriptor)) ?? []

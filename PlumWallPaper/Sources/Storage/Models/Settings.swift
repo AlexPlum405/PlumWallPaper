@@ -119,16 +119,16 @@ final class Settings {
     var screenOrder: [String]?
 
     /// 循环模式
-    var loopMode: LoopMode
+    var loopMode: LoopMode?
 
     /// 随机起始位置
-    var randomStartPosition: Bool
+    var randomStartPosition: Bool?
 
     /// 音频输出屏幕 (nil = 主屏幕)
     var audioScreenId: String?
 
     /// 轮播来源
-    var slideshowSource: SlideshowSource
+    var slideshowSource: SlideshowSource?
 
     /// 轮播指定标签 ID
     var slideshowTagId: String?

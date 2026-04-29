@@ -356,13 +356,13 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
 
                 // 循环模式变化（需要重建渲染器）
                 if settings.loopMode != oldLoopMode {
-                    WallpaperEngine.shared.loopMode = settings.loopMode.rawValue
+                    WallpaperEngine.shared.loopMode = (settings.loopMode ?? .loop).rawValue
                     WallpaperEngine.shared.reloadAllRenderers()
                 }
 
                 // 随机起始位置
                 if settings.randomStartPosition != oldRandomStartPosition {
-                    WallpaperEngine.shared.randomStartPosition = settings.randomStartPosition
+                    WallpaperEngine.shared.randomStartPosition = settings.randomStartPosition ?? false
                 }
 
                 // 音频输出屏幕变化
@@ -808,10 +808,10 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
             "menuBarEnabled": s.menuBarEnabled ?? MenuBarManager.shared.isEnabled,
             "screenOrder": s.screenOrder ?? [] as [String],
             "fpsLimit": s.fpsLimit ?? 0,
-            "loopMode": s.loopMode.rawValue,
-            "randomStartPosition": s.randomStartPosition,
+            "loopMode": (s.loopMode ?? .loop).rawValue,
+            "randomStartPosition": s.randomStartPosition ?? false,
             "audioScreenId": s.audioScreenId as Any,
-            "slideshowSource": s.slideshowSource.rawValue,
+            "slideshowSource": (s.slideshowSource ?? .all).rawValue,
             "slideshowTagId": s.slideshowTagId as Any,
             "appRules": s.appRules.map { ["id": $0.id, "bundleIdentifier": $0.bundleIdentifier, "appName": $0.appName, "action": $0.action.rawValue] }
         ]
