@@ -73,13 +73,13 @@ final class MenuBarManager {
         NSColor.black.setFill()
         plumPath.fill()
 
-        // 茎：从李子顶部向上延伸
+        // 茎：从李子顶部向上延伸，用灰色实现 template 模式下的双色效果
         let stemPath = NSBezierPath()
         stemPath.move(to: NSPoint(x: 9.0, y: 14.4))
         stemPath.line(to: NSPoint(x: 9.0, y: 17.1))
         stemPath.lineWidth = 1.35
         stemPath.lineCapStyle = .round
-        NSColor.black.setStroke()
+        NSColor(white: 0.45, alpha: 1.0).setStroke()
         stemPath.stroke()
 
         image.unlockFocus()
