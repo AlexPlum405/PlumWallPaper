@@ -227,9 +227,9 @@ enum ColorSpace: String, Codable {
 
     var cgColorSpace: CGColorSpace {
         switch self {
-        case .p3: return CGColorSpace(name: CGColorSpace.displayP3)!
+        case .p3: return CGColorSpace(name: CGColorSpace.displayP3) ?? CGColorSpace(name: CGColorSpace.sRGB)!
         case .srgb: return CGColorSpace(name: CGColorSpace.sRGB)!
-        case .adobeRGB: return CGColorSpace(name: CGColorSpace.adobeRGB1998)!
+        case .adobeRGB: return CGColorSpace(name: CGColorSpace.adobeRGB1998) ?? CGColorSpace(name: CGColorSpace.sRGB)!
         }
     }
 }

@@ -12,7 +12,7 @@ final class WallpaperEngine {
     private let desktopBridge = DesktopBridge()
 
     // 渲染配置（由 WebBridge 在设置变更时更新）
-    var activeColorSpace: CGColorSpace = CGColorSpace(name: CGColorSpace.displayP3)!
+    var activeColorSpace: CGColorSpace = CGColorSpace(name: CGColorSpace.displayP3) ?? CGColorSpace(name: CGColorSpace.sRGB)!
     var performanceMode: Bool = true
 
     private init() {}
@@ -25,7 +25,8 @@ final class WallpaperEngine {
 
     /// 重载所有活跃渲染器（用于设置变更后即时生效）
     func reloadAllRenderers() {
-        for (screenId, (wallpaper, screenInfo)) in activeWallpapers {
+        let snapshot = activeWallpapers  // 复制字典避免迭代时修改
+        for (screenId, (wallpaper, screenInfo)) in snapshot {
             if let old = renderers.removeValue(forKey: screenId) {
                 old.stop()
             }
