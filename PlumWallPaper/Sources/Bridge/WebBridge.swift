@@ -201,6 +201,7 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 }
 
                 try wallpaperStore.addWallpapers(imported)
+                // TODO: SlideshowScheduler.shared.rebuildPlaylist()
                 return success(imported.map { serializeWallpaper($0) })
 
             // 5. setWallpaper
@@ -245,12 +246,14 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 let wallpaper = try resolveWallpaper(params)
                 wallpaper.isFavorite.toggle()
                 try wallpaperStore.updateWallpaper()
+                // TODO: SlideshowScheduler.shared.rebuildPlaylist()
                 return success(["isFavorite": wallpaper.isFavorite])
 
             // 5. deleteWallpaper
             case "deleteWallpaper":
                 let wallpaper = try resolveWallpaper(params)
                 try wallpaperStore.deleteWallpaper(wallpaper)
+                // TODO: SlideshowScheduler.shared.rebuildPlaylist()
                 return success([:] as [String: Any])
 
             // 6. applyFilter
@@ -280,6 +283,18 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 }
                 return success(screens)
 
+            // 8.5. getAvailableScreens
+            case "getAvailableScreens":
+                let screens = NSScreen.screens.enumerated().map { (index, screen) -> [String: Any] in
+                    let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? Int ?? index
+                    return [
+                        "id": String(id),
+                        "name": screen.localizedName,
+                        "isMain": screen == NSScreen.main
+                    ]
+                }
+                return success(["screens": screens])
+
             // 9. getSettings
             case "getSettings":
                 let settings = try preferencesStore.fetchSettings()
@@ -299,6 +314,9 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 let oldRate = settings.playbackRate
                 let oldOpacity = settings.wallpaperOpacity
                 let oldFpsLimit = settings.fpsLimit
+                let oldLoopMode = settings.loopMode
+                let oldAudioScreenId = settings.audioScreenId
+                let oldRandomStartPosition = settings.randomStartPosition
                 applySettingsUpdate(settings, from: settingsData)
                 try preferencesStore.updateSettings()
 
@@ -308,15 +326,39 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                     WallpaperEngine.shared.reloadAllRenderers()
                 }
 
-                // 音频/播放速度变化时即时更新
-                if settings.globalVolume != oldVolume || settings.defaultMuted != oldMuted || settings.previewOnlyAudio != oldPreviewOnly || settings.playbackRate != oldRate {
-                    WallpaperEngine.shared.updateAudioConfig(
-                        volume: settings.globalVolume ?? 50,
-                        muted: settings.defaultMuted ?? false,
+                // 播放速率变化
+                if settings.playbackRate != oldRate {
+                    WallpaperEngine.shared.updatePlaybackRate(settings.playbackRate ?? 1.0)
+                }
+
+                // 全局音量变化
+                if settings.globalVolume != oldVolume {
+                    WallpaperEngine.shared.updateGlobalVolume(settings.globalVolume ?? 50)
+                }
+
+                // 静音策略变化
+                if settings.defaultMuted != oldMuted || settings.previewOnlyAudio != oldPreviewOnly {
+                    WallpaperEngine.shared.updateMutingPolicy(
+                        defaultMuted: settings.defaultMuted ?? false,
                         previewOnly: settings.previewOnlyAudio ?? false,
-                        rate: settings.playbackRate ?? 1.0
+                        audioScreenId: settings.audioScreenId
                     )
+                }
+
+                // 循环模式变化（需要重建渲染器）
+                if settings.loopMode != oldLoopMode {
+                    WallpaperEngine.shared.loopMode = settings.loopMode.rawValue
                     WallpaperEngine.shared.reloadAllRenderers()
+                }
+
+                // 随机起始位置
+                if settings.randomStartPosition != oldRandomStartPosition {
+                    WallpaperEngine.shared.randomStartPosition = settings.randomStartPosition
+                }
+
+                // 音频输出屏幕变化
+                if settings.audioScreenId != oldAudioScreenId {
+                    WallpaperEngine.shared.updateAudioScreenMuting(audioScreenId: settings.audioScreenId)
                 }
 
                 // 壁纸不透明度变化时即时更新（无需重载）
@@ -329,12 +371,37 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                     WallpaperEngine.shared.updateFPSLimit(settings.fpsLimit ?? 0)
                 }
 
+                // 音频闪避变化（注意：AudioDuckingMonitor 还未实现，先注释掉）
+                // let oldDucking = settings.audioDuckingEnabled
+                // if settings.audioDuckingEnabled != oldDucking {
+                //     AudioDuckingMonitor.shared.startMonitoring(...)
+                // }
+
+                // 轮播参数变化（注释掉，等 Task 5 完成）
+                // if settings.slideshowEnabled != oldSlideshowEnabled { ... }
+
                 // 暂停策略相关设置变更时立即重新评估
                 PauseStrategyManager.shared.reevaluate()
 
                 return success([:] as [String: Any])
 
-            // 11. getTags
+            // 11. setWallpaperVolume
+            case "setWallpaperVolume":
+                guard let wallpaperIdStr = params["wallpaperId"] as? String,
+                      let wallpaperId = UUID(uuidString: wallpaperIdStr),
+                      let volume = params["volume"] as? Int else {
+                    return fail("Missing wallpaperId or volume")
+                }
+                let descriptor = FetchDescriptor<Wallpaper>(predicate: #Predicate { $0.id == wallpaperId })
+                guard let wallpaper = try modelContext.fetch(descriptor).first else {
+                    return fail("Wallpaper not found")
+                }
+                wallpaper.volumeOverride = volume
+                try modelContext.save()
+                WallpaperEngine.shared.updateWallpaperVolume(wallpaperId: wallpaperId)
+                return success([:] as [String: Any])
+
+            // 12. getTags
             case "getTags":
                 let descriptor = FetchDescriptor<Tag>(sortBy: [SortDescriptor(\.name)])
                 let tags = try modelContext.fetch(descriptor)
@@ -637,6 +704,7 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
         ]
         if let duration = w.duration { dict["duration"] = duration }
         if let frameRate = w.frameRate { dict["frameRate"] = frameRate }
+        if let vol = w.volumeOverride { dict["volumeOverride"] = vol }
         if let lastUsed = w.lastUsedDate { dict["lastUsedDate"] = dateFormatter.string(from: lastUsed) }
         if let fp = w.filterPreset { dict["filterPreset"] = serializeFilterPreset(fp) }
         return dict
@@ -695,6 +763,11 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
             "menuBarEnabled": s.menuBarEnabled ?? MenuBarManager.shared.isEnabled,
             "screenOrder": s.screenOrder ?? [] as [String],
             "fpsLimit": s.fpsLimit ?? 0,
+            "loopMode": s.loopMode.rawValue,
+            "randomStartPosition": s.randomStartPosition,
+            "audioScreenId": s.audioScreenId as Any,
+            "slideshowSource": s.slideshowSource.rawValue,
+            "slideshowTagId": s.slideshowTagId as Any,
             "appRules": s.appRules.map { ["id": $0.id, "bundleIdentifier": $0.bundleIdentifier, "appName": $0.appName, "action": $0.action.rawValue] }
         ]
     }
@@ -748,6 +821,13 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
         if let v = d["wallpaperOpacity"] as? Int { s.wallpaperOpacity = v }
         if let v = d["screenOrder"] as? [String] { s.screenOrder = v }
         if let v = d["fpsLimit"] as? Int { s.fpsLimit = v == 0 ? nil : v }
+        if let v = d["loopMode"] as? String, let mode = LoopMode(rawValue: v) { s.loopMode = mode }
+        if let v = d["randomStartPosition"] as? Bool { s.randomStartPosition = v }
+        if let v = d["audioScreenId"] as? String { s.audioScreenId = v }
+        if d["audioScreenId"] is NSNull { s.audioScreenId = nil }
+        if let v = d["slideshowSource"] as? String, let source = SlideshowSource(rawValue: v) { s.slideshowSource = source }
+        if let v = d["slideshowTagId"] as? String { s.slideshowTagId = v }
+        if d["slideshowTagId"] is NSNull { s.slideshowTagId = nil }
         if let v = d["appRules"] as? [[String: Any]] {
             s.appRules = v.compactMap { dict in
                 guard let bundleId = dict["bundleIdentifier"] as? String,
