@@ -217,6 +217,12 @@ final class AppViewModel {
 
     // MARK: - 设壁纸
 
+    func setupSlideshow() {
+        SlideshowScheduler.shared.onSwitchWallpaper = { [weak self] wallpaper in
+            self?.smartSetWallpaper(wallpaper)
+        }
+    }
+
     func smartSetWallpaper(_ wallpaper: Wallpaper) {
         if display.availableScreens.count <= 1, let screen = display.availableScreens.first {
             setWallpaper(wallpaper, for: screen)
@@ -230,6 +236,7 @@ final class AppViewModel {
         activeWallpaperPerScreen[screen.id] = wallpaper
         wallpaper.lastUsedDate = Date()
         persistMapping()
+        SlideshowScheduler.shared.onWallpaperChanged(wallpaper.id)
     }
 
     func setWallpaperToAll(_ wallpaper: Wallpaper) {
@@ -239,6 +246,7 @@ final class AppViewModel {
         }
         wallpaper.lastUsedDate = Date()
         persistMapping()
+        SlideshowScheduler.shared.onWallpaperChanged(wallpaper.id)
     }
 
     private func persistMapping() {
@@ -273,5 +281,12 @@ final class AppViewModel {
 
         // 恢复壁纸后立即评估暂停条件，确保启动时状态正确
         PauseStrategyManager.shared.reevaluate()
+
+        // 启动轮播（如果已启用）
+        if let settings = try? PreferencesStore(modelContext: context).fetchSettings(),
+           settings.slideshowEnabled {
+            setupSlideshow()
+            SlideshowScheduler.shared.start(context: context, settings: settings)
+        }
     }
 }

@@ -79,6 +79,7 @@ final class PauseStrategyManager {
         if manuallyPaused {
             pauseReason = "手动暂停"
             WallpaperEngine.shared.pauseAll()
+            SlideshowScheduler.shared.pause()
             return
         }
 
@@ -107,9 +108,11 @@ final class PauseStrategyManager {
         if !reasons.isEmpty && !temporarilyResumed {
             pauseReason = reasons.joined(separator: " · ")
             WallpaperEngine.shared.pauseAll()
+            SlideshowScheduler.shared.pause()
         } else {
             pauseReason = nil
             WallpaperEngine.shared.resumeAll()
+            SlideshowScheduler.shared.resume()
         }
     }
 
@@ -118,6 +121,7 @@ final class PauseStrategyManager {
         if s["pauseBeforeSleep"] as? Bool == true {
             pauseReason = "系统即将进入睡眠"
             WallpaperEngine.shared.pauseAll()
+            SlideshowScheduler.shared.pause()
         }
     }
 
@@ -137,6 +141,7 @@ final class PauseStrategyManager {
             temporarilyResumed = false
             pauseReason = "手动暂停"
             WallpaperEngine.shared.pauseAll()
+            SlideshowScheduler.shared.pause()
         }
     }
 

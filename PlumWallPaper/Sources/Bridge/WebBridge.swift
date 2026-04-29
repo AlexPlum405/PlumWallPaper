@@ -317,6 +317,11 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 let oldLoopMode = settings.loopMode
                 let oldAudioScreenId = settings.audioScreenId
                 let oldRandomStartPosition = settings.randomStartPosition
+                let oldSlideshowEnabled = settings.slideshowEnabled
+                let oldSlideshowInterval = settings.slideshowInterval
+                let oldSlideshowOrder = settings.slideshowOrder
+                let oldSlideshowSource = settings.slideshowSource
+                let oldSlideshowTagId = settings.slideshowTagId
                 applySettingsUpdate(settings, from: settingsData)
                 try preferencesStore.updateSettings()
 
@@ -377,8 +382,27 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 //     AudioDuckingMonitor.shared.startMonitoring(...)
                 // }
 
-                // 轮播参数变化（注释掉，等 Task 5 完成）
-                // if settings.slideshowEnabled != oldSlideshowEnabled { ... }
+                // 轮播启用/禁用
+                if settings.slideshowEnabled != oldSlideshowEnabled {
+                    if settings.slideshowEnabled {
+                        AppViewModel().setupSlideshow()
+                        SlideshowScheduler.shared.start(context: modelContext, settings: settings)
+                    } else {
+                        SlideshowScheduler.shared.stop()
+                    }
+                }
+
+                // 轮播参数变化（间隔、顺序、来源、标签）
+                if settings.slideshowEnabled {
+                    if settings.slideshowInterval != oldSlideshowInterval {
+                        SlideshowScheduler.shared.updateInterval(settings.slideshowInterval)
+                    }
+                    if settings.slideshowOrder != oldSlideshowOrder ||
+                       settings.slideshowSource != oldSlideshowSource ||
+                       settings.slideshowTagId != oldSlideshowTagId {
+                        SlideshowScheduler.shared.rebuildPlaylist()
+                    }
+                }
 
                 // 暂停策略相关设置变更时立即重新评估
                 PauseStrategyManager.shared.reevaluate()
@@ -609,6 +633,22 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
             case "resumeTemporarily":
                 PauseStrategyManager.shared.resumeTemporarily()
                 return success([:] as [String: Any])
+
+            case "slideshowNext":
+                SlideshowScheduler.shared.next()
+                return success([:] as [String: Any])
+
+            case "slideshowPrev":
+                SlideshowScheduler.shared.prev()
+                return success([:] as [String: Any])
+
+            case "getSlideshowStatus":
+                let status = SlideshowScheduler.shared.getStatus()
+                return success([
+                    "current": status.current,
+                    "total": status.total,
+                    "nextIn": status.nextIn
+                ])
 
             default:
                 return fail("Unknown action: \(action)")
