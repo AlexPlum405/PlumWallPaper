@@ -611,6 +611,10 @@
       const [isMuted, setIsMuted] = useState(true);
       const [volume, setVolume] = useState(0.5);
       const [showVolSlider, setShowVolSlider] = useState(false);
+      const [progress, setProgress] = useState(0);
+      const [duration, setDuration] = useState(0);
+      const [currentTime, setCurrentTime] = useState(0);
+      const [isDragging, setIsDragging] = useState(false);
       const videoRef = useRef(null);
 
       useEffect(() => {
@@ -619,6 +623,32 @@
           videoRef.current.volume = volume;
         }
       }, [isMuted, volume]);
+
+      useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+        const onTime = () => {
+          if (!isDragging) {
+            setCurrentTime(video.currentTime);
+            setProgress(video.duration > 0 ? video.currentTime / video.duration : 0);
+          }
+        };
+        const onMeta = () => setDuration(video.duration);
+        video.addEventListener('timeupdate', onTime);
+        video.addEventListener('loadedmetadata', onMeta);
+        if (video.duration) setDuration(video.duration);
+        return () => {
+          video.removeEventListener('timeupdate', onTime);
+          video.removeEventListener('loadedmetadata', onMeta);
+        };
+      }, [isDragging]);
+
+      const fmtTime = (s) => {
+        if (!s || isNaN(s) || !isFinite(s)) return '0:00';
+        const m = Math.floor(s / 60);
+        const sec = Math.floor(s % 60);
+        return m + ':' + (sec < 10 ? '0' : '') + sec;
+      };
 
       return (
       <div className="animate-in" style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 5000, display: 'flex', flexDirection: 'column' }}>
@@ -640,6 +670,64 @@
           <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14, fontWeight: 300, letterSpacing: '0.05em' }}>
             {wallpaper.resolution} · {wallpaper.type} · {formatSize(wallpaper.fileSize)} {wallpaper.frameRate ? `· ${wallpaper.frameRate}fps` : ''} {formatDuration(wallpaper.duration) !== '-' && `· ${formatDuration(wallpaper.duration)}`}
           </p>
+          {wallpaper.type === 'video' && duration > 0 && isFinite(duration) && (
+            <div style={{
+              width: '100%', maxWidth: 600, margin: '16px auto 0',
+              display: 'flex', alignItems: 'center', gap: 10
+            }}>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', minWidth: 36, textAlign: 'right' }}>
+                {fmtTime(currentTime)}
+              </span>
+              <div style={{
+                flex: 1, height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2,
+                cursor: 'pointer', position: 'relative'
+              }}
+                onClick={e => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                  videoRef.current.currentTime = pct * duration;
+                  setProgress(pct);
+                  setCurrentTime(pct * duration);
+                }}
+                onMouseDown={e => {
+                  setIsDragging(true);
+                  const bar = e.currentTarget;
+                  const onMove = (ev) => {
+                    const rect = bar.getBoundingClientRect();
+                    const pct = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
+                    setProgress(pct);
+                    setCurrentTime(pct * duration);
+                  };
+                  const onUp = (ev) => {
+                    const rect = bar.getBoundingClientRect();
+                    const pct = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
+                    videoRef.current.currentTime = pct * duration;
+                    setIsDragging(false);
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                  };
+                  document.addEventListener('mousemove', onMove);
+                  document.addEventListener('mouseup', onUp);
+                }}
+              >
+                <div style={{
+                  width: (progress * 100) + '%', height: '100%',
+                  background: 'var(--accent)', borderRadius: 2,
+                  transition: isDragging ? 'none' : 'width 0.1s'
+                }} />
+                <div style={{
+                  position: 'absolute', left: (progress * 100) + '%', top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: 10, height: 10, borderRadius: '50%',
+                  background: '#fff', opacity: isDragging ? 1 : 0,
+                  transition: 'opacity 0.15s', pointerEvents: 'none'
+                }} />
+              </div>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', minWidth: 36 }}>
+                {fmtTime(duration)}
+              </span>
+            </div>
+          )}
         </div>
 
         {wallpaper.type === 'video' && wallpaper.hasAudio && (
