@@ -65,7 +65,7 @@ final class MenuBarManager {
 
     private static func makeIcon(darkMenuBar: Bool) -> NSImage {
         let bodyColor: NSColor = darkMenuBar ? .white : .black
-        let stemColor: NSColor = darkMenuBar ? NSColor(white: 0.55, alpha: 1.0) : NSColor(white: 0.45, alpha: 1.0)
+        let stemColor: NSColor = darkMenuBar ? NSColor(white: 0.35, alpha: 1.0) : .white
 
         let size = NSSize(width: 18, height: 18)
         let image = NSImage(size: size)
