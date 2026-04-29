@@ -43,9 +43,14 @@ DerivedData/
 
 # Swift Package Manager
 .build/
+.swiftpm/
 Packages/
 Package.pins
 Package.resolved
+
+# Xcode workspace (keep xcodeproj)
+*.xcworkspace
+!*.xcodeproj
 
 # CocoaPods
 Pods/
