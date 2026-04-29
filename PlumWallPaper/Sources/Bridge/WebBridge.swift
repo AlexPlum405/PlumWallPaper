@@ -201,7 +201,7 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 }
 
                 try wallpaperStore.addWallpapers(imported)
-                // TODO: SlideshowScheduler.shared.rebuildPlaylist()
+                SlideshowScheduler.shared.rebuildPlaylist()
                 return success(imported.map { serializeWallpaper($0) })
 
             // 5. setWallpaper
@@ -246,14 +246,14 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 let wallpaper = try resolveWallpaper(params)
                 wallpaper.isFavorite.toggle()
                 try wallpaperStore.updateWallpaper()
-                // TODO: SlideshowScheduler.shared.rebuildPlaylist()
+                SlideshowScheduler.shared.rebuildPlaylist()
                 return success(["isFavorite": wallpaper.isFavorite])
 
             // 5. deleteWallpaper
             case "deleteWallpaper":
                 let wallpaper = try resolveWallpaper(params)
                 try wallpaperStore.deleteWallpaper(wallpaper)
-                // TODO: SlideshowScheduler.shared.rebuildPlaylist()
+                SlideshowScheduler.shared.rebuildPlaylist()
                 return success([:] as [String: Any])
 
             // 6. applyFilter
