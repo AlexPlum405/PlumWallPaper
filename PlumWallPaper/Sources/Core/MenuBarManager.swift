@@ -6,6 +6,7 @@ final class MenuBarManager {
 
     private var statusItem: NSStatusItem?
     private weak var window: NSWindow?
+    private var appearanceObservation: NSKeyValueObservation?
 
     private init() {}
 
@@ -21,8 +22,15 @@ final class MenuBarManager {
         if enabled {
             guard statusItem == nil else { return }
             let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-            let image = Self.makeTemplateIcon()
-            item.button?.image = image
+            updateIcon(for: item)
+
+            // 监听菜单栏外观变化，自动切换图标
+            appearanceObservation = item.button?.observe(\.effectiveAppearance, options: [.new]) { [weak self] button, _ in
+                Task { @MainActor in
+                    guard let self, let item = self.statusItem else { return }
+                    self.updateIcon(for: item)
+                }
+            }
 
             let menu = NSMenu()
             menu.addItem(NSMenuItem(title: "打开 PlumWallPaper", action: #selector(openMainWindow), keyEquivalent: ""))
@@ -32,11 +40,18 @@ final class MenuBarManager {
             item.menu = menu
             statusItem = item
         } else {
+            appearanceObservation?.invalidate()
+            appearanceObservation = nil
             if let item = statusItem {
                 NSStatusBar.system.removeStatusItem(item)
                 statusItem = nil
             }
         }
+    }
+
+    private func updateIcon(for item: NSStatusItem) {
+        let isDark = item.button?.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        item.button?.image = Self.makeIcon(darkMenuBar: isDark)
     }
 
     @objc private func openMainWindow() {
@@ -48,13 +63,14 @@ final class MenuBarManager {
         NSApplication.shared.terminate(nil)
     }
 
-    private static func makeTemplateIcon() -> NSImage {
+    private static func makeIcon(darkMenuBar: Bool) -> NSImage {
+        let bodyColor: NSColor = darkMenuBar ? .white : .black
+        let stemColor: NSColor = darkMenuBar ? NSColor(white: 0.55, alpha: 1.0) : NSColor(white: 0.45, alpha: 1.0)
+
         let size = NSSize(width: 18, height: 18)
         let image = NSImage(size: size)
         image.lockFocus()
 
-        // 李子主体：SVG path 缩放 0.45 + Y 轴翻转（SVG Y↓, NSBezierPath Y↑）
-        // 原始 SVG: M20 36C28 36 34 30 34 22C34 14 20 6 20 6C20 6 6 14 6 22C6 30 12 36 20 36Z
         let plumPath = NSBezierPath()
         plumPath.move(to: NSPoint(x: 9.0, y: 1.8))
         plumPath.curve(to: NSPoint(x: 15.3, y: 8.1),
@@ -70,20 +86,19 @@ final class MenuBarManager {
                        controlPoint1: NSPoint(x: 2.7, y: 4.5),
                        controlPoint2: NSPoint(x: 5.4, y: 1.8))
         plumPath.close()
-        NSColor.black.setFill()
+        bodyColor.setFill()
         plumPath.fill()
 
-        // 茎：灰度 0.7 在 template 模式下渲染为 30% 不透明度，与黑色主体形成明显对比
         let stemPath = NSBezierPath()
         stemPath.move(to: NSPoint(x: 9.0, y: 14.4))
         stemPath.line(to: NSPoint(x: 9.0, y: 17.1))
         stemPath.lineWidth = 1.8
         stemPath.lineCapStyle = .round
-        NSColor(white: 0.7, alpha: 1.0).setStroke()
+        stemColor.setStroke()
         stemPath.stroke()
 
         image.unlockFocus()
-        image.isTemplate = true
+        image.isTemplate = false
         return image
     }
 }
