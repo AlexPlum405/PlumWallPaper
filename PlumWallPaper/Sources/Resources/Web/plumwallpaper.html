@@ -1460,7 +1460,7 @@
       );
     };
 
-    const SettingsPage = ({ fitMode, setFitMode, monitors, onClose, settings, updateSetting, wallpapers, customTags, onAddCustomTag }) => {
+    const SettingsPage = ({ fitMode, setFitMode, monitors, onClose, settings, updateSetting, wallpapers, customTags, onAddCustomTag, addToast }) => {
       const [activeTab, setActiveTab] = useState('通用');
       const [performanceData, setPerformanceData] = useState(
         [...Array(24)].map(() => 0)
@@ -1575,9 +1575,6 @@
           height: '100vh', padding: '0 80px', background: '#0d0e12',
           display: 'flex', gap: 40, overflow: 'hidden', alignItems: 'flex-start', position: 'relative'
         }}>
-          <div style={{ position: 'absolute', top: 32, left: 32, zIndex: 100 }}>
-            <button onClick={onClose} className="btn" style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(20px)', borderRadius: '50%', width: 44, height: 44, padding: 0, justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)' }}><Icon name="close" /></button>
-          </div>
           {/* Pro 级侧边导航 - 采用稳健材质杜绝分裂 Bug */}
           <div style={{ 
             width: 240, 
@@ -1631,21 +1628,20 @@
                       {monitors.map(d => (
                         <div key={d.id} style={{ textAlign: 'center' }} className="topology-card">
                           <div style={{
-                            width: d.isMain ? 220 : 160, aspectRatio: '16/10', background: '#000',
+                            width: 180, aspectRatio: '16/10', background: '#000',
                             borderRadius: 14, border: '2px solid ' + (d.isMain ? 'var(--accent)' : 'rgba(255,255,255,0.1)'),
                             boxShadow: d.isMain ? '0 0 40px rgba(224,62,62,0.25)' : '0 10px 30px rgba(0,0,0,0.5)',
                             marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
                             position: 'relative', cursor: 'pointer', transition: '0.4s'
                           }}>
-                            <Icon name="monitor" size={d.isMain ? 48 : 32} style={{ opacity: 0.3 }} />
-                            <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 10, background: 'rgba(255,255,255,0.08)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>P3</div>
+                            <Icon name="monitor" size={36} style={{ opacity: 0.3 }} />
+                            <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 10, background: 'rgba(255,255,255,0.08)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>{{p3:'P3', srgb:'sRGB', adobeRGB:'AdobeRGB'}[s.colorSpace || 'p3']}</div>
                             {d.isMain && <div style={{ position: 'absolute', bottom: -12, left: '50%', transform: 'translateX(-50%)', width: 40, height: 4, background: 'var(--accent)', borderRadius: 2 }} />}
                           </div>
                           <div style={{ fontSize: 14, fontWeight: 600 }}>{d.name}</div>
-                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 6 }}>{d.resolution} · {d.isMain ? '主屏幕' : '扩展'}</div>
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 6 }}>{d.resolution} · {d.isMain ? '活跃屏幕' : '扩展'}</div>
                         </div>
                       ))}
-                      <div style={{ position: 'absolute', bottom: 20, width: '100%', textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>拖拽显示器以排列其物理位置</div>
                    </div>
                 </div>
                 
@@ -2204,6 +2200,7 @@
                 wallpapers={wallpapers}
                 customTags={customTags}
                 onAddCustomTag={handleAddCustomTag}
+                addToast={addToast}
               />
             )}
           </main>
