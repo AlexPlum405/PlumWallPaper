@@ -24,11 +24,12 @@ final class DisplayManager {
             let description = screen.deviceDescription
             let screenNumber = description[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
             let screenID = screenNumber?.stringValue ?? "screen-\(index)"
+            let displayID = screenNumber?.uint32Value ?? 0
             let frame = screen.frame
             let resolution = "\(Int(frame.width))×\(Int(frame.height))"
-            let isMain = screen == NSScreen.main
+            let isBuiltIn = CGDisplayIsBuiltin(displayID) != 0
             let name = screen.localizedName
-            return ScreenInfo(id: screenID, name: name, resolution: resolution, isMain: isMain)
+            return ScreenInfo(id: screenID, name: name, resolution: resolution, isMain: isBuiltIn)
         }
     }
 
