@@ -15,6 +15,9 @@
 		BA9D1BD24C8FF8FFA0B0EB05 /* Tag.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACF1C1D9BC347E282F5C2F06 /* Tag.swift */; };
 		C03F4C27CCC0F897E002BC6E /* Wallpaper.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5ACA543E101FECACD5CA1D7 /* Wallpaper.swift */; };
 		E8F24A044181FE439EE2C8B3 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AE9A8B0D16C1B5C1C8AB5E7 /* ContentView.swift */; };
+		A1B2C3D4E5F60001A1B2C3D4 /* Enums.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60002A1B2C3D4 /* Enums.swift */; };
+		A1B2C3D4E5F60003A1B2C3D4 /* WallpaperStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60004A1B2C3D4 /* WallpaperStore.swift */; };
+		A1B2C3D4E5F60005A1B2C3D4 /* PreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60006A1B2C3D4 /* PreferencesStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,6 +30,9 @@
 		C5ACA543E101FECACD5CA1D7 /* Wallpaper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wallpaper.swift; sourceTree = "<group>"; };
 		CC0D0A105F06031860E8B5C3 /* PlumWallPaperApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlumWallPaperApp.swift; sourceTree = "<group>"; };
 		DC71A3853630F86F1CF1A2FA /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60002A1B2C3D4 /* Enums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enums.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60004A1B2C3D4 /* WallpaperStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperStore.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60006A1B2C3D4 /* PreferencesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -77,6 +83,7 @@
 		D3EDE0A335EB05D0A923A721 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				A1B2C3D4E5F60002A1B2C3D4 /* Enums.swift */,
 				DC71A3853630F86F1CF1A2FA /* Settings.swift */,
 				163C20723526A250CB94C6B9 /* ShaderPreset.swift */,
 				ACF1C1D9BC347E282F5C2F06 /* Tag.swift */,
@@ -97,6 +104,8 @@
 			isa = PBXGroup;
 			children = (
 				D3EDE0A335EB05D0A923A721 /* Models */,
+				A1B2C3D4E5F60004A1B2C3D4 /* WallpaperStore.swift */,
+				A1B2C3D4E5F60006A1B2C3D4 /* PreferencesStore.swift */,
 			);
 			path = Storage;
 			sourceTree = "<group>";
@@ -177,11 +186,14 @@
 			files = (
 				71C8AA4D4B1AFEE11F38BE9A /* AppDelegate.swift in Sources */,
 				E8F24A044181FE439EE2C8B3 /* ContentView.swift in Sources */,
+				A1B2C3D4E5F60001A1B2C3D4 /* Enums.swift in Sources */,
 				283D2B2FF747E8F0C39C8E9E /* PlumWallPaperApp.swift in Sources */,
+				A1B2C3D4E5F60005A1B2C3D4 /* PreferencesStore.swift in Sources */,
 				B6B9A75D9D49916C8B03972D /* Settings.swift in Sources */,
 				5FC9D607DF0A0DF58EA4798F /* ShaderPreset.swift in Sources */,
 				BA9D1BD24C8FF8FFA0B0EB05 /* Tag.swift in Sources */,
 				C03F4C27CCC0F897E002BC6E /* Wallpaper.swift in Sources */,
+				A1B2C3D4E5F60003A1B2C3D4 /* WallpaperStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
