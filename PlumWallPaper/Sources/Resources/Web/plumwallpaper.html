@@ -66,6 +66,7 @@
       gap: 8px;
     }
     .btn:hover { background: var(--glass-heavy); transform: translateY(-1px); }
+    .btn:active { transform: scale(0.96); transition: 0.08s; opacity: 0.85; }
     .btn-primary { background: rgba(255, 255, 255, 0.12); color: #fff; font-weight: 600; border: 1px solid rgba(255,255,255,0.14); backdrop-filter: blur(18px); }
     .btn-primary:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 
@@ -1486,8 +1487,29 @@
       );
 
       const Switch = ({ active, onToggle }) => (
-        <div onClick={onToggle} style={{ width: 44, height: 24, background: active ? 'var(--accent)' : 'rgba(255,255,255,0.1)', borderRadius: 12, position: 'relative', cursor: 'pointer', transition: '0.3s' }}>
-          <div style={{ width: 18, height: 18, background: '#fff', borderRadius: '50%', position: 'absolute', top: 3, [active ? 'right' : 'left']: 3, transition: '0.3s cubic-bezier(0.2, 1, 0.3, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+        <div onClick={onToggle} style={{
+          width: 46,
+          height: 26,
+          background: active ? 'linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #fff 30%))' : 'rgba(255,255,255,0.08)',
+          border: '1px solid ' + (active ? 'color-mix(in srgb, var(--accent) 70%, #fff 30%)' : 'rgba(255,255,255,0.12)'),
+          borderRadius: 13,
+          position: 'relative',
+          cursor: 'pointer',
+          transition: '0.24s cubic-bezier(0.2, 1, 0.3, 1)',
+          boxShadow: active ? '0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent), 0 8px 20px color-mix(in srgb, var(--accent) 28%, transparent)' : 'inset 0 1px 0 rgba(255,255,255,0.04)',
+          transform: active ? 'translateZ(0)' : 'none'
+        }} onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.96)'; }} onMouseUp={e => { e.currentTarget.style.transform = active ? 'translateZ(0)' : 'none'; }} onMouseLeave={e => { e.currentTarget.style.transform = active ? 'translateZ(0)' : 'none'; }}>
+          <div style={{
+            width: 20,
+            height: 20,
+            background: '#fff',
+            borderRadius: '50%',
+            position: 'absolute',
+            top: 2,
+            left: active ? 22 : 2,
+            transition: '0.24s cubic-bezier(0.2, 1, 0.3, 1)',
+            boxShadow: active ? '0 4px 14px rgba(0,0,0,0.22), 0 0 0 3px rgba(255,255,255,0.14)' : '0 2px 8px rgba(0,0,0,0.2)'
+          }} />
         </div>
       );
 
@@ -1509,19 +1531,20 @@
             height: '100%'
           }}>
             {navItems.map(item => (
-              <div 
-                key={item.id} 
+              <div
+                key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                style={{ 
-                  padding: '12px 16px', borderRadius: 14, cursor: 'pointer', transition: '0.2s',
-                  display: 'flex', alignItems: 'center', gap: 14,
+                style={{
+                  padding: '12px 16px', borderRadius: 14, cursor: 'pointer', transition: '0.25s cubic-bezier(0.2, 1, 0.3, 1)',
+                  display: 'flex', alignItems: 'center', gap: 14, position: 'relative',
                   background: activeTab === item.id ? 'rgba(255,255,255,0.06)' : 'transparent',
                   color: activeTab === item.id ? '#fff' : 'rgba(255,255,255,0.35)',
+                  borderLeft: activeTab === item.id ? '2px solid var(--accent)' : '2px solid transparent',
                 }}
                 className="settings-nav-item"
               >
                 <Icon name={item.icon} size={18} />
-                <span style={{ fontSize: 14, fontWeight: 700 }}>{item.id}</span>
+                <span style={{ fontSize: 14, fontWeight: activeTab === item.id ? 700 : 500, transition: '0.2s' }}>{item.id}</span>
               </div>
             ))}
           </div>
@@ -1575,10 +1598,10 @@
                 <div style={{ marginTop: 40, marginBottom: 40 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.3)', marginBottom: 24, textTransform: 'uppercase', letterSpacing: '0.15em' }}>显示与色彩</div>
                   <SettingRow title="显示模式" desc="多显示器壁纸分配策略">
-                    {[{v:'independent',l:'独立'},{v:'mirror',l:'镜像'},{v:'panorama',l:'全景'}].map(({v,l}) => <button key={v} className="btn" onClick={() => updateSetting('displayTopology', v)} style={{ padding: '8px 16px', fontSize: 13, background: (s.displayTopology || 'independent') === v ? 'rgba(255,255,255,0.12)' : undefined, color: (s.displayTopology || 'independent') === v ? '#fff' : undefined, fontWeight: (s.displayTopology || 'independent') === v ? 700 : undefined, borderColor: (s.displayTopology || 'independent') === v ? 'rgba(255,255,255,0.2)' : undefined }}>{l}</button>)}
+                    {[{v:'independent',l:'独立'},{v:'mirror',l:'镜像'},{v:'panorama',l:'全景'}].map(({v,l}) => <button key={v} className="btn" onClick={() => updateSetting('displayTopology', v)} style={{ padding: '8px 16px', fontSize: 13, background: (s.displayTopology || 'independent') === v ? 'rgba(255,255,255,0.14)' : undefined, color: (s.displayTopology || 'independent') === v ? '#fff' : undefined, fontWeight: (s.displayTopology || 'independent') === v ? 700 : undefined, borderColor: (s.displayTopology || 'independent') === v ? 'rgba(255,255,255,0.24)' : undefined, boxShadow: (s.displayTopology || 'independent') === v ? '0 10px 24px rgba(0,0,0,0.22), 0 0 0 1px rgba(255,255,255,0.05)' : 'none' }}>{l}</button>)}
                   </SettingRow>
                   <SettingRow title="色彩空间" desc="壁纸渲染使用的色域">
-                    {[{v:'p3',l:'Display P3'},{v:'srgb',l:'sRGB'},{v:'adobeRGB',l:'Adobe RGB'}].map(({v,l}) => <button key={v} className="btn" onClick={() => updateSetting('colorSpace', v)} style={{ padding: '8px 16px', fontSize: 13, background: (s.colorSpace || 'p3') === v ? 'rgba(255,255,255,0.12)' : undefined, color: (s.colorSpace || 'p3') === v ? '#fff' : undefined, fontWeight: (s.colorSpace || 'p3') === v ? 700 : undefined, borderColor: (s.colorSpace || 'p3') === v ? 'rgba(255,255,255,0.2)' : undefined }}>{l}</button>)}
+                    {[{v:'p3',l:'Display P3'},{v:'srgb',l:'sRGB'},{v:'adobeRGB',l:'Adobe RGB'}].map(({v,l}) => <button key={v} className="btn" onClick={() => updateSetting('colorSpace', v)} style={{ padding: '8px 16px', fontSize: 13, background: (s.colorSpace || 'p3') === v ? 'rgba(255,255,255,0.14)' : undefined, color: (s.colorSpace || 'p3') === v ? '#fff' : undefined, fontWeight: (s.colorSpace || 'p3') === v ? 700 : undefined, borderColor: (s.colorSpace || 'p3') === v ? 'rgba(255,255,255,0.24)' : undefined, boxShadow: (s.colorSpace || 'p3') === v ? '0 10px 24px rgba(0,0,0,0.22), 0 0 0 1px rgba(255,255,255,0.05)' : 'none' }}>{l}</button>)}
                   </SettingRow>
                   <SettingRow title="垂直同步" desc="启用 VSync 减少画面撕裂"><Switch active={s.vSyncEnabled !== false} onToggle={() => updateSetting('vSyncEnabled', !s.vSyncEnabled)} /></SettingRow>
                 </div>
@@ -1719,17 +1742,17 @@
             {activeTab === '外观' && (
               <div className="animate-in">
                 <SettingRow title="配色主题" desc="随 macOS 系统外观自动同步">
-                   {[{v:'auto',l:'自动'},{v:'light',l:'浅色'},{v:'dark',l:'深色'}].map(({v,l}) => <button key={v} className="btn" onClick={() => updateSetting('themeMode', v)} style={{ padding: '8px 16px', fontSize: 13, background: (s.themeMode || 'auto') === v ? 'rgba(255,255,255,0.12)' : undefined, color: (s.themeMode || 'auto') === v ? '#fff' : undefined, fontWeight: (s.themeMode || 'auto') === v ? 700 : undefined, borderColor: (s.themeMode || 'auto') === v ? 'rgba(255,255,255,0.2)' : undefined }}>{l}</button>)}
+                   {[{v:'auto',l:'自动'},{v:'light',l:'浅色'},{v:'dark',l:'深色'}].map(({v,l}) => <button key={v} className="btn" onClick={() => updateSetting('themeMode', v)} style={{ padding: '8px 16px', fontSize: 13, background: (s.themeMode || 'auto') === v ? 'rgba(255,255,255,0.14)' : undefined, color: (s.themeMode || 'auto') === v ? '#fff' : undefined, fontWeight: (s.themeMode || 'auto') === v ? 700 : undefined, borderColor: (s.themeMode || 'auto') === v ? 'rgba(255,255,255,0.24)' : undefined, boxShadow: (s.themeMode || 'auto') === v ? '0 10px 24px rgba(0,0,0,0.22), 0 0 0 1px rgba(255,255,255,0.05)' : 'none' }}>{l}</button>)}
                 </SettingRow>
                 <SettingRow title="强调色 (Accent)" desc="控制界面全局交互高亮色">
                   <div style={{ display: 'flex', gap: 12 }}>
                     {['#E03E3E', '#2ECC71', '#3498DB', '#F1C40F', '#9B59B6'].map(c => (
-                      <div key={c} onClick={() => updateSetting('accentColor', c)} style={{ width: 28, height: 28, borderRadius: '50%', background: c, border: '2px solid ' + ((s.accentColor || '#E03E3E') === c ? '#fff' : 'rgba(255,255,255,0.08)'), cursor: 'pointer', transition: '0.2s', boxShadow: (s.accentColor || '#E03E3E') === c ? '0 0 12px ' + c + '80' : 'none' }}></div>
+                      <div key={c} onClick={() => updateSetting('accentColor', c)} style={{ width: 28, height: 28, borderRadius: '50%', background: c, border: '2px solid ' + ((s.accentColor || '#E03E3E') === c ? '#fff' : 'rgba(255,255,255,0.08)'), cursor: 'pointer', transition: '0.22s cubic-bezier(0.2, 1, 0.3, 1)', boxShadow: (s.accentColor || '#E03E3E') === c ? '0 0 12px ' + c + '80' : 'none', transform: (s.accentColor || '#E03E3E') === c ? 'scale(1.08)' : 'scale(1)' }} onMouseEnter={e => { e.currentTarget.style.transform = (s.accentColor || '#E03E3E') === c ? 'scale(1.12)' : 'scale(1.08)'; }} onMouseLeave={e => { e.currentTarget.style.transform = (s.accentColor || '#E03E3E') === c ? 'scale(1.08)' : 'scale(1)'; }} onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.96)'; }} onMouseUp={e => { e.currentTarget.style.transform = (s.accentColor || '#E03E3E') === c ? 'scale(1.08)' : 'scale(1)'; }}></div>
                     ))}
                   </div>
                 </SettingRow>
                 <SettingRow title="库缩略图尺寸">
-                  {[{v:'small',l:'小'},{v:'medium',l:'中'},{v:'large',l:'大'}].map(({v,l}) => <button key={v} className="btn" onClick={() => updateSetting('thumbnailSize', v)} style={{ padding: '8px 16px', fontSize: 13, background: (s.thumbnailSize || 'medium') === v ? 'rgba(255,255,255,0.12)' : undefined, color: (s.thumbnailSize || 'medium') === v ? '#fff' : undefined, fontWeight: (s.thumbnailSize || 'medium') === v ? 700 : undefined, borderColor: (s.thumbnailSize || 'medium') === v ? 'rgba(255,255,255,0.2)' : undefined }}>{l}</button>)}
+                  {[{v:'small',l:'小'},{v:'medium',l:'中'},{v:'large',l:'大'}].map(({v,l}) => <button key={v} className="btn" onClick={() => updateSetting('thumbnailSize', v)} style={{ padding: '8px 16px', fontSize: 13, background: (s.thumbnailSize || 'medium') === v ? 'rgba(255,255,255,0.14)' : undefined, color: (s.thumbnailSize || 'medium') === v ? '#fff' : undefined, fontWeight: (s.thumbnailSize || 'medium') === v ? 700 : undefined, borderColor: (s.thumbnailSize || 'medium') === v ? 'rgba(255,255,255,0.24)' : undefined, boxShadow: (s.thumbnailSize || 'medium') === v ? '0 10px 24px rgba(0,0,0,0.22), 0 0 0 1px rgba(255,255,255,0.05)' : 'none' }}>{l}</button>)}
                 </SettingRow>
                 <SettingRow title="平滑动效" desc="开启后将启用界面过渡与悬浮反馈动画"><Switch active={s.animationsEnabled !== false} onToggle={() => updateSetting('animationsEnabled', !s.animationsEnabled)} /></SettingRow>
               </div>
@@ -1799,10 +1822,13 @@
           </div>
 
           <style>{`
-            .settings-nav-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+            .settings-nav-item:hover { background: rgba(255,255,255,0.05); color: #fff; transform: translateX(2px); }
+            .settings-nav-item:active { transform: scale(0.97); transition: 0.08s; }
             .topology-card:hover { transform: scale(1.02); }
-            .tag-item:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
+            .tag-item { cursor: default; }
+            .tag-item:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); transform: translateY(-1px); }
             .tag-item:hover .tag-delete { opacity: 0.8 !important; color: var(--accent); }
+            .tag-delete:hover { transform: scale(1.3); }
             @keyframes pulse {
               0%, 100% { opacity: 0.15; transform: scale(1); }
               50% { opacity: 0.3; transform: scale(1.15); }
