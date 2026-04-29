@@ -39,6 +39,15 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 let settings = try? self.preferencesStore.fetchSettings()
                 return self.serializeSettings(settings ?? Settings())
             }
+
+            // 启动时恢复菜单栏和渲染配置
+            if let settings = try? self.preferencesStore.fetchSettings() {
+                if settings.menuBarEnabled == true {
+                    MenuBarManager.shared.configure(window: NSApp.keyWindow)
+                    MenuBarManager.shared.setEnabled(true)
+                }
+                WallpaperEngine.shared.updateRenderingConfig(colorSpace: settings.colorSpace, performanceMode: settings.vSyncEnabled)
+            }
         }
     }
 
