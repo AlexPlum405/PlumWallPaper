@@ -138,10 +138,10 @@ final class AppViewModel {
             await actuallyImport(urls: unique, context: context, allowSuffix: false, store: store)
         }
 
-        if !dupes.isEmpty {
-            pendingDuplicates = dupes
-            importPhase = .duplicateReview
-        } else if importErrors.isEmpty {
+        // 直接跳过重复文件，不再弹窗确认
+        skippedCount += dupes.count
+
+        if importErrors.isEmpty {
             importPhase = .completed
         } else {
             importPhase = .completed
@@ -270,5 +270,8 @@ final class AppViewModel {
                 activeWallpaperPerScreen[screenID] = wallpaper
             }
         }
+
+        // 恢复壁纸后立即评估暂停条件，确保启动时状态正确
+        PauseStrategyManager.shared.reevaluate()
     }
 }

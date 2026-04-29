@@ -8,28 +8,56 @@ final class PauseStrategyManager {
 
     private var isMonitoring = false
     private var pollTimer: Timer?
+    private var temporarilyResumed = false
+    private var manuallyPaused = false
+
+    private(set) var pauseReason: String? = nil
 
     private init() {}
 
     func startMonitoring(settingsProvider: @escaping () -> [String: Any]) {
         guard !isMonitoring else { return }
         isMonitoring = true
+        self.settingsProvider = settingsProvider
 
         NotificationCenter.default.addObserver(self, selector: #selector(handleSleepNotification),
             name: NSWorkspace.willSleepNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleWakeNotification),
             name: NSWorkspace.didWakeNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(handleAppActivation),
-            name: NSApplication.didBecomeActiveNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(handleAppDeactivation),
-            name: NSApplication.didResignActiveNotification, object: nil)
+
+        // 事件驱动：应用切换时立即检测
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(handleAppChange),
+            name: NSWorkspace.didActivateApplicationNotification, object: nil)
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(handleAppChange),
+            name: NSWorkspace.didDeactivateApplicationNotification, object: nil)
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(handleAppChange),
+            name: NSWorkspace.didLaunchApplicationNotification, object: nil)
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(handleAppChange),
+            name: NSWorkspace.didTerminateApplicationNotification, object: nil)
+
         NotificationCenter.default.addObserver(self, selector: #selector(handleScreenChange),
             name: NSApplication.didChangeScreenParametersNotification, object: nil)
 
-        self.settingsProvider = settingsProvider
-        pollTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+        // 兜底轮询（处理电池状态等无事件通知的场景）
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.evaluatePauseConditions() }
         }
+
+        // 启动监控后立即评估一次，确保初始状态正确
+        evaluatePauseConditions()
+    }
+
+    /// 临时恢复（直到下次触发条件变化）
+    func resumeTemporarily() {
+        temporarilyResumed = true
+        pauseReason = nil
+        WallpaperEngine.shared.resumeAll()
+    }
+
+    /// 设置变更后立即重新评估暂停条件
+    func reevaluate() {
+        temporarilyResumed = false
+        evaluatePauseConditions()
     }
 
     private var settingsProvider: (() -> [String: Any])?
@@ -38,22 +66,49 @@ final class PauseStrategyManager {
         settingsProvider?() ?? [:]
     }
 
+    @objc private func handleAppChange(_ notification: Notification) {
+        temporarilyResumed = false
+        evaluatePauseConditions()
+    }
+
+    @objc private func handleScreenChange() {
+        evaluatePauseConditions()
+    }
+
     private func evaluatePauseConditions() {
+        if manuallyPaused {
+            pauseReason = "手动暂停"
+            WallpaperEngine.shared.pauseAll()
+            return
+        }
+
         let s = getSettings()
-        var shouldPause = false
+        var reasons: [String] = []
 
-        if s["pauseOnBattery"] as? Bool == true && isOnBattery() { shouldPause = true }
-        if s["pauseOnFullscreen"] as? Bool == true && hasFullscreenApp() { shouldPause = true }
-        if s["pauseOnOcclusion"] as? Bool == true && isDesktopOccluded() { shouldPause = true }
-        if s["pauseOnLowBattery"] as? Bool == true && ProcessInfo.processInfo.isLowPowerModeEnabled { shouldPause = true }
-        if s["pauseOnScreenSharing"] as? Bool == true && isScreenSharing() { shouldPause = true }
-        if s["pauseOnLidClosed"] as? Bool == true && isLidClosed() { shouldPause = true }
-        if s["pauseOnHighLoad"] as? Bool == true && cpuUsage() > 80 { shouldPause = true }
-        if s["pauseOnLostFocus"] as? Bool == true && !NSApp.isActive { shouldPause = true }
+        if s["pauseOnBattery"] as? Bool == true && isOnBattery() {
+            reasons.append("电池供电模式")
+        }
+        if s["pauseOnFullscreen"] as? Bool == true && hasFullscreenApp() {
+            reasons.append("全屏应用运行中")
+        }
+        if s["pauseOnLowBattery"] as? Bool == true && ProcessInfo.processInfo.isLowPowerModeEnabled {
+            reasons.append("低电量模式")
+        }
+        if s["pauseOnScreenSharing"] as? Bool == true && isScreenSharing() {
+            reasons.append("屏幕共享/录制中")
+        }
+        if s["pauseOnHighLoad"] as? Bool == true && isHighLoadAppRunning(s) {
+            reasons.append("高负载应用运行中")
+        }
+        if s["pauseOnLostFocus"] as? Bool == true && !isDesktopFocused() {
+            reasons.append("桌面未处于前台")
+        }
 
-        if shouldPause {
+        if !reasons.isEmpty && !temporarilyResumed {
+            pauseReason = reasons.joined(separator: " · ")
             WallpaperEngine.shared.pauseAll()
         } else {
+            pauseReason = nil
             WallpaperEngine.shared.resumeAll()
         }
     }
@@ -61,25 +116,31 @@ final class PauseStrategyManager {
     @objc private func handleSleepNotification() {
         let s = getSettings()
         if s["pauseBeforeSleep"] as? Bool == true {
+            pauseReason = "系统即将进入睡眠"
             WallpaperEngine.shared.pauseAll()
         }
     }
 
     @objc private func handleWakeNotification() {
+        temporarilyResumed = false
+        manuallyPaused = false
         evaluatePauseConditions()
     }
 
-    @objc private func handleAppActivation() {
-        evaluatePauseConditions()
+    /// 手动暂停/恢复切换（快捷键用）
+    func toggleManualPause() {
+        if manuallyPaused {
+            manuallyPaused = false
+            evaluatePauseConditions()
+        } else {
+            manuallyPaused = true
+            temporarilyResumed = false
+            pauseReason = "手动暂停"
+            WallpaperEngine.shared.pauseAll()
+        }
     }
 
-    @objc private func handleAppDeactivation() {
-        evaluatePauseConditions()
-    }
-
-    @objc private func handleScreenChange() {
-        evaluatePauseConditions()
-    }
+    // MARK: - Detection Methods
 
     private func isOnBattery() -> Bool {
         let snapshot = IOPSCopyPowerSourcesInfo()?.takeRetainedValue()
@@ -94,22 +155,79 @@ final class PauseStrategyManager {
     }
 
     private func hasFullscreenApp() -> Bool {
-        for window in NSApp.windows {
-            if window.styleMask.contains(.fullScreen) { return true }
+        guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
+            return false
+        }
+
+        let screenSizes = NSScreen.screens.map { $0.frame.size }
+
+        for window in windowList {
+            if let ownerName = window[kCGWindowOwnerName as String] as? String,
+               ownerName == "PlumWallPaper" {
+                continue
+            }
+
+            guard let layer = window[kCGWindowLayer as String] as? Int, layer == 0 else { continue }
+
+            if let boundsDict = window[kCGWindowBounds as String] as? [String: Any],
+               let width = boundsDict["Width"] as? CGFloat,
+               let height = boundsDict["Height"] as? CGFloat {
+                for screenSize in screenSizes {
+                    if abs(width - screenSize.width) < 10 && abs(height - screenSize.height) < 10 {
+                        return true
+                    }
+                }
+            }
         }
         return false
     }
 
-    private func isDesktopOccluded() -> Bool {
-        return false
+    /// 桌面是否处于前台：前台应用为 Finder 或无前台应用（显示桌面）
+    private func isDesktopFocused() -> Bool {
+        guard let frontmost = NSWorkspace.shared.frontmostApplication else { return true }
+        let bundleId = frontmost.bundleIdentifier
+        return bundleId == "com.apple.finder" || bundleId == Bundle.main.bundleIdentifier
     }
 
     private func isScreenSharing() -> Bool {
-        return false
+        let screenRecordingApps = [
+            "com.apple.QuickTimePlayerX",
+            "com.obsproject.obs-studio",
+            "com.telestream.screenflow9",
+            "com.telestream.screenflow10",
+            "com.techsmith.camtasia2021",
+            "us.zoom.xos",
+            "com.microsoft.teams",
+            "com.microsoft.teams2",
+            "com.tencent.meeting",
+            "com.cisco.webexmeetings",
+            "com.skype.skype",
+            "com.loom.desktop"
+        ]
+
+        let running = NSWorkspace.shared.runningApplications
+        return running.contains { app in
+            guard let bundleId = app.bundleIdentifier else { return false }
+            return screenRecordingApps.contains(bundleId)
+        }
     }
 
-    private func isLidClosed() -> Bool {
-        return false
+    private func isHighLoadAppRunning(_ s: [String: Any]) -> Bool {
+        // 检查应用规则黑名单
+        if let rules = s["appRules"] as? [[String: Any]] {
+            let running = NSWorkspace.shared.runningApplications
+            for rule in rules {
+                guard let bundleId = rule["bundleIdentifier"] as? String,
+                      let action = rule["action"] as? String,
+                      action == "pause" else { continue }
+                if running.contains(where: { $0.bundleIdentifier == bundleId }) {
+                    return true
+                }
+            }
+        }
+
+        // 兜底：CPU > 80%
+        return cpuUsage() > 80
     }
 
     private func cpuUsage() -> Double {

@@ -58,6 +58,12 @@ final class Wallpaper {
     /// 是否包含音频轨道
     var hasAudio: Bool?
 
+    /// 视频帧率（如 30、60、120）
+    var frameRate: Int?
+
+    /// 音量覆盖（0-100，nil 表示使用全局音量）
+    var volumeOverride: Int?
+
     init(
         id: UUID = UUID(),
         name: String,
@@ -73,7 +79,9 @@ final class Wallpaper {
         lastUsedDate: Date? = nil,
         filterPreset: FilterPreset? = nil,
         fileHash: String,
-        hasAudio: Bool? = nil
+        hasAudio: Bool? = nil,
+        frameRate: Int? = nil,
+        volumeOverride: Int? = nil
     ) {
         self.id = id
         self.name = name
@@ -90,6 +98,8 @@ final class Wallpaper {
         self.filterPreset = filterPreset
         self.fileHash = fileHash
         self.hasAudio = hasAudio
+        self.frameRate = frameRate
+        self.volumeOverride = volumeOverride
     }
 }
 
@@ -97,11 +107,13 @@ final class Wallpaper {
 enum WallpaperType: String, Codable {
     case video = "video"
     case heic = "heic"
+    case image = "image"
 
     var displayName: String {
         switch self {
         case .video: return "视频"
         case .heic: return "HEIC"
+        case .image: return "图片"
         }
     }
 }

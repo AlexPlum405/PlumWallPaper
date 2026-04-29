@@ -1,27 +1,96 @@
 import Foundation
 import AppKit
+import IOKit
 
 @MainActor
 final class PerformanceMonitor {
     static let shared = PerformanceMonitor()
 
+    var fpsLimit: Int = 0
+    private(set) var currentFPS = 0
+    private(set) var currentGPULoad: Double = 0
+    private(set) var currentMemoryMB: Int = 0
+
+    private var pollTimer: Timer?
+
     private init() {}
+
+    func startMonitoring() {
+        guard pollTimer == nil else { return }
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.sample() }
+        }
+        sample()
+    }
+
+    func stopMonitoring() {
+        pollTimer?.invalidate()
+        pollTimer = nil
+    }
+
+    private func sample() {
+        let rawFPS = WallpaperEngine.shared.getActualFPS()
+        currentFPS = fpsLimit > 0 ? min(rawFPS, fpsLimit) : rawFPS
+        currentGPULoad = readGPUUtilization()
+        currentMemoryMB = getMemoryUsage()
+    }
 
     func getCurrentMetrics() -> [String: Any] {
         return [
-            "gpuLoad": getGPULoad(),
-            "fps": getFPS(),
-            "memoryMB": getMemoryUsage()
+            "gpuLoad": currentGPULoad,
+            "fps": currentFPS,
+            "memoryMB": currentMemoryMB
         ]
     }
 
-    private func getGPULoad() -> Double {
-        return 0.0
+    // MARK: - GPU Utilization via IOKit
+
+    private func readGPUUtilization() -> Double {
+        var iterator: io_iterator_t = 0
+        let matching = IOServiceMatching("IOAccelerator")
+
+        guard IOServiceGetMatchingServices(kIOMainPortDefault, matching, &iterator) == KERN_SUCCESS else {
+            return estimateGPUFromFPS()
+        }
+
+        defer { IOObjectRelease(iterator) }
+
+        var service = IOIteratorNext(iterator)
+        while service != 0 {
+            defer {
+                IOObjectRelease(service)
+                service = IOIteratorNext(iterator)
+            }
+
+            var properties: Unmanaged<CFMutableDictionary>?
+            guard IORegistryEntryCreateCFProperties(service, &properties, kCFAllocatorDefault, 0) == KERN_SUCCESS,
+                  let dict = properties?.takeRetainedValue() as? [String: Any] else {
+                continue
+            }
+
+            if let perfStats = dict["PerformanceStatistics"] as? [String: Any] {
+                if let utilization = perfStats["GPU Core Utilization"] as? Int {
+                    return Double(utilization) / 10_000_000.0
+                }
+                if let activity = perfStats["GPU Activity(%)"] as? Int {
+                    return Double(activity)
+                }
+                if let deviceUtil = perfStats["Device Utilization %"] as? Int {
+                    return Double(deviceUtil)
+                }
+            }
+        }
+
+        return estimateGPUFromFPS()
     }
 
-    private func getFPS() -> Int {
-        return 60
+    private func estimateGPUFromFPS() -> Double {
+        guard currentFPS > 0 else { return 0 }
+        let maxRate = Double(NSScreen.main?.maximumFramesPerSecond ?? 60)
+        return min(Double(currentFPS) / maxRate * 100.0, 100.0)
     }
+
+    // MARK: - Memory
 
     private func getMemoryUsage() -> Int {
         var info = mach_task_basic_info()

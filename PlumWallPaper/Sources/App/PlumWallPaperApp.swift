@@ -29,23 +29,23 @@ struct PlumWallPaperApp: App {
         }
 
         GlobalShortcutManager.shared.onNextWallpaper = {
-            // TODO: cycle wallpaper list when playlist support is added
+            // 需要轮播功能支持，暂不可用
         }
         GlobalShortcutManager.shared.onPrevWallpaper = {
-            // TODO: cycle wallpaper list when playlist support is added
+            // 需要轮播功能支持，暂不可用
         }
         GlobalShortcutManager.shared.onTogglePlayback = {
-            WallpaperEngine.shared.pauseAll()
+            PauseStrategyManager.shared.toggleManualPause()
         }
         GlobalShortcutManager.shared.onToggleMute = {
-            // TODO: add global audio mute integration
+            WallpaperEngine.shared.toggleMuteAll()
         }
         GlobalShortcutManager.shared.onShowWindow = {
             NSApp.activate(ignoringOtherApps: true)
             NSApp.windows.first?.makeKeyAndOrderFront(nil)
         }
         GlobalShortcutManager.shared.onToggleFavorite = {
-            // TODO: bind to current selected wallpaper in app state
+            // 需要 WebBridge 通知前端当前选中壁纸，暂不可用
         }
         GlobalShortcutManager.shared.start()
     }

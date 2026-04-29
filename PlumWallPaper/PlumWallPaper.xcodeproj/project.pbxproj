@@ -40,6 +40,7 @@
 		EF5C41A6D51B4CD98A982A30 /* PauseStrategyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A712C86F40E44822A36DB561 /* PauseStrategyManager.swift */; };
 		CAC0E1FD846341E78A295573 /* GlobalShortcutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6D0C29F2C5F4AA09F3E805C /* GlobalShortcutManager.swift */; };
 		1D0EC22F9A1C4B50A38153C0 /* PerformanceMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5314646D16B48FE86029003 /* PerformanceMonitor.swift */; };
+		B3F7A21E8C9D4F01A5E6D742 /* FrameRateBackfiller.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8A1D3F5E7B24A6D9012F8E3 /* FrameRateBackfiller.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -77,6 +78,7 @@
 		A712C86F40E44822A36DB561 /* PauseStrategyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PauseStrategyManager.swift; sourceTree = "<group>"; };
 		D6D0C29F2C5F4AA09F3E805C /* GlobalShortcutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalShortcutManager.swift; sourceTree = "<group>"; };
 		E5314646D16B48FE86029003 /* PerformanceMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMonitor.swift; sourceTree = "<group>"; };
+		C8A1D3F5E7B24A6D9012F8E3 /* FrameRateBackfiller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameRateBackfiller.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -137,7 +139,8 @@
 					ABAEF8997AA14AE48844CBF9 /* MenuBarManager.swift */,
 					A712C86F40E44822A36DB561 /* PauseStrategyManager.swift */,
 					D6D0C29F2C5F4AA09F3E805C /* GlobalShortcutManager.swift */,
-					E5314646D16B48FE86029003 /* PerformanceMonitor.swift */,);
+					E5314646D16B48FE86029003 /* PerformanceMonitor.swift */,
+					C8A1D3F5E7B24A6D9012F8E3 /* FrameRateBackfiller.swift */,);
 			path = Core;
 			sourceTree = "<group>";
 		};
@@ -267,11 +270,12 @@
 				};
 			};
 			buildConfigurationList = AD26888A4F53EBEDAA65A358 /* Build configuration list for PBXProject "PlumWallPaper" */;
-			developmentRegion = en;
+			developmentRegion = "zh-Hans";
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				Base,
 				en,
+				"zh-Hans",
 			);
 			mainGroup = D7CF8A5E2B52A394B64F180A;
 			minimizedProjectReferenceProxies = 1;
@@ -332,7 +336,8 @@
 					166ED6826A644321A210ED89 /* MenuBarManager.swift in Sources */,
 					EF5C41A6D51B4CD98A982A30 /* PauseStrategyManager.swift in Sources */,
 					CAC0E1FD846341E78A295573 /* GlobalShortcutManager.swift in Sources */,
-					1D0EC22F9A1C4B50A38153C0 /* PerformanceMonitor.swift in Sources */,);
+					1D0EC22F9A1C4B50A38153C0 /* PerformanceMonitor.swift in Sources */,
+					B3F7A21E8C9D4F01A5E6D742 /* FrameRateBackfiller.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
@@ -350,6 +355,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_GENERATION_MODE = GeneratedFile;
 				INFOPLIST_KEY_ATSApplicationFontsPath = Fonts;
+				INFOPLIST_KEY_CFBundleDevelopmentRegion = "zh_CN";
 				INFOPLIST_KEY_UIAppFonts = (
 					"CormorantGaramond-Italic.ttf",
 					"CormorantGaramond-SemiBoldItalic.ttf",
@@ -496,6 +502,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_GENERATION_MODE = GeneratedFile;
 				INFOPLIST_KEY_ATSApplicationFontsPath = Fonts;
+				INFOPLIST_KEY_CFBundleDevelopmentRegion = "zh_CN";
 				INFOPLIST_KEY_UIAppFonts = (
 					"CormorantGaramond-Italic.ttf",
 					"CormorantGaramond-SemiBoldItalic.ttf",

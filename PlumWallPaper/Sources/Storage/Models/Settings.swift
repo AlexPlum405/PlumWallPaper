@@ -109,8 +109,35 @@ final class Settings {
     /// 仅预览时允许声音
     var previewOnlyAudio: Bool?
 
+    /// 播放速度 (0.5 - 2.0)
+    var playbackRate: Double?
+
+    /// 壁纸不透明度 (50 - 100)
+    var wallpaperOpacity: Int?
+
     /// 显示器物理排列顺序（screen ID 数组）
     var screenOrder: [String]?
+
+    /// 循环模式
+    var loopMode: LoopMode
+
+    /// 随机起始位置
+    var randomStartPosition: Bool
+
+    /// 音频输出屏幕 (nil = 主屏幕)
+    var audioScreenId: String?
+
+    /// 轮播来源
+    var slideshowSource: SlideshowSource
+
+    /// 轮播指定标签 ID
+    var slideshowTagId: String?
+
+    /// FPS 上限 (nil = 不限，其他 = 具体数值)
+    var fpsLimit: Int?
+
+    /// 应用规则（黑名单）JSON 字符串
+    var appRulesJSON: String?
 
     init(
         slideshowEnabled: Bool = false,
@@ -137,7 +164,14 @@ final class Settings {
         themeMode: ThemeMode = .auto,
         accentColor: String = "#E03E3E",
         thumbnailSize: ThumbnailSize = .medium,
-        animationsEnabled: Bool = true
+        animationsEnabled: Bool = true,
+        loopMode: LoopMode = .loop,
+        randomStartPosition: Bool = false,
+        audioScreenId: String? = nil,
+        slideshowSource: SlideshowSource = .all,
+        slideshowTagId: String? = nil,
+        fpsLimit: Int? = nil,
+        appRulesJSON: String? = nil
     ) {
         self.slideshowEnabled = slideshowEnabled
         self.slideshowInterval = slideshowInterval
@@ -164,10 +198,41 @@ final class Settings {
         self.accentColor = accentColor
         self.thumbnailSize = thumbnailSize
         self.animationsEnabled = animationsEnabled
+        self.loopMode = loopMode
+        self.randomStartPosition = randomStartPosition
+        self.audioScreenId = audioScreenId
+        self.slideshowSource = slideshowSource
+        self.slideshowTagId = slideshowTagId
+        self.fpsLimit = fpsLimit
+        self.appRulesJSON = appRulesJSON
+    }
+
+    var appRules: [AppRule] {
+        get {
+            guard let json = appRulesJSON,
+                  let data = json.data(using: .utf8) else { return [] }
+            return (try? JSONDecoder().decode([AppRule].self, from: data)) ?? []
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                appRulesJSON = String(data: data, encoding: .utf8)
+            }
+        }
     }
 }
 
 // MARK: - Enums
+
+enum LoopMode: String, Codable {
+    case loop = "loop"
+    case once = "once"
+}
+
+enum SlideshowSource: String, Codable {
+    case all = "all"
+    case favorites = "favorites"
+    case tag = "tag"
+}
 
 enum SlideshowOrder: String, Codable {
     case sequential = "sequential"
@@ -267,6 +332,40 @@ enum ThumbnailSize: String, Codable {
         case .small: return CGSize(width: 200, height: 112)
         case .medium: return CGSize(width: 300, height: 169)
         case .large: return CGSize(width: 400, height: 225)
+        }
+    }
+}
+
+// MARK: - App Rule
+
+struct AppRule: Codable, Identifiable {
+    let id: String
+    let bundleIdentifier: String
+    let appName: String
+    let action: RuleAction
+
+    init(id: String = UUID().uuidString, bundleIdentifier: String, appName: String, action: RuleAction) {
+        self.id = id
+        self.bundleIdentifier = bundleIdentifier
+        self.appName = appName
+        self.action = action
+    }
+}
+
+enum RuleAction: String, Codable {
+    case pause = "pause"
+    case mute = "mute"
+    case limitFPS30 = "fps30"
+    case limitFPS15 = "fps15"
+    case none = "none"
+
+    var displayName: String {
+        switch self {
+        case .pause: return "暂停壁纸"
+        case .mute: return "静音壁纸"
+        case .limitFPS30: return "降低到 30fps"
+        case .limitFPS15: return "降低到 15fps"
+        case .none: return "无操作"
         }
     }
 }

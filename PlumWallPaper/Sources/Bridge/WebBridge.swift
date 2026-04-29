@@ -47,6 +47,25 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                     MenuBarManager.shared.setEnabled(true)
                 }
                 WallpaperEngine.shared.updateRenderingConfig(colorSpace: settings.colorSpace, performanceMode: settings.vSyncEnabled)
+                WallpaperEngine.shared.updateAudioConfig(
+                    volume: settings.globalVolume ?? 50,
+                    muted: settings.defaultMuted ?? false,
+                    previewOnly: settings.previewOnlyAudio ?? false,
+                    rate: settings.playbackRate ?? 1.0
+                )
+                WallpaperEngine.shared.updateWallpaperOpacity(settings.wallpaperOpacity ?? 100)
+                WallpaperEngine.shared.updateFPSLimit(settings.fpsLimit ?? 0)
+                PerformanceMonitor.shared.startMonitoring()
+            }
+
+            // 启动后静默补全缺失的壁纸帧率元数据
+            FrameRateBackfiller.shared.backfillMissingFrameRates(modelContext: self.modelContext)
+
+            // 启动时检查缓存清理
+            if let settings = try? self.preferencesStore.fetchSettings(), settings.autoCleanEnabled {
+                Task.detached(priority: .background) {
+                    ThumbnailGenerator.shared.cleanCacheIfNeeded(threshold: settings.cacheThreshold)
+                }
             }
         }
     }
@@ -90,7 +109,7 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                         panel.allowsMultipleSelection = true
                         panel.canChooseDirectories = false
                         panel.allowedContentTypes = [.movie, .image]
-                        panel.message = "选择要导入的壁纸文件（支持视频和 HEIC 图片）"
+                        panel.message = "选择要导入的壁纸文件（支持视频和图片）"
 
                         panel.begin { response in
                             Task { @MainActor in
@@ -122,7 +141,7 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                                     return
                                 }
                                 do {
-                                    let validExts = Set(["mp4", "mov", "m4v", "heic", "heif"])
+                                    let validExts = Set(["mp4", "mov", "m4v", "heic", "heif", "jpg", "jpeg", "png", "gif", "bmp", "tiff", "tif"])
                                     let contents = try FileManager.default.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: nil)
                                     let mediaFiles = contents.filter { validExts.contains($0.pathExtension.lowercased()) }
                                     guard !mediaFiles.isEmpty else {
@@ -193,20 +212,32 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 WallpaperEngine.shared.updateRenderingConfig(colorSpace: settings.colorSpace, performanceMode: settings.vSyncEnabled)
 
                 let mode = params["mode"] as? String
+                var affectedScreens: [String] = []
 
                 if let screenId = params["screenId"] as? String {
                     guard let screenInfo = DisplayManager.shared.availableScreens.first(where: { $0.id == screenId }) else {
                         return fail("Screen not found")
                     }
                     WallpaperEngine.shared.setWallpaper(wallpaper, for: screenInfo)
+                    affectedScreens = [screenId]
                 } else if mode == "panorama" {
                     WallpaperEngine.shared.setWallpaperPanorama(wallpaper, screenOrder: settings.screenOrder)
+                    affectedScreens = DisplayManager.shared.availableScreens.map { $0.id }
                 } else {
                     WallpaperEngine.shared.setWallpaperToAllScreens(wallpaper)
+                    affectedScreens = DisplayManager.shared.availableScreens.map { $0.id }
                 }
 
                 wallpaper.lastUsedDate = Date()
                 try wallpaperStore.updateWallpaper()
+
+                // 持久化壁纸选择，启动时自动恢复
+                var mapping = RestoreManager.shared.loadSession()
+                for screenId in affectedScreens {
+                    mapping[screenId] = wallpaper.id
+                }
+                RestoreManager.shared.saveSession(mapping: mapping)
+
                 return success([:] as [String: Any])
 
             // 4. toggleFavorite
@@ -262,6 +293,12 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 let settings = try preferencesStore.fetchSettings()
                 let oldColorSpace = settings.colorSpace
                 let oldPerformanceMode = settings.vSyncEnabled
+                let oldVolume = settings.globalVolume
+                let oldMuted = settings.defaultMuted
+                let oldPreviewOnly = settings.previewOnlyAudio
+                let oldRate = settings.playbackRate
+                let oldOpacity = settings.wallpaperOpacity
+                let oldFpsLimit = settings.fpsLimit
                 applySettingsUpdate(settings, from: settingsData)
                 try preferencesStore.updateSettings()
 
@@ -270,6 +307,30 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                     WallpaperEngine.shared.updateRenderingConfig(colorSpace: settings.colorSpace, performanceMode: settings.vSyncEnabled)
                     WallpaperEngine.shared.reloadAllRenderers()
                 }
+
+                // 音频/播放速度变化时即时更新
+                if settings.globalVolume != oldVolume || settings.defaultMuted != oldMuted || settings.previewOnlyAudio != oldPreviewOnly || settings.playbackRate != oldRate {
+                    WallpaperEngine.shared.updateAudioConfig(
+                        volume: settings.globalVolume ?? 50,
+                        muted: settings.defaultMuted ?? false,
+                        previewOnly: settings.previewOnlyAudio ?? false,
+                        rate: settings.playbackRate ?? 1.0
+                    )
+                    WallpaperEngine.shared.reloadAllRenderers()
+                }
+
+                // 壁纸不透明度变化时即时更新（无需重载）
+                if settings.wallpaperOpacity != oldOpacity {
+                    WallpaperEngine.shared.updateWallpaperOpacity(settings.wallpaperOpacity ?? 100)
+                }
+
+                // FPS 上限变化时即时更新（无需重载）
+                if settings.fpsLimit != oldFpsLimit {
+                    WallpaperEngine.shared.updateFPSLimit(settings.fpsLimit ?? 0)
+                }
+
+                // 暂停策略相关设置变更时立即重新评估
+                PauseStrategyManager.shared.reevaluate()
 
                 return success([:] as [String: Any])
 
@@ -340,7 +401,58 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 if let window = NSApp.keyWindow {
                     let response = await panel.beginSheetModal(for: window)
                     if response == .OK, let url = panel.url {
-                        return success(["path": url.path] as [String: Any])
+                        let newPath = url.path
+                        let settings = try preferencesStore.fetchSettings()
+                        let oldPath = settings.libraryPath
+
+                        if oldPath != newPath {
+                            let fm = FileManager.default
+                            try? fm.createDirectory(atPath: newPath, withIntermediateDirectories: true)
+
+                            let descriptor = FetchDescriptor<Wallpaper>()
+                            let wallpapers = try modelContext.fetch(descriptor)
+                            var movedCount = 0
+                            var failedFiles: [String] = []
+
+                            for wallpaper in wallpapers {
+                                let oldFile = URL(fileURLWithPath: wallpaper.filePath)
+                                guard oldFile.path.hasPrefix(oldPath) else { continue }
+
+                                var relativePath = String(oldFile.path.dropFirst(oldPath.count))
+                                if relativePath.hasPrefix("/") {
+                                    relativePath = String(relativePath.dropFirst())
+                                }
+
+                                let newFile = URL(fileURLWithPath: newPath).appendingPathComponent(relativePath)
+                                let newDir = newFile.deletingLastPathComponent()
+
+                                do {
+                                    try fm.createDirectory(at: newDir, withIntermediateDirectories: true)
+                                    if fm.fileExists(atPath: oldFile.path) {
+                                        if fm.fileExists(atPath: newFile.path) {
+                                            try fm.removeItem(at: newFile)
+                                        }
+                                        try fm.moveItem(at: oldFile, to: newFile)
+                                        wallpaper.filePath = newFile.path
+                                        movedCount += 1
+                                    }
+                                } catch {
+                                    failedFiles.append(oldFile.lastPathComponent)
+                                }
+                            }
+
+                            if movedCount > 0 {
+                                try modelContext.save()
+                            }
+
+                            if !failedFiles.isEmpty {
+                                return fail("部分文件迁移失败: \(failedFiles.joined(separator: ", "))")
+                            }
+
+                            return success(["path": newPath, "migrated": true, "movedCount": movedCount] as [String: Any])
+                        }
+
+                        return success(["path": newPath, "migrated": false] as [String: Any])
                     }
                 }
                 return success([:] as [String: Any])
@@ -352,6 +464,30 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                 }
                 NSWorkspace.shared.open(url)
                 return success([:] as [String: Any])
+
+            case "getAppInfo":
+                let bundle = Bundle.main
+                let version = bundle.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+                let build = bundle.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+                let osVersion = ProcessInfo.processInfo.operatingSystemVersion
+                let osString = "macOS \(osVersion.majorVersion).\(osVersion.minorVersion).\(osVersion.patchVersion)"
+                var chip = "Unknown"
+                var sysInfo = utsname()
+                uname(&sysInfo)
+                let machine = withUnsafePointer(to: &sysInfo.machine) {
+                    $0.withMemoryRebound(to: CChar.self, capacity: 1) { String(cString: $0) }
+                }
+                if machine.contains("arm64") {
+                    chip = "Apple Silicon"
+                } else {
+                    chip = "Intel"
+                }
+                return success([
+                    "version": version,
+                    "build": build,
+                    "os": osString,
+                    "chip": chip
+                ] as [String: Any])
 
             case "getLaunchAtLogin":
                 return success(["enabled": LaunchAtLoginManager.shared.isEnabled])
@@ -373,6 +509,39 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
             case "getPerformanceMetrics":
                 let metrics = PerformanceMonitor.shared.getCurrentMetrics()
                 return success(metrics)
+
+            case "getScreenRefreshRates":
+                let rates = DisplayManager.shared.getRefreshRates()
+                let maxRate = DisplayManager.shared.getMaxRefreshRate()
+                return success(["rates": rates, "maxRate": maxRate] as [String: Any])
+
+            case "selectApplication":
+                let panel = NSOpenPanel()
+                panel.canChooseFiles = true
+                panel.canChooseDirectories = false
+                panel.allowsMultipleSelection = false
+                panel.directoryURL = URL(fileURLWithPath: "/Applications")
+                panel.allowedContentTypes = [.application]
+                panel.message = "选择要添加规则的应用"
+
+                if let window = NSApp.keyWindow {
+                    let response = await panel.beginSheetModal(for: window)
+                    if response == .OK, let url = panel.url {
+                        let bundle = Bundle(url: url)
+                        let bundleId = bundle?.bundleIdentifier ?? url.deletingPathExtension().lastPathComponent
+                        let appName = url.deletingPathExtension().lastPathComponent
+                        return success(["bundleIdentifier": bundleId, "appName": appName] as [String: Any])
+                    }
+                }
+                return success([:] as [String: Any])
+
+            case "getPauseReason":
+                let reason = PauseStrategyManager.shared.pauseReason
+                return success(["reason": reason ?? "", "isPaused": reason != nil] as [String: Any])
+
+            case "resumeTemporarily":
+                PauseStrategyManager.shared.resumeTemporarily()
+                return success([:] as [String: Any])
 
             default:
                 return fail("Unknown action: \(action)")
@@ -467,6 +636,7 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
             "hasAudio": w.hasAudio ?? false
         ]
         if let duration = w.duration { dict["duration"] = duration }
+        if let frameRate = w.frameRate { dict["frameRate"] = frameRate }
         if let lastUsed = w.lastUsedDate { dict["lastUsedDate"] = dateFormatter.string(from: lastUsed) }
         if let fp = w.filterPreset { dict["filterPreset"] = serializeFilterPreset(fp) }
         return dict
@@ -519,9 +689,13 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
             "globalVolume": s.globalVolume ?? 50,
             "defaultMuted": s.defaultMuted ?? false,
             "previewOnlyAudio": s.previewOnlyAudio ?? false,
+            "playbackRate": s.playbackRate ?? 1.0,
+            "wallpaperOpacity": s.wallpaperOpacity ?? 100,
             "launchAtLogin": s.launchAtLogin ?? LaunchAtLoginManager.shared.isEnabled,
             "menuBarEnabled": s.menuBarEnabled ?? MenuBarManager.shared.isEnabled,
-            "screenOrder": s.screenOrder ?? [] as [String]
+            "screenOrder": s.screenOrder ?? [] as [String],
+            "fpsLimit": s.fpsLimit ?? 0,
+            "appRules": s.appRules.map { ["id": $0.id, "bundleIdentifier": $0.bundleIdentifier, "appName": $0.appName, "action": $0.action.rawValue] }
         ]
     }
     // MARK: - Deserialization
@@ -570,7 +744,20 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
         if let v = d["globalVolume"] as? Int { s.globalVolume = v }
         if let v = d["defaultMuted"] as? Bool { s.defaultMuted = v }
         if let v = d["previewOnlyAudio"] as? Bool { s.previewOnlyAudio = v }
+        if let v = d["playbackRate"] as? Double { s.playbackRate = v }
+        if let v = d["wallpaperOpacity"] as? Int { s.wallpaperOpacity = v }
         if let v = d["screenOrder"] as? [String] { s.screenOrder = v }
+        if let v = d["fpsLimit"] as? Int { s.fpsLimit = v == 0 ? nil : v }
+        if let v = d["appRules"] as? [[String: Any]] {
+            s.appRules = v.compactMap { dict in
+                guard let bundleId = dict["bundleIdentifier"] as? String,
+                      let appName = dict["appName"] as? String,
+                      let actionStr = dict["action"] as? String,
+                      let action = RuleAction(rawValue: actionStr) else { return nil }
+                let id = dict["id"] as? String ?? UUID().uuidString
+                return AppRule(id: id, bundleIdentifier: bundleId, appName: appName, action: action)
+            }
+        }
         if let v = d["launchAtLogin"] as? Bool {
             s.launchAtLogin = v
             LaunchAtLoginManager.shared.setEnabled(v)

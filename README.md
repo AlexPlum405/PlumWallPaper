@@ -20,7 +20,10 @@
 | 启动自动恢复壁纸 | ✅ |
 | 壁纸库管理 | ✅ |
 | 轮播调度 | 🔜 |
-| 智能省电策略 | 🔜 |
+| 智能暂停策略（7 种条件 + 应用黑名单） | ✅ |
+| 性能监控（FPS / GPU / 内存） | ✅ |
+| FPS 上限（动态检测屏幕刷新率） | ✅ |
+| 视频帧率自动检测 + 库内筛选 | ✅ |
 
 ## 滤镜参数
 
@@ -28,10 +31,12 @@
 
 ## 技术栈
 
-- SwiftUI + SwiftData
-- AVFoundation（视频渲染）
+- WKWebView + React（UI，单文件 `plumwallpaper.html`）
+- SwiftData（持久化）
+- AVFoundation（视频渲染 + 帧率检测）
 - Core Image（滤镜链）
 - AppKit（桌面窗口 + NSWorkspace）
+- IOKit（GPU 监控 + 电源状态）
 
 ## 系统要求
 
@@ -44,45 +49,49 @@
 ```
 PlumWallPaper/Sources/
 ├── App/
-│   └── PlumWallPaperApp.swift           # 入口
+│   └── PlumWallPaperApp.swift           # 入口 + SwiftData 容器
 │
-├── UI/                                  # ── 前端 ──
-│   ├── Theme.swift                      # 主题常量
-│   ├── AppViewModel.swift               # 全局状态
-│   ├── Views/
-│   │   ├── HomeView.swift               # 首页
-│   │   ├── LibraryView.swift            # 壁纸库
-│   │   ├── ColorAdjustView.swift        # 色彩调节
-│   │   ├── SettingsView.swift           # 设置
-│   │   ├── ImportModalView.swift        # 导入弹窗
-│   │   ├── MonitorSelectorView.swift    # 显示器选择
-│   │   └── WallpaperDetailView.swift    # 壁纸详情
-│   └── Components/
-│       ├── AdjustComponents.swift       # 调节组件
-│       └── EdgeBorder.swift             # 边框修饰
+├── Bridge/                              # ── WebView 桥接 ──
+│   ├── WebBridge.swift                  # JS↔Swift 消息路由
+│   └── WebViewContainer.swift           # WKWebView 容器
 │
-├── Core/                                # ── 后端 ──
+├── Core/                                # ── 核心业务 ──
 │   ├── WallpaperEngine/
-│   │   ├── WallpaperEngine.swift        # 渲染引擎
-│   │   └── WallpaperRenderer.swift      # Video + HEIC 渲染器
+│   │   ├── WallpaperEngine.swift        # 渲染调度 + VideoRenderer
+│   │   └── WallpaperRenderer.swift      # 渲染器协议 + HEICRenderer
 │   ├── DisplayManager/
-│   │   └── DisplayManager.swift         # 显示器管理
+│   │   ├── DisplayManager.swift         # 多显示器管理
+│   │   └── ScreenInfo.swift             # 屏幕信息
+│   ├── PauseStrategyManager.swift       # 智能暂停策略
+│   ├── PerformanceMonitor.swift         # 性能监控
+│   ├── FrameRateBackfiller.swift        # 帧率补全
 │   ├── FilterEngine.swift               # 滤镜引擎
 │   ├── FileImporter.swift               # 文件导入
 │   ├── ThumbnailGenerator.swift         # 缩略图生成
-│   └── RestoreManager.swift             # 启动恢复
+│   ├── RestoreManager.swift             # 启动恢复
+│   ├── GlobalShortcutManager.swift      # 全局快捷键
+│   ├── LaunchAtLoginManager.swift       # 开机启动
+│   └── MenuBarManager.swift             # 菜单栏图标
 │
-├── Storage/                             # ── 存储层 ──
+├── Storage/                             # ── 数据层 ──
 │   ├── Models/
 │   │   ├── Wallpaper.swift              # 壁纸模型
 │   │   ├── Tag.swift                    # 标签
 │   │   ├── FilterPreset.swift           # 滤镜预设
-│   │   └── Settings.swift               # 设置
+│   │   └── Settings.swift               # 设置 + AppRule
 │   ├── WallpaperStore.swift             # CRUD + 查询
 │   └── PreferencesStore.swift           # 偏好管理
 │
-└── System/                              # ── 系统桥接 ──
-    └── DesktopBridge.swift              # NSWorkspace 封装
+├── System/
+│   └── DesktopBridge.swift              # NSWorkspace 封装
+│
+├── UI/
+│   └── AppViewModel.swift               # 启动恢复 + 导入流程
+│
+└── Resources/Web/                       # ── 前端 ──
+    ├── plumwallpaper.html               # 全部 UI（React 单文件）
+    ├── bridge.js                        # JS 桥接辅助
+    └── react/babel 运行时
 ```
 
 ## 构建
@@ -93,16 +102,6 @@ xcodebuild -project PlumWallPaper.xcodeproj -scheme PlumWallPaper -configuration
 ```
 
 或在 Xcode 中打开 `PlumWallPaper/PlumWallPaper.xcodeproj`，按 Cmd+R 运行。
-
-## 原型文件
-
-| 路径 | 说明 |
-|------|------|
-| `ui-prototype/plumwallpaper-v5.html` | 最新全页 HTML 原型 |
-| `ui-prototype/home-v*.html` | 首页迭代 |
-| `ui-prototype/color-adjustment-v*.html` | 色彩调节迭代 |
-| `ui-prototype/settings-v*.html` | 设置页迭代 |
-| `src/` | React/TSX 交互原型 |
 
 ## 许可
 

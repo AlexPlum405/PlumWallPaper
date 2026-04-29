@@ -22,8 +22,8 @@ final class ThumbnailGenerator {
         switch type {
         case .video:
             try await generateVideoThumbnail(for: url, outputURL: outputURL)
-        case .heic:
-            try generateHEICThumbnail(for: url, outputURL: outputURL)
+        case .heic, .image:
+            try generateImageThumbnail(for: url, outputURL: outputURL)
         }
 
         return outputURL.path
@@ -38,9 +38,9 @@ final class ThumbnailGenerator {
         try saveJPEG(cgImage: cgImage, to: outputURL)
     }
 
-    private func generateHEICThumbnail(for url: URL, outputURL: URL) throws {
+    private func generateImageThumbnail(for url: URL, outputURL: URL) throws {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else {
-            throw NSError(domain: "ThumbnailGenerator", code: 1, userInfo: [NSLocalizedDescriptionKey: "无法读取 HEIC 文件"])
+            throw NSError(domain: "ThumbnailGenerator", code: 1, userInfo: [NSLocalizedDescriptionKey: "无法读取图片文件"])
         }
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -48,7 +48,7 @@ final class ThumbnailGenerator {
             kCGImageSourceCreateThumbnailWithTransform: true
         ]
         guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
-            throw NSError(domain: "ThumbnailGenerator", code: 2, userInfo: [NSLocalizedDescriptionKey: "无法生成 HEIC 缩略图"])
+            throw NSError(domain: "ThumbnailGenerator", code: 2, userInfo: [NSLocalizedDescriptionKey: "无法生成图片缩略图"])
         }
         try saveJPEG(cgImage: cgImage, to: outputURL)
     }
@@ -61,6 +61,43 @@ final class ThumbnailGenerator {
         CGImageDestinationAddImage(destination, cgImage, properties as CFDictionary)
         guard CGImageDestinationFinalize(destination) else {
             throw NSError(domain: "ThumbnailGenerator", code: 4, userInfo: [NSLocalizedDescriptionKey: "无法写入缩略图"])
+        }
+    }
+
+    /// 检查缓存大小，超过阈值时删除最旧的文件直到低于阈值
+    func cleanCacheIfNeeded(threshold: Int64) {
+        let fm = FileManager.default
+        guard let files = try? fm.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey]) else { return }
+
+        var totalSize: Int64 = 0
+        var fileInfos: [(url: URL, date: Date, size: Int64)] = []
+
+        for file in files {
+            guard let values = try? file.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey]) else { continue }
+            let size = Int64(values.fileSize ?? 0)
+            let date = values.contentModificationDate ?? Date.distantPast
+            totalSize += size
+            fileInfos.append((url: file, date: date, size: size))
+        }
+
+        guard totalSize > threshold else { return }
+
+        fileInfos.sort { $0.date < $1.date }
+
+        for info in fileInfos {
+            guard totalSize > threshold else { break }
+            try? fm.removeItem(at: info.url)
+            totalSize -= info.size
+        }
+    }
+
+    /// 获取当前缓存目录大小（字节）
+    func getCacheSize() -> Int64 {
+        let fm = FileManager.default
+        guard let files = try? fm.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: [.fileSizeKey]) else { return 0 }
+        return files.reduce(Int64(0)) { total, file in
+            let size = (try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            return total + Int64(size)
         }
     }
 }

@@ -29,6 +29,7 @@ final class FileImporter {
         let resolution = try await detectResolution(for: url, type: type)
         let duration = try await detectDuration(for: url, type: type)
         let hasAudio = try await detectAudio(for: url, type: type)
+        let frameRate = try await detectFrameRate(for: url, type: type)
 
         return Wallpaper(
             name: url.deletingPathExtension().lastPathComponent,
@@ -39,7 +40,8 @@ final class FileImporter {
             duration: duration,
             thumbnailPath: thumbnailPath,
             fileHash: fileHash,
-            hasAudio: hasAudio
+            hasAudio: hasAudio,
+            frameRate: frameRate
         )
     }
 
@@ -47,6 +49,9 @@ final class FileImporter {
         let ext = url.pathExtension.lowercased()
         if ext == "heic" || ext == "heif" {
             return .heic
+        }
+        if ext == "jpg" || ext == "jpeg" || ext == "png" || ext == "gif" || ext == "bmp" || ext == "tiff" || ext == "tif" {
+            return .image
         }
         return .video
     }
@@ -60,7 +65,7 @@ final class FileImporter {
             }
             let size = try await track.load(.naturalSize)
             return "\(Int(size.width))×\(Int(size.height))"
-        case .heic:
+        case .heic, .image:
             guard let image = NSImage(contentsOf: url) else { return "Unknown" }
             return "\(Int(image.size.width))×\(Int(image.size.height))"
         }
@@ -71,6 +76,14 @@ final class FileImporter {
         let asset = AVAsset(url: url)
         let duration = try await asset.load(.duration)
         return CMTimeGetSeconds(duration)
+    }
+
+    private func detectFrameRate(for url: URL, type: WallpaperType) async throws -> Int? {
+        guard type == .video else { return nil }
+        let asset = AVAsset(url: url)
+        guard let track = try await asset.loadTracks(withMediaType: .video).first else { return nil }
+        let rate = try await track.load(.nominalFrameRate)
+        return Int(rate.rounded())
     }
 
     private func detectAudio(for url: URL, type: WallpaperType) async throws -> Bool {

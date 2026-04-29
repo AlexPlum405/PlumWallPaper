@@ -1,116 +1,66 @@
 # PlumWallPaper 后端架构
 
-## 已完成
+> 更新日期: 2026-04-29
 
-### 数据模型（SwiftData）
-- ✅ `Wallpaper.swift` - 壁纸数据模型
-- ✅ `Tag.swift` - 标签数据模型
-- ✅ `FilterPreset.swift` - 色彩滤镜预设模型
-- ✅ `Settings.swift` - 应用设置模型
-
-### 存储层
-- ✅ `WallpaperStore.swift` - 壁纸存储管理器
-  - CRUD 操作
-  - 查询操作（全部、收藏、按标签、搜索、最近使用）
-  - 重复检测
-  - 批量操作
-- ✅ `PreferencesStore.swift` - 偏好设置管理器
-
-### 系统集成
-- ✅ `DesktopBridge.swift` - macOS 桌面壁纸 API 封装
-
-### 渲染引擎（骨架）
-- ✅ `WallpaperRenderer.swift` - 渲染器协议和基础实现
-  - `VideoRenderer` - 视频渲染器（待完善）
-  - `HEICRenderer` - HEIC 渲染器（待完善）
-
-## 待实现
-
-### 核心功能
-- [ ] 完善视频渲染器
-  - AVPlayer 配置
-  - 硬件解码
-  - 循环播放
-  - 桌面窗口集成
-- [ ] 色彩滤镜系统
-  - Core Image 滤镜链
-  - AVVideoComposition 集成
-  - 实时预览
-- [ ] 多显示器管理
-  - 显示器检测
-  - 拓扑管理
-  - 独立渲染
-- [ ] 轮播调度器
-  - 定时切换
-  - 顺序/随机/收藏优先
-  - 过渡效果
-- [ ] 智能省电策略
-  - 系统事件监听
-  - 自动暂停/恢复
-  - 性能监控
-
-### 工具功能
-- [ ] 文件管理
-  - 导入处理
-  - 缩略图生成
-  - 文件哈希计算
-  - 重复检测
-- [ ] 缓存管理
-  - 缓存清理
-  - 空间监控
-
-## 项目结构
+## 源码结构
 
 ```
-PlumWallPaper/
-├── Sources/
-│   ├── App/                    # 应用入口（待创建）
-│   ├── UI/                     # 界面层（由 Gemini 生成）
-│   │   ├── Views/
-│   │   └── Components/
-│   ├── Core/                   # 核心业务逻辑
-│   │   ├── WallpaperEngine/    # ✅ 渲染引擎骨架
-│   │   ├── ColorFilter/        # 色彩滤镜（待实现）
-│   │   ├── DisplayManager/     # 显示器管理（待实现）
-│   │   ├── Scheduler/          # 轮播调度（待实现）
-│   │   └── PowerManager/       # 省电管理（待实现）
-│   ├── Storage/                # ✅ 数据持久化
-│   │   ├── Models/             # ✅ 数据模型
-│   │   ├── WallpaperStore.swift
-│   │   └── PreferencesStore.swift
-│   ├── System/                 # ✅ 系统集成
-│   │   └── DesktopBridge.swift
-│   └── Resources/              # 资源文件（待添加）
-└── Tests/                      # 测试（待创建）
+Sources/
+├── App/
+│   └── PlumWallPaperApp.swift           # 入口 + SwiftData 容器
+│
+├── Bridge/                              # ── WebView 桥接 ──
+│   ├── WebBridge.swift                  # JS↔Swift 消息路由（所有前端操作入口）
+│   └── WebViewContainer.swift           # WKWebView 容器配置
+│
+├── Core/                                # ── 核心业务 ──
+│   ├── WallpaperEngine/
+│   │   ├── WallpaperEngine.swift        # 渲染调度 + BasicVideoRenderer
+│   │   └── WallpaperRenderer.swift      # 渲染器协议 + HEICRenderer
+│   ├── DisplayManager/
+│   │   ├── DisplayManager.swift         # 多显示器检测与管理
+│   │   └── ScreenInfo.swift             # 屏幕信息模型
+│   ├── PauseStrategyManager.swift       # 智能暂停（事件驱动 + 轮询）
+│   ├── PerformanceMonitor.swift         # FPS/GPU/内存实时监控
+│   ├── FrameRateBackfiller.swift        # 启动时补全旧视频帧率
+│   ├── FilterEngine.swift               # Core Image 滤镜链
+│   ├── FileImporter.swift               # 文件导入 + 帧率检测
+│   ├── ThumbnailGenerator.swift         # 缩略图生成
+│   ├── RestoreManager.swift             # 启动恢复（UserDefaults 持久化）
+│   ├── GlobalShortcutManager.swift      # 全局快捷键
+│   ├── LaunchAtLoginManager.swift       # 开机启动
+│   └── MenuBarManager.swift             # 菜单栏图标
+│
+├── Storage/                             # ── 数据层 ──
+│   ├── Models/
+│   │   ├── Wallpaper.swift              # 壁纸模型（含 frameRate）
+│   │   ├── Tag.swift                    # 标签（多对多）
+│   │   ├── FilterPreset.swift           # 滤镜预设
+│   │   └── Settings.swift              # 设置 + AppRule + 枚举
+│   ├── WallpaperStore.swift             # CRUD + 查询
+│   └── PreferencesStore.swift           # 偏好读写
+│
+├── System/
+│   └── DesktopBridge.swift              # NSWorkspace 桌面壁纸 API
+│
+├── UI/
+│   └── AppViewModel.swift               # 启动恢复 + 导入流程
+│
+└── Resources/
+    └── Web/
+        ├── plumwallpaper.html           # 全部前端 UI（React 单文件）
+        ├── bridge.js                    # JS 端桥接辅助
+        ├── react.production.min.js
+        ├── react-dom.production.min.js
+        └── babel.min.js
 ```
 
-## 下一步
+## 技术栈
 
-1. **等待 Gemini 生成前端 UI**
-2. **完善渲染引擎**：
-   - 实现完整的视频渲染逻辑
-   - 集成 Core Image 滤镜
-3. **实现多显示器管理**
-4. **实现轮播调度器**
-5. **实现智能省电策略**
-6. **创建应用入口和生命周期管理**
-7. **集成前后端**
-
-## 技术要点
-
-### 性能优化
-- 使用 AVPlayer 硬件解码
-- GPU 加速滤镜处理
-- 独立进程渲染（XPC Service）
-- 内存管理和缓存策略
-
-### 系统集成
-- NSWorkspace 桌面壁纸 API
-- NSScreen 多显示器管理
-- NSApplication 生命周期事件
-- IOKit 电源管理
-
-### 数据管理
-- SwiftData 持久化
-- 非破坏性滤镜（参数存储）
-- 轻量级索引（只存路径）
+- Swift 5.9 / macOS 14.0+
+- SwiftData（持久化）
+- AVFoundation（视频渲染 + 帧率检测）
+- Core Image（滤镜）
+- AppKit（桌面窗口 + NSWorkspace）
+- IOKit（GPU 监控 + 电源状态）
+- WKWebView + React（UI）

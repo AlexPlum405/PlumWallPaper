@@ -1,62 +1,59 @@
-# PlumWallPaper 100% 原型还原进度追踪
+# PlumWallPaper 项目约定
 
-此文件用于追踪将 SwiftUI App 还原至 HTML 原型 (`plumwallpaper-v5.html`) 视觉效果的进度。
+## 架构概览
 
-## 🎨 全局视觉基调 (Theme & Assets)
-- [x] **字体集成**: 下载并配置 `Cormorant Garamond` (Italic/SemiBoldItalic)。
-- [x] **颜色体系**: 实现 `Theme.swift` 中的 Hex 颜色支持、Aura Red、Deep Gray 等。
-- [x] **材质系统**: 优化 `plumGlass` 背景和 1px 细边框。
-- [ ] **全局导航**: 实现灵动分段控制器 (TopNav)，支持悬浮模糊材质切换动画。
+- **UI 层**: WebView + React 单文件 (`plumwallpaper.html`)，通过 `WebBridge.swift` 与 Swift 后端通信
+- **后端**: Swift (SwiftData + AVFoundation + AppKit)
+- **构建**: Xcode project (`PlumWallPaper.xcodeproj`)，macOS 14.0+
 
-## 🏠 首页 (HomeView) - [100% 完成]
-- [x] **Hero Section**: 
-    - [x] 850px 沉浸式高度。
-    - [x] Jewel Curated 标签与元数据排版。
-    - [x] 1.2s 背景切换平滑过渡。
-- [x] **交互组件**:
-    - [x] 设为壁纸/收藏按钮样式还原。
-    - [x] 浮动缩略图条 (Thumb Strip) 激活态逻辑。
-- [x] **网格卡片**:
-    - [x] Aura Glow 鼠标悬浮光晕溢出效果。
-    - [x] NEW 霓虹标签与玻璃材质规格标签。
+## 关键路径
 
-## 📚 壁纸库 (LibraryView) - [进行中]
-- [ ] **侧边分类 (Sideline Tab)**: 
-    - [x] 实现左侧垂直排列的分段选择。
-    - [ ] 对应图标与选中态的高亮效果。
-- [ ] **搜索与过滤**:
-    - [ ] 顶部搜索框样式还原。
-    - [ ] 标签过滤 Chip 组。
-- [ ] **网格交互**:
-    - [ ] 保持与首页一致的 Aura Glow 悬浮效果。
-    - [ ] 多选模式 UI。
+| 模块 | 路径 |
+|------|------|
+| 前端 UI（全部） | `Sources/Resources/Web/plumwallpaper.html` |
+| JS↔Swift 桥接 | `Sources/Bridge/WebBridge.swift` |
+| 渲染引擎 | `Sources/Core/WallpaperEngine/WallpaperEngine.swift` |
+| 性能监控 | `Sources/Core/PerformanceMonitor.swift` |
+| 智能暂停 | `Sources/Core/PauseStrategyManager.swift` |
+| 帧率补全 | `Sources/Core/FrameRateBackfiller.swift` |
+| 数据模型 | `Sources/Storage/Models/` |
+| 启动恢复 | `Sources/Core/RestoreManager.swift` |
 
-## 🎨 色彩调节 (ColorAdjustView)
-- [ ] **布局结构**:
-    - [ ] 还原右侧悬浮式半透明调节面板。
-    - [ ] 9 个专业参数滑块样式自定义。
-- [ ] **预设系统**:
-    - [ ] 下方水平滚动的预设预览卡片。
-- [ ] **实时反馈**:
-    - [ ] 调节过程中的画布即时响应。
+## 构建命令
 
-## ⚙️ 设置中心 (SettingsView)
-- [ ] **仪表盘布局**:
-    - [ ] 还原左侧大图标导航。
-    - [ ] 性能监控实时柱状图 (GPU/FPS)。
-- [ ] **功能分区**:
-    - [ ] 智能暂停策略的开关组排版。
-    - [ ] 库路径管理视图。
+```bash
+cd PlumWallPaper
+xcodebuild -project PlumWallPaper.xcodeproj -scheme PlumWallPaper -configuration Debug build
+```
 
-## 🖥️ 其他组件
-- [ ] **显示器选择器**: 还原多屏排列示意图。
-- [ ] **导入弹窗**: 还原拖拽区域的虚线边框与进度动画。
+## 开发约定
 
----
+- 新增 Swift 源文件必须手动加入 `project.pbxproj`（PBXBuildFile + PBXFileReference + group + build phase）
+- 前端修改只改 `plumwallpaper.html`，不拆外部 JS 文件（WebView 用 `file://` 协议加载）
+- 设置变更后必须调用 `PauseStrategyManager.shared.reevaluate()` 使暂停策略立即生效
+- 壁纸设置后必须写 `RestoreManager.saveSession(mapping:)` 保证重启恢复
+- FPS 监控基于 `AVPlayer.rate * nominalFrameRate`，不使用 CVDisplayLink
+- GPU 监控基于 IOKit `IOAccelerator` 的 `PerformanceStatistics`
 
-## 下一步行动建议
-1. **LibraryView 还原**: 实现左侧垂直分类导航和过滤系统。
-2. **SettingsView 还原**: 实现高性能监控仪表盘和自定义开关。
+## 功能完成状态（2026-04-29）
+
+### 已完成
+- 视频/HEIC 壁纸渲染 + 多显示器 + 全景模式
+- 9 参数实时滤镜（Core Image）
+- 文件导入 + 重复检测 + 缩略图生成
+- 启动自动恢复壁纸
+- 性能监控（真实 FPS / GPU / 内存，SVG 波形图）
+- FPS 上限（动态检测屏幕刷新率，支持自定义值）
+- 智能暂停策略（电池/全屏/低电量/屏幕共享/高负载应用/失去焦点/睡眠前）
+- 暂停原因实时提示 + 临时恢复按钮
+- 应用规则黑名单
+- 视频帧率自动检测 + 旧数据后台补全
+- 壁纸库帧率筛选器
+
+### 待完成
+- 轮播调度器
+- 色彩调节面板 UI 还原
+- 壁纸库搜索与多选模式
 
 ---
-*上次更新时间: 2026-04-28*
+*上次更新: 2026-04-29*

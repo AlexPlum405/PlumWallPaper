@@ -29,22 +29,29 @@
   <style>
     :root {
       --bg: #181A1F;
+      --bg-body: #0d0e12;
       --fg: #ffffff;
-      --accent: #E03E3E; 
+      --fg-secondary: rgba(255,255,255,0.6);
+      --fg-tertiary: rgba(255,255,255,0.4);
+      --fg-quaternary: rgba(255,255,255,0.3);
+      --accent: #E03E3E;
       --glass: rgba(255, 255, 255, 0.04);
       --glass-heavy: rgba(255, 255, 255, 0.08);
       --glass-border: rgba(255, 255, 255, 0.1);
       --font-display: 'Cormorant Garamond', serif;
       --font-ui: 'Inter', -apple-system, sans-serif;
+      --transition-duration: 0.2s;
+      --animation-duration: 1;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
 
     body {
-      background: #0d0e12;
+      background: var(--bg-body);
       color: var(--fg);
       font-family: var(--font-ui);
       overflow: hidden;
+      transition: background var(--transition-duration), color var(--transition-duration);
     }
 
     /* 隐藏滚动条但保留功能 */
@@ -57,17 +64,17 @@
       border-radius: 8px;
       border: 1px solid var(--glass-border);
       background: var(--glass);
-      color: #fff;
+      color: var(--fg);
       font-size: 14px;
       cursor: pointer;
-      transition: 0.2s;
+      transition: all var(--transition-duration);
       display: flex;
       align-items: center;
       gap: 8px;
     }
     .btn:hover { background: var(--glass-heavy); transform: translateY(-1px); }
     .btn:active { transform: scale(0.96); transition: 0.08s; opacity: 0.85; }
-    .btn-primary { background: rgba(255, 255, 255, 0.12); color: #fff; font-weight: 600; border: 1px solid rgba(255,255,255,0.14); backdrop-filter: blur(18px); }
+    .btn-primary { background: rgba(255, 255, 255, 0.12); color: var(--fg); font-weight: 600; border: 1px solid var(--glass-border); backdrop-filter: blur(18px); }
     .btn-primary:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 
     /* 模拟 macOS 红绿灯 */
@@ -80,19 +87,19 @@
     /* 动画 */
     /* 呼吸光效动画 */
     @keyframes breathing {
-      0% { box-shadow: 0 0 5px rgba(224, 62, 62, 0.2), inset 0 0 0 1px rgba(255,255,255,0.1); }
-      50% { box-shadow: 0 0 25px rgba(224, 62, 62, 0.5), inset 0 0 0 1px rgba(255,255,255,0.2); }
-      100% { box-shadow: 0 0 5px rgba(224, 62, 62, 0.2), inset 0 0 0 1px rgba(255,255,255,0.1); }
+      0% { box-shadow: 0 0 5px rgba(224, 62, 62, calc(0.2 * var(--animation-duration))), inset 0 0 0 1px rgba(255,255,255,0.1); }
+      50% { box-shadow: 0 0 25px rgba(224, 62, 62, calc(0.5 * var(--animation-duration))), inset 0 0 0 1px rgba(255,255,255,0.2); }
+      100% { box-shadow: 0 0 5px rgba(224, 62, 62, calc(0.2 * var(--animation-duration))), inset 0 0 0 1px rgba(255,255,255,0.1); }
     }
-    .breathing-glow { animation: breathing 3s infinite ease-in-out; }
+    .breathing-glow { animation: breathing calc(3s / var(--animation-duration)) infinite ease-in-out; }
 
     @keyframes dash-move {
       to { stroke-dashoffset: -16; }
     }
-    .animated-dash { animation: dash-move 0.8s linear infinite; }
+    .animated-dash { animation: dash-move calc(0.8s / var(--animation-duration)) linear infinite; }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .animate-in { animation: fadeIn 0.6s cubic-bezier(0.2, 1, 0.3, 1) forwards; }
+    .animate-in { animation: fadeIn calc(0.6s / var(--animation-duration)) cubic-bezier(0.2, 1, 0.3, 1) forwards; }
   </style>
 </head>
 <body>
@@ -584,7 +591,7 @@
 
             <div style={{ padding: '24px 40px', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
-                {step === 1 ? '支持 MP4, MOV, M4V, HEIC, HEIF' : `即将导入 ${selectedFiles.length} 个资源`}
+                {step === 1 ? '支持 MP4, MOV, M4V, HEIC, JPG, PNG 等格式' : `即将导入 ${selectedFiles.length} 个资源`}
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 <button onClick={step === 1 ? onClose : () => { setStep(1); setDuplicates([]); }} className="btn" style={{ padding: '10px 24px' }}>
@@ -631,7 +638,7 @@
           </div>
           <h2 style={{ fontSize: 48, fontFamily: 'var(--font-display)', fontStyle: 'italic', marginBottom: 12, letterSpacing: '-0.02em' }}>{wallpaper.name}</h2>
           <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14, fontWeight: 300, letterSpacing: '0.05em' }}>
-            {wallpaper.resolution} · {wallpaper.type} · {formatSize(wallpaper.fileSize)} {formatDuration(wallpaper.duration) !== '-' && `· ${formatDuration(wallpaper.duration)}`}
+            {wallpaper.resolution} · {wallpaper.type} · {formatSize(wallpaper.fileSize)} {wallpaper.frameRate ? `· ${wallpaper.frameRate}fps` : ''} {formatDuration(wallpaper.duration) !== '-' && `· ${formatDuration(wallpaper.duration)}`}
           </p>
         </div>
 
@@ -656,7 +663,112 @@
     const HomePage = ({ onSetWallpaper, wallpapers, fitMode, onPreview, onEditColor, onToggleFavorite, onDelete, onViewAll }) => {
       const [heroIndex, setHeroIndex] = useState(0);
       const [contextMenu, setContextMenu] = useState(null);
-      const hero = wallpapers[heroIndex];
+
+      // 智能推荐：计算 Hero 区展示的壁纸
+      const heroWallpapers = useMemo(() => {
+        if (wallpapers.length === 0) return [];
+
+        // 评分函数
+        const scoreWallpaper = (w) => {
+          let score = 0;
+
+          // 1. 收藏 +50 分（最高优先级）
+          if (w.isFavorite) score += 50;
+
+          // 2. 最近使用 +30 分
+          if (w.lastUsedDate) {
+            const daysSinceUsed = (Date.now() - new Date(w.lastUsedDate).getTime()) / (1000 * 60 * 60 * 24);
+            if (daysSinceUsed < 7) score += 30;
+            else if (daysSinceUsed < 30) score += 15;
+          }
+
+          // 3. 最近添加 +20 分
+          const daysSinceImport = (Date.now() - new Date(w.importDate).getTime()) / (1000 * 60 * 60 * 24);
+          if (daysSinceImport < 7) score += 20;
+          else if (daysSinceImport < 30) score += 10;
+
+          // 4. 高分辨率 +15 分（视觉冲击力）
+          const resMatch = w.resolution.match(/(\d+)×(\d+)/);
+          if (resMatch) {
+            const width = parseInt(resMatch[1]);
+            const height = parseInt(resMatch[2]);
+            const pixels = width * height;
+            if (pixels >= 3840 * 2160) score += 15; // 4K+
+            else if (pixels >= 2560 * 1440) score += 10; // 2K+
+            else if (pixels >= 1920 * 1080) score += 5; // 1080p+
+          }
+
+          // 5. 视频 + 有音频 +10 分（沉浸感）
+          if (w.type === 'video' && w.hasAudio) score += 10;
+
+          // 6. 高帧率视频 +8 分（流畅度）
+          if (w.frameRate && w.frameRate >= 60) score += 8;
+          else if (w.frameRate && w.frameRate >= 30) score += 4;
+
+          // 7. 文件大小适中 +5 分（质量平衡）
+          const sizeMB = w.fileSize / (1024 * 1024);
+          if (sizeMB >= 10 && sizeMB <= 500) score += 5;
+          else if (sizeMB < 1) score -= 5; // 太小可能质量差
+
+          // 8. 有标签 +3 分（分类清晰）
+          if (w.tags && w.tags.length > 0) score += 3;
+
+          return score;
+        };
+
+        // 计算所有壁纸的分数
+        const scored = wallpapers.map(w => ({ wallpaper: w, score: scoreWallpaper(w) }));
+
+        // 按分数排序
+        scored.sort((a, b) => b.score - a.score);
+
+        // 取前 15 个，但要保证标签多样性
+        const selected = [];
+        const usedTags = new Set();
+        const maxPerTag = 3;
+
+        for (const item of scored) {
+          if (selected.length >= 15) break;
+
+          const w = item.wallpaper;
+          const wTags = (w.tags || []).map(t => t.name || String(t));
+
+          // 检查标签多样性
+          const tagCounts = wTags.map(tag =>
+            selected.filter(s =>
+              (s.tags || []).some(t => (t.name || String(t)) === tag)
+            ).length
+          );
+
+          const maxTagCount = Math.max(0, ...tagCounts);
+
+          // 如果这个壁纸的标签还没超过限制，或者它是收藏/最近使用，就加入
+          if (maxTagCount < maxPerTag || item.score >= 50) {
+            selected.push(w);
+          }
+        }
+
+        // 如果不足 8 个，补充高分壁纸
+        if (selected.length < 8) {
+          for (const item of scored) {
+            if (selected.length >= 15) break;
+            if (!selected.includes(item.wallpaper)) {
+              selected.push(item.wallpaper);
+            }
+          }
+        }
+
+        return selected.slice(0, 15);
+      }, [wallpapers]);
+
+      // heroIndex 越界保护
+      useEffect(() => {
+        if (heroWallpapers.length > 0 && heroIndex >= heroWallpapers.length) {
+          setHeroIndex(0);
+        }
+      }, [heroWallpapers.length]);
+
+      const hero = heroWallpapers[heroIndex] || heroWallpapers[0];
       const scrollContainerRef = useRef(null);
       const heroVideoRef = useRef(null);
       const [heroMuted, setHeroMuted] = useState(true);
@@ -723,7 +835,7 @@
       return (
         <div ref={scrollContainerRef} className="no-scrollbar" style={{ height: '100vh', overflowY: 'auto', overflowX: 'hidden', scrollBehavior: 'smooth', background: '#0d0e12' }}>
           {/* Hero Section */}
-          <section style={{ height: '85vh', position: 'relative', overflow: 'hidden' }}>
+          {hero && <section style={{ height: '85vh', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
               {hero.type === 'video' ? (
                 <video ref={heroVideoRef} src={hero.filePath} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: fitStyles[fitMode] || 'cover', transition: '1.2s cubic-bezier(0.2, 1, 0.3, 1)', filter: getFilterCSS(hero.filterPreset) }} />
@@ -759,6 +871,7 @@
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="monitor" size={14} /> {hero.resolution}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="sliders" size={14} /> {formatSize(hero.fileSize)}</div>
                 {formatDuration(hero.duration) !== '-' && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="play" size={14} /> {formatDuration(hero.duration)}</div>}
+                {hero.frameRate && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="zap" size={14} /> {hero.frameRate}fps</div>}
                 {hero.hasAudio && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="volume-2" size={14} /> Audio</div>}
               </div>
 
@@ -775,14 +888,14 @@
 
             <div onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} className="no-scrollbar" style={{ position: 'absolute', bottom: 40, left: 80, right: 0, overflowX: 'auto', zIndex: 20, cursor: dragState.isDragging ? 'grabbing' : 'grab', userSelect: 'none' }}>
               <div style={{ display: 'flex', gap: 16, paddingRight: 80 }}>
-                {wallpapers.map((w, i) => (
+                {heroWallpapers.map((w, i) => (
                   <div key={w.id} onClick={() => handleHeroThumbClick(i)} style={{ flexShrink: 0, width: 160, aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden', cursor: 'pointer', border: heroIndex === i ? '2px solid #fff' : '1px solid rgba(255,255,255,0.1)', opacity: heroIndex === i ? 1 : 0.4, transition: '0.3s' }}>
                     <img src={w.thumbnailPath} style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none', filter: getFilterCSS(w.filterPreset) }} />
                   </div>
                 ))}
               </div>
             </div>
-          </section>
+          </section>}
 
           {/* Scrolling Sections */}
           <div style={{ padding: '80px 80px 140px', background: '#0d0e12', position: 'relative', zIndex: 30 }}>
@@ -846,8 +959,9 @@
                           )}
                         </div>
 
-                        <div style={{ position: 'absolute', bottom: 16, right: 16, display: 'flex', gap: 6 }}>
+                        <div style={{ position: 'absolute', bottom: 16, left: 16, right: 16, display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: 'calc(100% - 32px)' }}>
                            {w.filterPreset && <div style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '5px 10px', borderRadius: 10, fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="droplet" size={9} />{w.filterPreset.name}</div>}
+                           {w.frameRate && <div style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '5px 10px', borderRadius: 10, fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>{w.frameRate}fps</div>}
                            <div style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '5px 10px', borderRadius: 10, fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>{formatSize(w.fileSize)}</div>
                            {formatDuration(w.duration) !== '-' && <div style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '5px 10px', borderRadius: 10, fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>{formatDuration(w.duration)}</div>}
                         </div>
@@ -858,6 +972,7 @@
                           <span>{w.resolution}</span>
                           <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'rgba(255,255,255,0.2)' }} />
                           <span>{w.type}</span>
+                          {w.frameRate && <><span style={{ width: 3, height: 3, borderRadius: '50%', background: 'rgba(255,255,255,0.2)' }} /><span>{w.frameRate}fps</span></>}
                         </div>
                       </div>
                     </div>
@@ -918,7 +1033,7 @@
       );
     };
 
-    const LibraryPage = ({ wallpapers, setView, onSetWallpaper, onEditColor, onToggleFavorite, onDelete, initialFilter, sortBy, sortOrder, onChangeSortBy, onToggleSortOrder }) => {
+    const LibraryPage = ({ wallpapers, setView, onSetWallpaper, onEditColor, onToggleFavorite, onDelete, initialFilter, sortBy, sortOrder, onChangeSortBy, onToggleSortOrder, settings: libSettings }) => {
       const [contextMenu, setContextMenu] = useState(null);
       const [showTagManager, setShowTagManager] = useState(false);
       const [showSortMenu, setShowSortMenu] = useState(false);
@@ -929,7 +1044,10 @@
         const tagNames = Array.from(new Set(
           wallpapers.flatMap(w => (w.tags || []).map(tag => tag.name || String(tag))).filter(Boolean)
         ));
-        return ['全部', '收藏', '视频', 'HEIC', ...tagNames];
+        const frameRates = Array.from(new Set(
+          wallpapers.map(w => w.frameRate).filter(Boolean)
+        )).sort((a, b) => a - b).map(r => r + 'fps');
+        return ['全部', '收藏', '视频', 'HEIC', ...frameRates, ...tagNames];
       }, [wallpapers]);
 
       const filteredWallpapers = useMemo(() => {
@@ -937,6 +1055,10 @@
         if (activeFilter === '收藏') return wallpapers.filter(w => w.isFavorite);
         if (activeFilter === '视频') return wallpapers.filter(w => w.type === 'video');
         if (activeFilter === 'HEIC') return wallpapers.filter(w => w.type === 'heic');
+        if (activeFilter.endsWith('fps')) {
+          const rate = parseInt(activeFilter);
+          return wallpapers.filter(w => w.frameRate === rate);
+        }
         return wallpapers.filter(w => w.tags && w.tags.some(tag => (tag.name || String(tag)) === activeFilter));
       }, [activeFilter, wallpapers]);
 
@@ -993,7 +1115,7 @@
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 32 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${((libSettings || {}).thumbnailSize || 'medium') === 'small' ? '200px' : ((libSettings || {}).thumbnailSize || 'medium') === 'large' ? '380px' : '280px'}, 1fr))`, gap: 32 }}>
             {filteredWallpapers.map((w, i) => (
               <div key={w.id} className="library-card-v2" 
                 onDoubleClick={() => setView(w)} 
@@ -1394,6 +1516,12 @@
               <button className="btn" style={{ flex: 1.5, justifyContent: 'center', height: 44, fontSize: 13, background: 'var(--accent)', color: '#000', border: 'none', fontWeight: 600 }} onClick={() => {
                 const filter = getCurrentFilter();
                 filter.brightness = bri;
+
+                // 标记是否为默认值（重置状态）
+                filter._isDefault = hue === 0 && sat === 100 && bri === 100 && con === 100 &&
+                                    blur === 0 && gray === 0 && inv === 0 && expo === 100 &&
+                                    grain === 0 && vignette === 0;
+
                 if (selectedSavedPresetId) {
                   const updated = savedPresets.map(p => p.id === selectedSavedPresetId ? { ...p, ...filter, id: p.id } : p);
                   localStorage.setItem('plum_saved_presets', JSON.stringify(updated));
@@ -1463,15 +1591,22 @@
     const SettingsPage = ({ fitMode, setFitMode, monitors, onClose, settings, updateSetting, wallpapers, customTags, onAddCustomTag, addToast }) => {
       const [activeTab, setActiveTab] = useState('通用');
       const [performanceData, setPerformanceData] = useState(
-        [...Array(24)].map(() => 0)
+        [...Array(24)].map(() => ({ gpu: 0, fps: 0, mem: 0 }))
       );
-      const [perfMetrics, setPerfMetrics] = useState({ gpuLoad: 0, fps: 60, memoryMB: 0 });
+      const [perfMetrics, setPerfMetrics] = useState({ gpuLoad: 0, fps: 0, memoryMB: 0 });
       const [allTags, setAllTags] = useState([]);
       const [newTagName, setNewTagName] = useState('');
       const [showNewTagInput, setShowNewTagInput] = useState(false);
       const [dragIdx, setDragIdx] = useState(null);
       const [dragOverIdx, setDragOverIdx] = useState(null);
       const [localScreenOrder, setLocalScreenOrder] = useState(null);
+      const [localVolume, setLocalVolume] = useState(null);
+      const [localOpacity, setLocalOpacity] = useState(null);
+      const [screenRefreshRates, setScreenRefreshRates] = useState({ rates: {}, maxRate: 60 });
+      const [pauseStatus, setPauseStatus] = useState({ isPaused: false, reason: '' });
+      const [showCustomFPS, setShowCustomFPS] = useState(false);
+      const [customFPSValue, setCustomFPSValue] = useState('');
+      const [appInfo, setAppInfo] = useState(null);
 
       const s = settings || {};
 
@@ -1492,6 +1627,7 @@
 
       useEffect(() => {
         bridge.call('getTags').then(tags => setAllTags(tags || []));
+        bridge.call('getAppInfo').then(info => setAppInfo(info)).catch(() => {});
       }, []);
 
       const storageStats = useMemo(() => {
@@ -1506,11 +1642,13 @@
 
       useEffect(() => {
         if (activeTab === '性能') {
+          bridge.call('getScreenRefreshRates').then(r => setScreenRefreshRates(r)).catch(() => {});
           const poll = () => {
             bridge.call('getPerformanceMetrics').then(m => {
               setPerfMetrics(m);
-              setPerformanceData(prev => [...prev.slice(1), m.memoryMB || 0]);
+              setPerformanceData(prev => [...prev.slice(1), { gpu: m.gpuLoad || 0, fps: m.fps || 0, mem: m.memoryMB || 0 }]);
             }).catch(() => {});
+            bridge.call('getPauseReason').then(r => setPauseStatus(r)).catch(() => {});
           };
           poll();
           const timer = setInterval(poll, 2000);
@@ -1522,6 +1660,7 @@
         { id: '通用', icon: 'monitor' },
         { id: '外观', icon: 'image' },
         { id: '音频', icon: 'volume-2' },
+        { id: '播放', icon: 'play' },
         { id: '性能', icon: 'sliders' },
         { id: '库管理', icon: 'plus' },
         { id: '快捷键', icon: 'settings' },
@@ -1695,6 +1834,14 @@
                 
                 <SettingRow title="启动时自动运行" desc="开机即刻呈现沉浸式桌面体验"><Switch active={!!s.launchAtLogin} onToggle={() => bridge.call('setLaunchAtLogin', { enabled: !s.launchAtLogin }).then(r => updateSetting('launchAtLogin', r.enabled))} /></SettingRow>
                 <SettingRow title="菜单栏快捷入口" desc="在顶部菜单栏显示实时状态图标"><Switch active={!!s.menuBarEnabled} onToggle={() => bridge.call('setMenuBarEnabled', { enabled: !s.menuBarEnabled }).then(r => updateSetting('menuBarEnabled', r.enabled))} /></SettingRow>
+                <div style={{ opacity: 0.35, pointerEvents: 'none', position: 'relative' }}>
+                  <SettingRow title="屏保集成" desc="将当前壁纸用作 macOS 系统屏保">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 11, color: 'var(--fg-tertiary)', background: 'var(--glass)', padding: '3px 10px', borderRadius: 6, border: '1px solid var(--glass-border)' }}>后续版本</span>
+                      <Switch active={false} />
+                    </div>
+                  </SettingRow>
+                </div>
 
                 <div style={{ marginTop: 40, marginBottom: 40 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.3)', marginBottom: 24, textTransform: 'uppercase', letterSpacing: '0.15em' }}>显示与色彩</div>
@@ -1704,7 +1851,6 @@
                   <SettingRow title="色彩空间" desc="壁纸渲染使用的色域">
                     {[{v:'p3',l:'Display P3'},{v:'srgb',l:'sRGB'},{v:'adobeRGB',l:'Adobe RGB'}].map(({v,l}) => <button key={v} className="btn" onClick={() => { updateSetting('colorSpace', v); addToast('色彩空间已切换为 ' + l); }} style={{ padding: '8px 16px', fontSize: 13, background: (s.colorSpace || 'p3') === v ? 'rgba(255,255,255,0.14)' : undefined, color: (s.colorSpace || 'p3') === v ? '#fff' : undefined, fontWeight: (s.colorSpace || 'p3') === v ? 700 : undefined, borderColor: (s.colorSpace || 'p3') === v ? 'rgba(255,255,255,0.24)' : undefined, boxShadow: (s.colorSpace || 'p3') === v ? '0 10px 24px rgba(0,0,0,0.22), 0 0 0 1px rgba(255,255,255,0.05)' : 'none' }}>{l}</button>)}
                   </SettingRow>
-                  <SettingRow title="高性能模式" desc="开启后 60fps 全质量播放，关闭后省电模式（限制 1080p 解码）"><Switch active={s.vSyncEnabled !== false} onToggle={() => { const next = !(s.vSyncEnabled !== false); updateSetting('vSyncEnabled', next); addToast(next ? '已切换为高性能模式 · 60fps 全质量' : '已切换为省电模式 · 限制 1080p'); }} /></SettingRow>
                 </div>
               </div>
             )}
@@ -1712,94 +1858,275 @@
             {activeTab === '音频' && (
               <div className="animate-in">
                 <div style={{ marginBottom: 56 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.3)', marginBottom: 24, textTransform: 'uppercase', letterSpacing: '0.15em' }}>壁纸声音策略</div>
-                  <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 28, padding: 36, border: '1px solid rgba(255,255,255,0.05)', marginBottom: 32 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fg-quaternary)', marginBottom: 24, textTransform: 'uppercase', letterSpacing: '0.15em' }}>壁纸声音策略</div>
+                  <div style={{ background: 'var(--glass)', borderRadius: 28, padding: 36, border: '1px solid var(--glass-border)', marginBottom: 32 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
                       <div>
                         <div style={{ fontSize: 16, fontWeight: 600 }}>全局壁纸音量</div>
-                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>控制所有有声动态壁纸的默认输出强度</div>
+                        <div style={{ fontSize: 13, color: 'var(--fg-quaternary)', marginTop: 4 }}>控制所有有声动态壁纸的默认输出强度</div>
                       </div>
-                      <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--accent)', fontFamily: 'monospace' }}>{Math.round((s.globalVolume != null ? s.globalVolume : 50))}%</div>
+                      <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--accent)', fontFamily: 'monospace' }}>{Math.round(localVolume != null ? localVolume : (s.globalVolume != null ? s.globalVolume : 50))}%</div>
                     </div>
-                    <input type="range" min={0} max={100} value={s.globalVolume != null ? s.globalVolume : 50} onChange={e => updateSetting('globalVolume', Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--accent)' }} />
+                    <input type="range" min={0} max={100} value={localVolume != null ? localVolume : (s.globalVolume != null ? s.globalVolume : 50)}
+                      onChange={e => setLocalVolume(Number(e.target.value))}
+                      onMouseUp={e => { updateSetting('globalVolume', Number(e.target.value)); setLocalVolume(null); }}
+                      onTouchEnd={e => { updateSetting('globalVolume', Number(e.target.value)); setLocalVolume(null); }}
+                      style={{ width: '100%', accentColor: 'var(--accent)' }} />
                   </div>
 
                   <SettingRow title="默认静音启动" desc="首次应用有声壁纸时默认不直接发声"><Switch active={!!s.defaultMuted} onToggle={() => updateSetting('defaultMuted', !s.defaultMuted)} /></SettingRow>
-                  <SettingRow title="音频闪避 (Audio Ducking)" desc="当 Music、Spotify 或浏览器正在播放音频时自动降低壁纸音量"><Switch active={s.audioDuckingEnabled !== false} onToggle={() => updateSetting('audioDuckingEnabled', !s.audioDuckingEnabled)} /></SettingRow>
                   <SettingRow title="仅预览时允许声音" desc="桌面常驻时静音，仅在预览和调色页允许试听"><Switch active={!!s.previewOnlyAudio} onToggle={() => updateSetting('previewOnlyAudio', !s.previewOnlyAudio)} /></SettingRow>
+                  <div style={{ opacity: 0.35, pointerEvents: 'none', position: 'relative' }}>
+                    <SettingRow title="音频闪避 (Audio Ducking)" desc="当其他应用播放音频时自动静音壁纸"><Switch active={false} /></SettingRow>
+                    <div style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--fg-tertiary)', background: 'var(--glass)', padding: '3px 10px', borderRadius: 6, border: '1px solid var(--glass-border)' }}>后续版本</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === '播放' && (
+              <div className="animate-in">
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fg-quaternary)', marginBottom: 24, textTransform: 'uppercase', letterSpacing: '0.15em' }}>播放控制</div>
+
+                <SettingRow title="播放速度" desc="调整壁纸视频的播放速率">
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {[{v:0.5,l:'0.5x'},{v:0.75,l:'0.75x'},{v:1,l:'1x'},{v:1.25,l:'1.25x'},{v:1.5,l:'1.5x'},{v:2,l:'2x'}].map(({v,l}) => <button key={v} className="btn" onClick={() => updateSetting('playbackRate', v)} style={{ padding: '6px 12px', fontSize: 12, background: (s.playbackRate || 1) === v ? 'rgba(255,255,255,0.14)' : undefined, color: (s.playbackRate || 1) === v ? '#fff' : undefined, fontWeight: (s.playbackRate || 1) === v ? 700 : undefined, borderColor: (s.playbackRate || 1) === v ? 'rgba(255,255,255,0.24)' : undefined }}>{l}</button>)}
+                  </div>
+                </SettingRow>
+
+                <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 32, marginTop: 32 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fg-quaternary)', marginBottom: 24, textTransform: 'uppercase', letterSpacing: '0.15em' }}>自动轮播</div>
+                  <div style={{ opacity: 0.35, pointerEvents: 'none' }}>
+                    <SettingRow title="启用播放列表" desc="从收藏或标签创建壁纸播放列表，自动轮换">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <span style={{ fontSize: 11, color: 'var(--fg-tertiary)', background: 'var(--glass)', padding: '3px 10px', borderRadius: 6, border: '1px solid var(--glass-border)' }}>后续版本</span>
+                        <Switch active={false} />
+                      </div>
+                    </SettingRow>
+                    <SettingRow title="轮播间隔" desc="每张壁纸的展示时长">
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {['5 分钟','15 分钟','30 分钟','1 小时','2 小时'].map(l => <button key={l} className="btn" style={{ padding: '6px 12px', fontSize: 12 }}>{l}</button>)}
+                      </div>
+                    </SettingRow>
+                    <SettingRow title="轮播顺序" desc="壁纸切换的排列方式">
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {['顺序','随机','收藏优先'].map(l => <button key={l} className="btn" style={{ padding: '6px 12px', fontSize: 12 }}>{l}</button>)}
+                      </div>
+                    </SettingRow>
+                  </div>
                 </div>
               </div>
             )}
 
             {activeTab === '性能' && (
               <div className="animate-in">
-                {/* 当前渲染模式状态 */}
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32,
-                  background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: '16px 24px',
-                  border: '1px solid rgba(255,255,255,0.05)'
-                }}>
+                {/* 暂停原因提示 */}
+                {pauseStatus.isPaused && (
                   <div style={{
-                    width: 8, height: 8, borderRadius: '50%',
-                    background: (s.vSyncEnabled !== false) ? '#2ECC71' : '#F1C40F',
-                    boxShadow: (s.vSyncEnabled !== false) ? '0 0 8px #2ECC71' : '0 0 8px #F1C40F'
-                  }} />
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>
-                    {(s.vSyncEnabled !== false) ? '高性能模式' : '省电模式'}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>
-                    {(s.vSyncEnabled !== false) ? '60fps · 全分辨率解码' : '限制 1080p 解码 · 降低 GPU 负载'}
-                  </div>
-                  <div style={{ marginLeft: 'auto', fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>
-                    色彩空间: {({p3:'Display P3', srgb:'sRGB', adobeRGB:'Adobe RGB'})[s.colorSpace || 'p3']}
-                  </div>
-                </div>
-
-                {/* 实时性能仪表盘 */}
-                <div style={{ 
-                  display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32, marginBottom: 56 
-                }}>
-                  {[
-                    { label: 'GPU 渲染压力', value: perfMetrics.gpuLoad.toFixed(1) + '%', color: 'var(--accent)', unit: 'LOAD' },
-                    { label: '动态帧率', value: String(perfMetrics.fps), color: '#2ECC71', unit: 'FPS' },
-                    { label: '系统内存占用', value: String(perfMetrics.memoryMB), color: '#3498DB', unit: 'MB' }
-                  ].map((stat, idx) => (
-                    <div key={stat.label} style={{ 
-                      background: 'rgba(255,255,255,0.02)', padding: 28, borderRadius: 24,
-                      border: '1px solid rgba(255,255,255,0.05)'
-                    }}>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 16, textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.1em' }}>{stat.label}</div>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                        <div style={{ fontSize: 36, fontWeight: 800, color: stat.color, fontFamily: 'monospace' }}>{stat.value}</div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.2)' }}>{stat.unit}</div>
-                      </div>
-                      <div style={{ height: 40, display: 'flex', alignItems: 'flex-end', gap: 3, marginTop: 24 }}>
-                        {performanceData.map((h, i) => (
-                          <div key={i} style={{ 
-                            flex: 1, 
-                            background: stat.color, 
-                            opacity: 0.1 + (i / 24) * 0.4, 
-                            height: (idx === 0 ? h : (25 + Math.random() * 75)) + '%',
-                            transition: 'height 0.2s ease-in-out',
-                            borderRadius: '1px'
-                          }} />
-                        ))}
-                      </div>
+                    display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32,
+                    background: 'rgba(241,196,15,0.04)', borderRadius: 16, padding: '16px 24px',
+                    border: '1px solid rgba(241,196,15,0.15)'
+                  }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#F1C40F', boxShadow: '0 0 8px #F1C40F', animation: 'pulse 2s infinite' }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#F1C40F' }}>已暂停</div>
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{pauseStatus.reason}</div>
                     </div>
-                  ))}
+                    <button className="btn" style={{ padding: '6px 14px', fontSize: 12, color: '#F1C40F', borderColor: 'rgba(241,196,15,0.3)' }} onClick={() => bridge.call('resumeTemporarily').then(() => setPauseStatus({ isPaused: false, reason: '' }))}>立即恢复</button>
+                  </div>
+                )}
+
+                {/* 性能预设选择器 */}
+                <div style={{ marginBottom: 40 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fg-quaternary)', marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.15em' }}>性能预设</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                    {[
+                      { id: 'high', label: '高性能', desc: '不限 fps · P3 · 全分辨率', fps: 0, color: 'p3', perf: true },
+                      { id: 'balanced', label: '平衡', desc: (screenRefreshRates.maxRate || 60) + 'fps · P3 · 全分辨率', fps: screenRefreshRates.maxRate || 60, color: 'p3', perf: true },
+                      { id: 'powersave', label: '省电', desc: '30fps · sRGB · 1080p', fps: 30, color: 'srgb', perf: false }
+                    ].map(preset => {
+                      const isActive = (() => {
+                        const fpsMatch = (s.fpsLimit || 0) === preset.fps;
+                        const colorMatch = (s.colorSpace || 'p3') === preset.color;
+                        const perfMatch = (s.vSyncEnabled !== false) === preset.perf;
+                        return fpsMatch && colorMatch && perfMatch;
+                      })();
+                      return (
+                        <div key={preset.id} onClick={() => {
+                          updateSetting('fpsLimit', preset.fps);
+                          updateSetting('colorSpace', preset.color);
+                          updateSetting('vSyncEnabled', preset.perf);
+                          addToast('已切换为' + preset.label + '模式');
+                        }} style={{
+                          padding: '20px 24px', borderRadius: 16, cursor: 'pointer',
+                          background: isActive ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)',
+                          border: '1px solid ' + (isActive ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)'),
+                          transition: '0.2s', position: 'relative', overflow: 'hidden'
+                        }}>
+                          {isActive && <div style={{ position: 'absolute', top: 12, right: 12, width: 6, height: 6, borderRadius: '50%', background: '#2ECC71', boxShadow: '0 0 6px #2ECC71' }} />}
+                          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>{preset.label}</div>
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{preset.desc}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
+                {/* 实时性能仪表盘 - 流动波形 */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 56 }}>
+                  {[
+                    { label: 'Metal 渲染负载', value: perfMetrics.gpuLoad.toFixed(1) + '%', color: '#E03E3E', unit: 'LOAD', dataKey: 'gpu' },
+                    { label: '实时帧率', value: String(perfMetrics.fps), color: '#2ECC71', unit: 'FPS', dataKey: 'fps' },
+                    { label: '内存占用', value: String(perfMetrics.memoryMB), color: '#3498DB', unit: 'MB', dataKey: 'mem' }
+                  ].map((stat, idx) => {
+                    const maxVal = stat.dataKey === 'gpu' ? 100 : stat.dataKey === 'fps' ? (screenRefreshRates.maxRate || 60) : 512;
+                    const points = performanceData.map(d => Math.min(1, (d[stat.dataKey] || 0) / maxVal));
+                    const w = 200, h = 56;
+                    const genPath = (pts) => {
+                      if (pts.length < 2) return '';
+                      const coords = pts.map((v, i) => [i * (w / (pts.length - 1)), h - v * h * 0.85]);
+                      let d = `M${coords[0][0]},${coords[0][1]}`;
+                      for (let i = 1; i < coords.length; i++) {
+                        const prev = coords[i - 1];
+                        const curr = coords[i];
+                        const tension = 0.3;
+                        const cp1x = prev[0] + (curr[0] - (coords[i-2]?.[0] ?? prev[0])) * tension;
+                        const cp1y = prev[1] + (curr[1] - (coords[i-2]?.[1] ?? prev[1])) * tension;
+                        const cp2x = curr[0] - (((coords[i+1]?.[0] ?? curr[0]) - prev[0]) * tension);
+                        const cp2y = curr[1] - (((coords[i+1]?.[1] ?? curr[1]) - prev[1]) * tension);
+                        d += ` C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${curr[0].toFixed(1)},${curr[1].toFixed(1)}`;
+                      }
+                      return d;
+                    };
+                    const linePath = genPath(points);
+                    const areaPath = linePath + ` L${w},${h} L0,${h} Z`;
+                    const gradId = 'grad-' + stat.dataKey;
+                    return (
+                      <div key={stat.label} style={{ background: 'rgba(255,255,255,0.02)', padding: '24px 24px 16px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden' }}>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 12, textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.12em' }}>{stat.label}</div>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 16 }}>
+                          <div style={{ fontSize: 32, fontWeight: 700, color: stat.color, fontFamily: "'SF Mono', 'Menlo', monospace", lineHeight: 1 }}>{stat.value}</div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.2)' }}>{stat.unit}</div>
+                        </div>
+                        <svg viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height: 56, display: 'block' }} preserveAspectRatio="none">
+                          <defs>
+                            <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor={stat.color} stopOpacity="0.2" />
+                              <stop offset="100%" stopColor={stat.color} stopOpacity="0.02" />
+                            </linearGradient>
+                          </defs>
+                          <path d={areaPath} fill={`url(#${gradId})`} />
+                          <path d={linePath} fill="none" stroke={stat.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }} />
+                        </svg>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* FPS 上限设置 */}
                 <div style={{ marginBottom: 40 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.3)', marginBottom: 24, textTransform: 'uppercase', letterSpacing: '0.1em' }}>智能暂停策略 (Smart Pause)</div>
+                  <SettingRow title="FPS 上限" desc={'限制壁纸最高帧率（实际帧率取决于视频源） · 显示器 ' + (screenRefreshRates.maxRate || 60) + 'Hz'}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      {[15, 30, 60].concat(screenRefreshRates.maxRate > 60 ? [screenRefreshRates.maxRate] : []).map(v => (
+                        <button key={v} className="btn" onClick={() => { updateSetting('fpsLimit', v); setShowCustomFPS(false); }} style={{
+                          padding: '6px 14px', fontSize: 12,
+                          background: (s.fpsLimit || 0) === v ? 'rgba(255,255,255,0.14)' : undefined,
+                          color: (s.fpsLimit || 0) === v ? '#fff' : undefined,
+                          fontWeight: (s.fpsLimit || 0) === v ? 700 : undefined,
+                          borderColor: (s.fpsLimit || 0) === v ? 'rgba(255,255,255,0.24)' : undefined
+                        }}>{v}</button>
+                      ))}
+                      <button className="btn" onClick={() => { updateSetting('fpsLimit', 0); setShowCustomFPS(false); }} style={{
+                        padding: '6px 14px', fontSize: 12,
+                        background: (s.fpsLimit || 0) === 0 ? 'rgba(255,255,255,0.14)' : undefined,
+                        color: (s.fpsLimit || 0) === 0 ? '#fff' : undefined,
+                        fontWeight: (s.fpsLimit || 0) === 0 ? 700 : undefined,
+                        borderColor: (s.fpsLimit || 0) === 0 ? 'rgba(255,255,255,0.24)' : undefined
+                      }}>不限</button>
+                      {!showCustomFPS ? (
+                        <button className="btn" onClick={() => setShowCustomFPS(true)} style={{ padding: '6px 14px', fontSize: 12, color: 'var(--accent)' }}>自定义</button>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <input type="number" min={1} max={screenRefreshRates.maxRate || 60} value={customFPSValue} onChange={e => setCustomFPSValue(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && customFPSValue) { const v = Math.min(Math.max(1, Number(customFPSValue)), screenRefreshRates.maxRate || 60); updateSetting('fpsLimit', v); setShowCustomFPS(false); }}} placeholder={'1-' + (screenRefreshRates.maxRate || 60)} style={{ width: 70, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '6px 10px', color: '#fff', fontSize: 12, outline: 'none' }} />
+                          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>fps</span>
+                        </div>
+                      )}
+                    </div>
+                  </SettingRow>
+                </div>
+
+                {/* 智能暂停策略 */}
+                <div style={{ marginBottom: 40 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.3)', marginBottom: 24, textTransform: 'uppercase', letterSpacing: '0.1em' }}>智能暂停策略</div>
                   <SettingRow title="电池供电时暂停" desc="切换到电池模式时自动停止动态渲染"><Switch active={s.pauseOnBattery !== false} onToggle={() => updateSetting('pauseOnBattery', !s.pauseOnBattery)} /></SettingRow>
                   <SettingRow title="处于全屏应用时暂停" desc="当有任何应用处于全屏状态时"><Switch active={s.pauseOnFullscreen !== false} onToggle={() => updateSetting('pauseOnFullscreen', !s.pauseOnFullscreen)} /></SettingRow>
-                  <SettingRow title="壁纸被完全遮挡时休眠" desc="当桌面窗口完全覆盖壁纸表面时自动休眠"><Switch active={!!s.pauseOnOcclusion} onToggle={() => updateSetting('pauseOnOcclusion', !s.pauseOnOcclusion)} /></SettingRow>
                   <SettingRow title="低电量模式开启时暂停" desc="配合 macOS 系统低电量模式自动触发"><Switch active={s.pauseOnLowBattery !== false} onToggle={() => updateSetting('pauseOnLowBattery', !s.pauseOnLowBattery)} /></SettingRow>
-                  <SettingRow title="屏幕共享或录制时暂停" desc="保护隐私并确保演示流程顺畅"><Switch active={!!s.pauseOnScreenSharing} onToggle={() => updateSetting('pauseOnScreenSharing', !s.pauseOnScreenSharing)} /></SettingRow>
-                  <SettingRow title="笔记本盖子关闭时暂停" desc="在翻盖模式下连接外屏时可选暂停"><Switch active={!!s.pauseOnLidClosed} onToggle={() => updateSetting('pauseOnLidClosed', !s.pauseOnLidClosed)} /></SettingRow>
-                  <SettingRow title="运行高负载应用时暂停" desc="如 Final Cut Pro, Blender 等开启时"><Switch active={!!s.pauseOnHighLoad} onToggle={() => updateSetting('pauseOnHighLoad', !s.pauseOnHighLoad)} /></SettingRow>
+                  <SettingRow title="屏幕共享或录制时暂停" desc="检测到 Zoom、OBS 等录屏软件运行时"><Switch active={!!s.pauseOnScreenSharing} onToggle={() => updateSetting('pauseOnScreenSharing', !s.pauseOnScreenSharing)} /></SettingRow>
+                  <SettingRow title="运行高负载应用时暂停" desc="检测到黑名单应用或 CPU > 80% 时"><Switch active={!!s.pauseOnHighLoad} onToggle={() => updateSetting('pauseOnHighLoad', !s.pauseOnHighLoad)} /></SettingRow>
                   <SettingRow title="失去焦点时自动暂停" desc="只要当前活跃窗口不是桌面，即停止渲染"><Switch active={!!s.pauseOnLostFocus} onToggle={() => updateSetting('pauseOnLostFocus', !s.pauseOnLostFocus)} /></SettingRow>
                   <SettingRow title="系统锁定/进入睡眠前" desc="提前停止渲染以加快系统待机速度"><Switch active={s.pauseBeforeSleep !== false} onToggle={() => updateSetting('pauseBeforeSleep', !s.pauseBeforeSleep)} /></SettingRow>
+                </div>
+
+                {/* 应用规则管理 */}
+                <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 32, marginTop: 32 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fg-quaternary)', marginBottom: 24, textTransform: 'uppercase', letterSpacing: '0.15em' }}>应用规则</div>
+                  <div style={{ background: 'var(--glass)', borderRadius: 20, border: '1px solid var(--glass-border)', overflow: 'hidden', marginBottom: 16 }}>
+                    {(s.appRules || []).length === 0 ? (
+                      <div style={{ padding: '32px 24px', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>暂无应用规则，点击下方添加</div>
+                    ) : (
+                      (s.appRules || []).map((rule, idx) => (
+                        <div key={rule.id || idx} style={{ display: 'flex', alignItems: 'center', padding: '14px 24px', borderBottom: idx < (s.appRules || []).length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                          <div style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{rule.appName}</div>
+                          <select value={rule.action} onChange={e => {
+                            const updated = [...(s.appRules || [])];
+                            updated[idx] = { ...rule, action: e.target.value };
+                            updateSetting('appRules', updated);
+                          }} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '5px 10px', color: '#fff', fontSize: 12, outline: 'none', marginRight: 12 }}>
+                            <option value="pause">暂停壁纸</option>
+                            <option value="mute">静音壁纸</option>
+                            <option value="fps30">降低到 30fps</option>
+                            <option value="fps15">降低到 15fps</option>
+                          </select>
+                          <div onClick={() => {
+                            const updated = (s.appRules || []).filter((_, i) => i !== idx);
+                            updateSetting('appRules', updated);
+                          }} style={{ cursor: 'pointer', opacity: 0.3, fontSize: 16, padding: '0 8px', transition: '0.2s' }} onMouseEnter={e => e.currentTarget.style.opacity = '0.8'} onMouseLeave={e => e.currentTarget.style.opacity = '0.3'}>×</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <button className="btn" style={{ padding: '8px 16px', fontSize: 13, color: 'var(--accent)' }} onClick={() => {
+                      bridge.call('selectApplication').then(result => {
+                        if (result && result.bundleIdentifier) {
+                          const existing = s.appRules || [];
+                          if (existing.some(r => r.bundleIdentifier === result.bundleIdentifier)) {
+                            addToast('该应用已在规则列表中');
+                            return;
+                          }
+                          const newRule = { id: 'rule_' + Date.now(), bundleIdentifier: result.bundleIdentifier, appName: result.appName, action: 'pause' };
+                          updateSetting('appRules', [...existing, newRule]);
+                          addToast('已添加 ' + result.appName);
+                        }
+                      });
+                    }}>+ 添加应用</button>
+                    <button className="btn" style={{ padding: '8px 16px', fontSize: 13 }} onClick={() => {
+                      const presets = [
+                        { bundleIdentifier: 'com.apple.FinalCut', appName: 'Final Cut Pro', action: 'pause' },
+                        { bundleIdentifier: 'org.blender.blender', appName: 'Blender', action: 'pause' },
+                        { bundleIdentifier: 'com.blackmagic-design.DaVinciResolve', appName: 'DaVinci Resolve', action: 'pause' },
+                        { bundleIdentifier: 'com.adobe.PremierePro', appName: 'Premiere Pro', action: 'pause' }
+                      ];
+                      const existing = s.appRules || [];
+                      const newRules = presets.filter(p => !existing.some(e => e.bundleIdentifier === p.bundleIdentifier)).map(p => ({ ...p, id: 'rule_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6) }));
+                      if (newRules.length > 0) {
+                        updateSetting('appRules', [...existing, ...newRules]);
+                        addToast('已导入 ' + newRules.length + ' 条预设规则');
+                      } else {
+                        addToast('预设规则已全部存在');
+                      }
+                    }}>导入视频编辑预设</button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1864,20 +2191,65 @@
 
             {activeTab === '外观' && (
               <div className="animate-in">
-                <SettingRow title="配色主题" desc="随 macOS 系统外观自动同步">
-                   {[{v:'auto',l:'自动'},{v:'light',l:'浅色'},{v:'dark',l:'深色'}].map(({v,l}) => <button key={v} className="btn" onClick={() => updateSetting('themeMode', v)} style={{ padding: '8px 16px', fontSize: 13, background: (s.themeMode || 'auto') === v ? 'rgba(255,255,255,0.14)' : undefined, color: (s.themeMode || 'auto') === v ? '#fff' : undefined, fontWeight: (s.themeMode || 'auto') === v ? 700 : undefined, borderColor: (s.themeMode || 'auto') === v ? 'rgba(255,255,255,0.24)' : undefined, boxShadow: (s.themeMode || 'auto') === v ? '0 10px 24px rgba(0,0,0,0.22), 0 0 0 1px rgba(255,255,255,0.05)' : 'none' }}>{l}</button>)}
-                </SettingRow>
-                <SettingRow title="强调色 (Accent)" desc="控制界面全局交互高亮色">
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    {['#E03E3E', '#2ECC71', '#3498DB', '#F1C40F', '#9B59B6'].map(c => (
-                      <div key={c} onClick={() => updateSetting('accentColor', c)} style={{ width: 28, height: 28, borderRadius: '50%', background: c, border: '2px solid ' + ((s.accentColor || '#E03E3E') === c ? '#fff' : 'rgba(255,255,255,0.08)'), cursor: 'pointer', transition: '0.22s cubic-bezier(0.2, 1, 0.3, 1)', boxShadow: (s.accentColor || '#E03E3E') === c ? '0 0 12px ' + c + '80' : 'none', transform: (s.accentColor || '#E03E3E') === c ? 'scale(1.08)' : 'scale(1)' }} onMouseEnter={e => { e.currentTarget.style.transform = (s.accentColor || '#E03E3E') === c ? 'scale(1.12)' : 'scale(1.08)'; }} onMouseLeave={e => { e.currentTarget.style.transform = (s.accentColor || '#E03E3E') === c ? 'scale(1.08)' : 'scale(1)'; }} onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.96)'; }} onMouseUp={e => { e.currentTarget.style.transform = (s.accentColor || '#E03E3E') === c ? 'scale(1.08)' : 'scale(1)'; }}></div>
-                    ))}
+                <div style={{ marginBottom: 40 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fg-quaternary)', marginBottom: 20, textTransform: 'uppercase', letterSpacing: '0.15em' }}>强调色</div>
+                  <div style={{ display: 'flex', gap: 14 }}>
+                    {[
+                      { c: '#E03E3E', n: '李红' },
+                      { c: '#2ECC71', n: '翠绿' },
+                      { c: '#3498DB', n: '天蓝' },
+                      { c: '#F1C40F', n: '琥珀' },
+                      { c: '#9B59B6', n: '鸢尾' }
+                    ].map(({ c, n }) => {
+                      const active = (s.accentColor || '#E03E3E') === c;
+                      return (
+                        <div key={c} onClick={() => updateSetting('accentColor', c)} style={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, cursor: 'pointer',
+                          transition: 'all 0.25s cubic-bezier(0.2, 1, 0.3, 1)',
+                          transform: active ? 'scale(1.05)' : 'scale(1)',
+                          opacity: active ? 1 : 0.7
+                        }}
+                        onMouseEnter={e => { if (!active) e.currentTarget.style.opacity = '0.9'; }}
+                        onMouseLeave={e => { if (!active) e.currentTarget.style.opacity = '0.7'; }}
+                        >
+                          <div style={{
+                            width: 44, height: 44, borderRadius: 14, background: c,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: active ? '0 4px 20px ' + c + '60, inset 0 1px 1px rgba(255,255,255,0.2)' : 'inset 0 1px 1px rgba(255,255,255,0.1)',
+                            border: active ? '2.5px solid #fff' : '2.5px solid transparent',
+                            transition: 'all 0.25s cubic-bezier(0.2, 1, 0.3, 1)'
+                          }}>
+                            {active && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                          </div>
+                          <span style={{ fontSize: 11, color: active ? 'var(--fg)' : 'var(--fg-quaternary)', fontWeight: active ? 600 : 400, transition: '0.2s' }}>{n}</span>
+                        </div>
+                      );
+                    })}
                   </div>
-                </SettingRow>
+                </div>
+
                 <SettingRow title="库缩略图尺寸">
                   {[{v:'small',l:'小'},{v:'medium',l:'中'},{v:'large',l:'大'}].map(({v,l}) => <button key={v} className="btn" onClick={() => updateSetting('thumbnailSize', v)} style={{ padding: '8px 16px', fontSize: 13, background: (s.thumbnailSize || 'medium') === v ? 'rgba(255,255,255,0.14)' : undefined, color: (s.thumbnailSize || 'medium') === v ? '#fff' : undefined, fontWeight: (s.thumbnailSize || 'medium') === v ? 700 : undefined, borderColor: (s.thumbnailSize || 'medium') === v ? 'rgba(255,255,255,0.24)' : undefined, boxShadow: (s.thumbnailSize || 'medium') === v ? '0 10px 24px rgba(0,0,0,0.22), 0 0 0 1px rgba(255,255,255,0.05)' : 'none' }}>{l}</button>)}
                 </SettingRow>
                 <SettingRow title="平滑动效" desc="开启后将启用界面过渡与悬浮反馈动画"><Switch active={s.animationsEnabled !== false} onToggle={() => updateSetting('animationsEnabled', !s.animationsEnabled)} /></SettingRow>
+
+                <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 32, marginTop: 32 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fg-quaternary)', marginBottom: 24, textTransform: 'uppercase', letterSpacing: '0.15em' }}>壁纸显示</div>
+                  <div style={{ background: 'var(--glass)', borderRadius: 28, padding: 36, border: '1px solid var(--glass-border)', marginBottom: 32 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+                      <div>
+                        <div style={{ fontSize: 16, fontWeight: 600 }}>壁纸不透明度</div>
+                        <div style={{ fontSize: 13, color: 'var(--fg-quaternary)', marginTop: 4 }}>降低不透明度可让桌面图标更清晰</div>
+                      </div>
+                      <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--accent)', fontFamily: 'monospace' }}>{localOpacity != null ? localOpacity : (s.wallpaperOpacity != null ? s.wallpaperOpacity : 100)}%</div>
+                    </div>
+                    <input type="range" min={50} max={100} value={localOpacity != null ? localOpacity : (s.wallpaperOpacity != null ? s.wallpaperOpacity : 100)}
+                      onChange={e => setLocalOpacity(Number(e.target.value))}
+                      onMouseUp={e => { updateSetting('wallpaperOpacity', Number(e.target.value)); setLocalOpacity(null); }}
+                      onTouchEnd={e => { updateSetting('wallpaperOpacity', Number(e.target.value)); setLocalOpacity(null); }}
+                      style={{ width: '100%', accentColor: 'var(--accent)' }} />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1886,9 +2258,9 @@
                 <div style={{ marginBottom: 40 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.3)', marginBottom: 24, textTransform: 'uppercase' }}>播放控制</div>
                   {[
-                    { l: '切换至下一张壁纸', k: ['⌥', '→'] },
-                    { l: '切换至上一张壁纸', k: ['⌥', '←'] },
-                    { l: '暂停 / 恢复播放', k: ['Space'] },
+                    { l: '切换至下一张壁纸（需轮播功能）', k: ['⌥', '→'] },
+                    { l: '切换至上一张壁纸（需轮播功能）', k: ['⌥', '←'] },
+                    { l: '暂停 / 恢复播放', k: ['⌃', '⌥', 'Space'] },
                     { l: '静音背景音', k: ['⌥', 'M'] }
                   ].map(s => (
                     <ShortcutRow key={s.l} label={s.l} keys={s.k} />
@@ -1899,9 +2271,7 @@
                   <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.3)', marginBottom: 24, textTransform: 'uppercase' }}>系统与全局</div>
                   {[
                     { l: '呼出主程序窗口', k: ['⌥', 'P'] },
-                    { l: '进入沉浸式预览', k: ['⌘', 'Enter'] },
-                    { l: '收藏当前壁纸', k: ['⌘', 'F'] },
-                    { l: '打开偏好设置', k: ['⌘', ','] }
+                    { l: '收藏当前壁纸', k: ['⌘', '⇧', 'F'] }
                   ].map(s => (
                     <ShortcutRow key={s.l} label={s.l} keys={s.k} />
                   ))}
@@ -1912,13 +2282,13 @@
             {activeTab === '关于' && (
               <div className="animate-in" style={{ textAlign: 'center', paddingTop: 40 }}>
                 <div style={{ position: 'relative', width: 140, height: 140, margin: '0 auto 40px' }}>
-                  <div style={{ 
-                    position: 'absolute', inset: -30, background: 'radial-gradient(circle, var(--accent) 0%, transparent 70%)', 
-                    opacity: 0.2, filter: 'blur(30px)', animation: 'pulse 4s infinite' 
+                  <div style={{
+                    position: 'absolute', inset: -30, background: 'radial-gradient(circle, var(--accent) 0%, transparent 70%)',
+                    opacity: 0.2, filter: 'blur(30px)', animation: 'pulse 4s infinite'
                   }} />
-                  <div style={{ 
-                    width: '100%', height: '100%', background: '#16181c', borderRadius: 32, 
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                  <div style={{
+                    width: '100%', height: '100%', background: '#16181c', borderRadius: 32,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                     boxShadow: '0 40px 80px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.15)',
                     position: 'relative', zIndex: 1
                   }}>
@@ -1928,16 +2298,25 @@
 
                 <h3 style={{ fontSize: 48, fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 600, marginBottom: 12 }}>PlumWallPaper</h3>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 32 }}>
-                  <span style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: 6, fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Version 5.2.4 (Pro)</span>
-                  <span style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: 6, fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Build 2026.04.28</span>
+                  <span style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: 6, fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Version {appInfo ? appInfo.version : '...'}</span>
+                  <span style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: 6, fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Build {appInfo ? appInfo.build : '...'}</span>
                 </div>
-                
-                <p style={{ fontSize: 16, lineHeight: 1.8, color: 'rgba(255,255,255,0.6)', maxWidth: 500, margin: '0 auto 48px' }}>
-                  极致纯净的 macOS 壁纸引擎。采用 Apple Metal 框架构建，为您带来兼具美学与效能的桌面体验。
+
+                <p style={{ fontSize: 16, lineHeight: 1.8, color: 'rgba(255,255,255,0.6)', maxWidth: 500, margin: '0 auto 32px' }}>
+                  极致纯净的 macOS 壁纸引擎。采用 AVFoundation + Metal 框架构建，为您带来兼具美学与效能的桌面体验。
                 </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, maxWidth: 400, margin: '0 auto' }}>
+                {appInfo && (
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 40, fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
+                    <span>{appInfo.os}</span>
+                    <span>·</span>
+                    <span>{appInfo.chip}</span>
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, maxWidth: 480, margin: '0 auto' }}>
                   <button className="btn" style={{ justifyContent: 'center', height: 44 }} onClick={() => bridge.call('openURL', { url: 'https://github.com/AlexPlum405/PlumWallPaper/releases' })}>检查更新</button>
+                  <button className="btn" style={{ justifyContent: 'center', height: 44 }} onClick={() => bridge.call('openURL', { url: 'https://github.com/AlexPlum405/PlumWallPaper/issues' })}>反馈问题</button>
                   <button className="btn" style={{ justifyContent: 'center', height: 44 }} onClick={() => bridge.call('openURL', { url: 'https://github.com/AlexPlum405/PlumWallPaper/blob/main/LICENSE' })}>许可协议</button>
                 </div>
               </div>
@@ -2028,6 +2407,17 @@
       }, [settings.accentColor]);
 
       useEffect(() => {
+        const enabled = settings.animationsEnabled !== false;
+        if (!enabled) {
+          document.documentElement.style.setProperty('--transition-duration', '0s');
+          document.documentElement.style.setProperty('--animation-duration', '0s');
+        } else {
+          document.documentElement.style.removeProperty('--transition-duration');
+          document.documentElement.style.removeProperty('--animation-duration');
+        }
+      }, [settings.animationsEnabled]);
+
+      useEffect(() => {
         window.__receiveDroppedFiles = (files) => {
           console.log('[DRAG-L4-JS] __receiveDroppedFiles called with', files ? files.length : 0, 'files');
           if (files && files.length > 0) {
@@ -2059,7 +2449,7 @@
 
         if (topology === 'mirror') {
           // 镜像模式：直接应用到所有显示器
-          handleApplyWallpaper('all');
+          handleApplyWallpaper('all', null, w);
         } else if (topology === 'panorama') {
           // 全景模式：显示全景预览面板
           setShowPanoramaPreview(true);
@@ -2069,9 +2459,10 @@
         }
       };
 
-      const handleApplyWallpaper = (monitorId, mode) => {
-        if (!selectedWallpaper) return;
-        const params = { wallpaperId: selectedWallpaper.id };
+      const handleApplyWallpaper = (monitorId, mode, wallpaper) => {
+        const w = wallpaper || selectedWallpaper;
+        if (!w) return;
+        const params = { wallpaperId: w.id };
         if (monitorId !== 'all') params.screenId = monitorId;
         if (mode) params.mode = mode;
 
@@ -2214,6 +2605,7 @@
                 sortOrder={librarySortOrder}
                 onChangeSortBy={setLibrarySortBy}
                 onToggleSortOrder={() => setLibrarySortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                settings={settings}
               />
             )}
             {view === 'color' && selectedWallpaper && (
@@ -2224,10 +2616,17 @@
                 onSavePreset={handleSavePreset}
                 onDeletePreset={handleDeletePreset}
                 onSave={(filterParams) => {
-                  bridge.call('applyFilter', { wallpaperId: selectedWallpaper.id, filter: filterParams }).then(() => {
-                    addToast('色彩配置已应用');
-                    refreshWallpapers();
-                  }).catch(() => addToast('应用失败'));
+                  if (filterParams._isDefault) {
+                    bridge.call('removeFilter', { wallpaperId: selectedWallpaper.id }).then(() => {
+                      addToast('已重置色彩方案');
+                      refreshWallpapers();
+                    }).catch(() => addToast('重置失败'));
+                  } else {
+                    bridge.call('applyFilter', { wallpaperId: selectedWallpaper.id, filter: filterParams }).then(() => {
+                      addToast('色彩配置已应用');
+                      refreshWallpapers();
+                    }).catch(() => addToast('应用失败'));
+                  }
                 }}
               />
             )}

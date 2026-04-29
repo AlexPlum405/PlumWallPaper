@@ -42,6 +42,23 @@ final class DisplayManager {
         }
     }
 
+    /// 获取所有显示器的刷新率
+    func getRefreshRates() -> [String: Int] {
+        var rates: [String: Int] = [:]
+        for (index, screen) in NSScreen.screens.enumerated() {
+            let description = screen.deviceDescription
+            let screenNumber = description[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
+            let screenID = screenNumber?.stringValue ?? "screen-\(index)"
+            rates[screenID] = screen.maximumFramesPerSecond
+        }
+        return rates
+    }
+
+    /// 获取所有显示器中的最大刷新率
+    func getMaxRefreshRate() -> Int {
+        return NSScreen.screens.map { $0.maximumFramesPerSecond }.max() ?? 60
+    }
+
     private func startMonitoring() {
         NotificationCenter.default.addObserver(
             self,

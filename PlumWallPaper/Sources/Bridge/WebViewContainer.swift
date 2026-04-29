@@ -397,7 +397,7 @@ final class DropEnabledWebView: WKWebView {
 final class DropEnabledContainerView: NSView {
     var onDropFiles: (([URL]) -> Void)?
     private let webView: WKWebView
-    private static let supportedExtensions: Set<String> = ["mp4", "mov", "m4v", "heic", "heif"]
+    private static let supportedExtensions: Set<String> = ["mp4", "mov", "m4v", "heic", "heif", "jpg", "jpeg", "png", "gif", "bmp", "tiff", "tif"]
 
     init(webView: WKWebView) {
         self.webView = webView

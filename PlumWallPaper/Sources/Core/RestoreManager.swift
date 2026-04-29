@@ -39,10 +39,22 @@ final class RestoreManager {
         let mapping = loadSession()
         guard !mapping.isEmpty else { return }
 
-        // 恢复前同步渲染配置
+        // 恢复前同步渲染配置和音频配置
         let preferencesStore = PreferencesStore(modelContext: context)
         let settings = (try? preferencesStore.fetchSettings()) ?? Settings()
         wallpaperEngine.updateRenderingConfig(colorSpace: settings.colorSpace, performanceMode: settings.vSyncEnabled)
+        wallpaperEngine.updateAudioConfig(
+            volume: settings.globalVolume ?? 50,
+            muted: settings.defaultMuted ?? false,
+            previewOnly: settings.previewOnlyAudio ?? false,
+            rate: settings.playbackRate ?? 1.0
+        )
+        if let opacity = settings.wallpaperOpacity {
+            wallpaperEngine.updateWallpaperOpacity(opacity)
+        }
+        if let fpsLimit = settings.fpsLimit {
+            wallpaperEngine.updateFPSLimit(fpsLimit)
+        }
 
         for screen in displayManager.availableScreens {
             guard let wallpaperID = mapping[screen.id] else { continue }

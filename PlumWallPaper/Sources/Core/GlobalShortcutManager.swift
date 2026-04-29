@@ -18,7 +18,7 @@ final class GlobalShortcutManager {
 
     func start() {
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if self?.handleKeyEvent(event) == true { return nil }
+            if self?.handleLocalKeyEvent(event) == true { return nil }
             return event
         }
 
@@ -33,9 +33,12 @@ final class GlobalShortcutManager {
     }
 
     @discardableResult
-    private func handleKeyEvent(_ event: NSEvent) -> Bool {
+    private func handleLocalKeyEvent(_ event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let keyCode = event.keyCode
+
+        // Space 不在本地监听器中处理，避免干扰文本输入
+        // 只处理带修饰键的快捷键
 
         // ⌥ + → : next wallpaper
         if flags == .option && keyCode == kVK_RightArrow {
@@ -57,12 +60,27 @@ final class GlobalShortcutManager {
             onShowWindow?()
             return true
         }
-        // ⌘ + Shift + F : toggle favorite (avoid conflicting with system Cmd+F Find)
+        // ⌘ + Shift + F : toggle favorite
         if flags == [.command, .shift] && keyCode == kVK_ANSI_F {
             onToggleFavorite?()
             return true
         }
 
         return false
+    }
+
+    @discardableResult
+    private func handleKeyEvent(_ event: NSEvent) -> Bool {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let keyCode = event.keyCode
+
+        // ⌃ + ⌥ + Space : toggle playback (不常用的组合，不会冲突)
+        if flags == [.control, .option] && keyCode == kVK_Space {
+            onTogglePlayback?()
+            return true
+        }
+
+        // 其他快捷键也在全局监听器中处理（用户在其他应用时也能用）
+        return handleLocalKeyEvent(event)
     }
 }
