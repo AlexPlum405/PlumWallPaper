@@ -511,3 +511,9 @@ open "/Users/Alex/Library/Developer/Xcode/DerivedData/PlumWallPaper-daqsaqfuiprq
     - 实时生成内容（粒子系统、程序化动画、shader art）
     - 极致自定义滤镜（AVFoundation 的 Core Image 滤镜不够用）
     - 交互式壁纸（鼠标跟随、音频可视化）
+
+
+
+1.菜单栏快捷图标和当前应用图标logo形状不一致
+2.全景模式貌似效果不对？看起来和镜像模式效果基本一致，主副屏显示的是一样的壁纸
+3.高性能模式打开，我怎么知道真的生效了呢？
