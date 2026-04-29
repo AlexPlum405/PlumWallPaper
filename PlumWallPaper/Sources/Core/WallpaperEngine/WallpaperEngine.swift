@@ -64,9 +64,18 @@ final class WallpaperEngine {
     }
 
     /// 全景模式：壁纸横跨所有显示器，每个屏幕显示对应的裁切区域
-    func setWallpaperPanorama(_ wallpaper: Wallpaper) {
-        let screens = DisplayManager.shared.availableScreens
+    func setWallpaperPanorama(_ wallpaper: Wallpaper, screenOrder: [String]?) {
+        var screens = DisplayManager.shared.availableScreens
         guard !screens.isEmpty else { return }
+
+        // 按用户拖拽排列的顺序排序
+        if let order = screenOrder, !order.isEmpty {
+            screens.sort { a, b in
+                let ai = order.firstIndex(of: a.id) ?? Int.max
+                let bi = order.firstIndex(of: b.id) ?? Int.max
+                return ai < bi
+            }
+        }
 
         let totalCount = CGFloat(screens.count)
         for (index, screenInfo) in screens.enumerated() {

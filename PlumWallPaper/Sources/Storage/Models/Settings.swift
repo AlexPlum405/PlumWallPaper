@@ -109,6 +109,9 @@ final class Settings {
     /// 仅预览时允许声音
     var previewOnlyAudio: Bool?
 
+    /// 显示器物理排列顺序（screen ID 数组）
+    var screenOrder: [String]?
+
     init(
         slideshowEnabled: Bool = false,
         slideshowInterval: TimeInterval = 1800, // 30 分钟

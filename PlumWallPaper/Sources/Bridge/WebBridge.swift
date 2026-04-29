@@ -191,7 +191,7 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
                     }
                     WallpaperEngine.shared.setWallpaper(wallpaper, for: screenInfo)
                 } else if mode == "panorama" {
-                    WallpaperEngine.shared.setWallpaperPanorama(wallpaper)
+                    WallpaperEngine.shared.setWallpaperPanorama(wallpaper, screenOrder: settings.screenOrder)
                 } else {
                     WallpaperEngine.shared.setWallpaperToAllScreens(wallpaper)
                 }
@@ -511,7 +511,8 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
             "defaultMuted": s.defaultMuted ?? false,
             "previewOnlyAudio": s.previewOnlyAudio ?? false,
             "launchAtLogin": s.launchAtLogin ?? LaunchAtLoginManager.shared.isEnabled,
-            "menuBarEnabled": s.menuBarEnabled ?? MenuBarManager.shared.isEnabled
+            "menuBarEnabled": s.menuBarEnabled ?? MenuBarManager.shared.isEnabled,
+            "screenOrder": s.screenOrder ?? [] as [String]
         ]
     }
     // MARK: - Deserialization
@@ -560,6 +561,7 @@ final class WebBridge: NSObject, WKScriptMessageHandler {
         if let v = d["globalVolume"] as? Int { s.globalVolume = v }
         if let v = d["defaultMuted"] as? Bool { s.defaultMuted = v }
         if let v = d["previewOnlyAudio"] as? Bool { s.previewOnlyAudio = v }
+        if let v = d["screenOrder"] as? [String] { s.screenOrder = v }
         if let v = d["launchAtLogin"] as? Bool {
             s.launchAtLogin = v
             LaunchAtLoginManager.shared.setEnabled(v)

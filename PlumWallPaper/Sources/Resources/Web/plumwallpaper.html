@@ -1469,8 +1469,25 @@
       const [allTags, setAllTags] = useState([]);
       const [newTagName, setNewTagName] = useState('');
       const [showNewTagInput, setShowNewTagInput] = useState(false);
+      const [dragIdx, setDragIdx] = useState(null);
+      const [dragOverIdx, setDragOverIdx] = useState(null);
 
       const s = settings || {};
+
+      // 按保存的顺序排列显示器
+      const orderedMonitors = useMemo(() => {
+        const order = s.screenOrder;
+        if (!order || !Array.isArray(order) || order.length === 0) return monitors;
+        const sorted = [...monitors].sort((a, b) => {
+          const ai = order.indexOf(a.id);
+          const bi = order.indexOf(b.id);
+          if (ai === -1 && bi === -1) return 0;
+          if (ai === -1) return 1;
+          if (bi === -1) return -1;
+          return ai - bi;
+        });
+        return sorted;
+      }, [monitors, s.screenOrder]);
 
       useEffect(() => {
         bridge.call('getTags').then(tags => setAllTags(tags || []));
@@ -1619,29 +1636,48 @@
                 {/* 物理拓扑编辑器 */}
                 <div style={{ marginBottom: 56 }}>
                    <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.3)', marginBottom: 24, textTransform: 'uppercase', letterSpacing: '0.15em' }}>显示器拓扑布局</div>
-                   <div style={{ 
-                     background: 'rgba(0,0,0,0.3)', borderRadius: 28, padding: '60px 40px', 
+                   <div style={{
+                     background: 'rgba(0,0,0,0.3)', borderRadius: 28, padding: '60px 40px 40px',
                      display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 40,
                      border: '1px solid rgba(255,255,255,0.03)', position: 'relative',
                      boxShadow: 'inset 0 20px 40px rgba(0,0,0,0.4)'
                    }}>
-                      {monitors.map(d => (
-                        <div key={d.id} style={{ textAlign: 'center' }} className="topology-card">
+                      {orderedMonitors.map((d, idx) => (
+                        <div key={d.id}
+                          draggable
+                          onDragStart={() => setDragIdx(idx)}
+                          onDragOver={e => { e.preventDefault(); setDragOverIdx(idx); }}
+                          onDragLeave={() => setDragOverIdx(null)}
+                          onDrop={() => {
+                            if (dragIdx === null || dragIdx === idx) { setDragIdx(null); setDragOverIdx(null); return; }
+                            const reordered = [...orderedMonitors];
+                            const [moved] = reordered.splice(dragIdx, 1);
+                            reordered.splice(idx, 0, moved);
+                            updateSetting('screenOrder', reordered.map(m => m.id));
+                            if (addToast) addToast('显示器排列已更新');
+                            setDragIdx(null);
+                            setDragOverIdx(null);
+                          }}
+                          onDragEnd={() => { setDragIdx(null); setDragOverIdx(null); }}
+                          style={{ textAlign: 'center', cursor: 'grab', opacity: dragIdx === idx ? 0.4 : 1, transition: 'opacity 0.2s, transform 0.2s', transform: dragOverIdx === idx && dragIdx !== idx ? 'scale(1.05)' : 'none' }}
+                          className="topology-card">
                           <div style={{
                             width: 180, aspectRatio: '16/10', background: '#000',
-                            borderRadius: 14, border: '2px solid ' + (d.isMain ? 'var(--accent)' : 'rgba(255,255,255,0.1)'),
-                            boxShadow: d.isMain ? '0 0 40px rgba(224,62,62,0.25)' : '0 10px 30px rgba(0,0,0,0.5)',
+                            borderRadius: 14, border: '2px solid ' + (dragOverIdx === idx && dragIdx !== idx ? '#3498DB' : d.isMain ? 'var(--accent)' : 'rgba(255,255,255,0.1)'),
+                            boxShadow: dragOverIdx === idx && dragIdx !== idx ? '0 0 30px rgba(52,152,219,0.3)' : d.isMain ? '0 0 40px rgba(224,62,62,0.25)' : '0 10px 30px rgba(0,0,0,0.5)',
                             marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            position: 'relative', cursor: 'pointer', transition: '0.4s'
+                            position: 'relative', transition: '0.4s'
                           }}>
                             <Icon name="monitor" size={36} style={{ opacity: 0.3 }} />
                             <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 10, background: 'rgba(255,255,255,0.08)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>{{p3:'P3', srgb:'sRGB', adobeRGB:'AdobeRGB'}[s.colorSpace || 'p3']}</div>
+                            <div style={{ position: 'absolute', top: 12, left: 12, fontSize: 10, background: 'rgba(255,255,255,0.08)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>{idx + 1}</div>
                             {d.isMain && <div style={{ position: 'absolute', bottom: -12, left: '50%', transform: 'translateX(-50%)', width: 40, height: 4, background: 'var(--accent)', borderRadius: 2 }} />}
                           </div>
                           <div style={{ fontSize: 14, fontWeight: 600 }}>{d.name}</div>
                           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 6 }}>{d.resolution} · {d.isMain ? '活跃屏幕' : '扩展'}</div>
                         </div>
                       ))}
+                      <div style={{ position: 'absolute', bottom: 16, width: '100%', textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>拖拽显示器以排列其物理位置</div>
                    </div>
                 </div>
                 
