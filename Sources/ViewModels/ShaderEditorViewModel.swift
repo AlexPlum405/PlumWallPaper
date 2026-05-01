@@ -1,6 +1,7 @@
 // Sources/ViewModels/ShaderEditorViewModel.swift
 import Foundation
 import Observation
+import Metal
 
 @Observable
 @MainActor
@@ -14,7 +15,29 @@ final class ShaderEditorViewModel {
     var isLivePreview: Bool = true
     var isDirty: Bool = false
 
+    // MARK: - Init
+
+    init() {
+        loadDefaultPasses()
+    }
+
     // MARK: - Actions
+
+    func loadDefaultPasses() {
+        let filterDefs: [(String, String, [String: ShaderParameterValue])] = [
+            ("曝光调整", "exposureFilter", ["exposure": .float(0)]),
+            ("对比度", "contrastFilter", ["contrast": .float(1)]),
+            ("饱和度", "saturationFilter", ["saturation": .float(1)]),
+            ("色调旋转", "hueFilter", ["hue": .float(0)]),
+            ("灰度", "grayscaleFilter", ["intensity": .float(0)]),
+            ("反转", "invertFilter", ["intensity": .float(0)]),
+            ("暗角", "vignetteFilter", ["intensity": .float(0)]),
+        ]
+
+        passes = filterDefs.map { (name, _, params) in
+            ShaderPassConfig(id: UUID(), type: .filter, name: name, enabled: false, parameters: params)
+        }
+    }
 
     func load(_ preset: ShaderPreset) {
         self.preset = preset
@@ -43,12 +66,23 @@ final class ShaderEditorViewModel {
         guard passes.indices.contains(index) else { return }
         passes[index].enabled.toggle()
         isDirty = true
+        if isLivePreview {
+            applyToEngine()
+        }
     }
 
     func updateParameter(passIndex: Int, key: String, value: ShaderParameterValue) {
         guard passes.indices.contains(passIndex) else { return }
         passes[passIndex].parameters[key] = value
         isDirty = true
+        if isLivePreview {
+            applyToEngine()
+        }
+    }
+
+    func applyToEngine(screenId: String? = nil) {
+        // TODO: 将当前 passes 配置同步到 RenderPipeline 的 ShaderGraph
+        // RenderPipeline.shared.updateShaderPreset(passes, screenId: screenId)
     }
 
     func save() {
