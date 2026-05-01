@@ -35,6 +35,7 @@
 		9AB36DFE3CE6D3EFC2BA2DCB /* ShaderEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C7BCE0F2040978FF2489324 /* ShaderEditorView.swift */; };
 		A4093DB0B77F95A40E3262AF /* ToastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDA23CF3F13A10057ACF6366 /* ToastView.swift */; };
 		A7FF1365633793988927514D /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC5E66565FDFD15599B1D3D7 /* LibraryView.swift */; };
+		A8A2604BBE717F78526C844A /* AppRulesTabV2+Logic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E977D9275E8E861FC4D618E /* AppRulesTabV2+Logic.swift */; };
 		AC0347332482B86C7EC02B69 /* MenuBarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 777318D7149CD291FA60B4B6 /* MenuBarViewModel.swift */; };
 		B6B9A75D9D49916C8B03972D /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC71A3853630F86F1CF1A2FA /* Settings.swift */; };
 		B75475FD6218E24AC8C7F70B /* GrainTextureOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E8478CD9D21B050F8C10944 /* GrainTextureOverlay.swift */; };
@@ -64,6 +65,7 @@
 		22380F7F0053393F97B47B1F /* TopNavigationBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopNavigationBar.swift; sourceTree = "<group>"; };
 		3866DB4C03EEDDB3ADAD0532 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		3D5A495A42370F1A80198EA3 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4E977D9275E8E861FC4D618E /* AppRulesTabV2+Logic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppRulesTabV2+Logic.swift"; sourceTree = "<group>"; };
 		5AE9A8B0D16C1B5C1C8AB5E7 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		60AD48DB3AC1A8944B151694 /* PlumWallPaper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PlumWallPaper.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		63AB7C972CC7EB8B5701124C /* FilterChips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterChips.swift; sourceTree = "<group>"; };
@@ -127,6 +129,7 @@
 			isa = PBXGroup;
 			children = (
 				21678164A5C66B62064D17AF /* AppRulesTabV2.swift */,
+				4E977D9275E8E861FC4D618E /* AppRulesTabV2+Logic.swift */,
 				9A249A8E7730C921366030ED /* SettingsView.swift */,
 			);
 			path = Settings;
@@ -369,6 +372,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				71C8AA4D4B1AFEE11F38BE9A /* AppDelegate.swift in Sources */,
+				A8A2604BBE717F78526C844A /* AppRulesTabV2+Logic.swift in Sources */,
 				59E796E942F5185E0C24B4D2 /* AppRulesTabV2.swift in Sources */,
 				E8F24A044181FE439EE2C8B3 /* ContentView.swift in Sources */,
 				16F6CCB7A2FE9671BB168768 /* Enums.swift in Sources */,

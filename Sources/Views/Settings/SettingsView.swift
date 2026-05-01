@@ -130,7 +130,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .appearance: return "paintpalette"
         case .performance: return "cpu"
         case .display: return "desktopcomputer"
-        case .appRules: return "app.badge.shield"
+        case .appRules: return "shield.fill"
         case .library: return "folder"
         case .about: return "info.circle"
         }
