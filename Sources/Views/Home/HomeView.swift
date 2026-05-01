@@ -50,7 +50,11 @@ struct HomeView: View {
             }
         }
         .sheet(item: $detailWallpaper) { wallpaper in
-            WallpaperDetailView(wallpaper: wallpaper, onPrevious: { navigateDetail(direction: -1) }, onNext: { navigateDetail(direction: 1) })
+            WallpaperDetailView(
+                wallpaper: wallpaper, 
+                onPrevious: { callback in callback(getNavigateWallpaper(direction: -1)) }, 
+                onNext: { callback in callback(getNavigateWallpaper(direction: 1)) }
+            )
         }
     }
 

@@ -25,6 +25,7 @@ struct PlumWallPaperApp {
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.minSize = NSSize(width: 1100, height: 750)
+        window.center() // 确保窗口在屏幕正中间
 
         // 保留系统红绿灯按钮（不隐藏）
 

@@ -13,6 +13,12 @@ extension HomeView {
         detailWallpaper = createMockWallpaper(index: currentDetailIndex, isDynamic: isDynamic)
     }
 
+    func getNavigateWallpaper(direction: Int) -> Wallpaper {
+        currentDetailIndex = (currentDetailIndex + direction + 16) % 16
+        let isDynamic = currentDetailIndex >= 8
+        return createMockWallpaper(index: currentDetailIndex, isDynamic: isDynamic)
+    }
+
     func createMockWallpaper(index: Int, isDynamic: Bool) -> Wallpaper {
         // 使用 heroItems 的图片或 Picsum 图片
         let imageURL = index < heroItems.count ? heroItems[index].imageURL : "https://picsum.photos/seed/\(index)/1920/1080"

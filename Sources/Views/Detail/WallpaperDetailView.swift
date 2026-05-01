@@ -4,9 +4,9 @@ import SwiftUI
 // 沉浸式壁纸鉴赏厅，UI 仅在鼠标触碰功能区时如雾般浮现。
 
 struct WallpaperDetailView: View {
-    let wallpaper: Wallpaper
-    var onPrevious: (() -> Void)? = nil
-    var onNext: (() -> Void)? = nil
+    @State var wallpaper: Wallpaper // 改为 @State 以支持内部平滑更新
+    var onPrevious: ((@escaping (Wallpaper) -> Void) -> Void)? = nil
+    var onNext: ((@escaping (Wallpaper) -> Void) -> Void)? = nil
     
     @Environment(\.dismiss) private var dismiss
     
@@ -106,7 +106,13 @@ struct WallpaperDetailView: View {
                 .frame(width: 80)
                 .contentShape(Rectangle())
                 .onHover { hovering in withAnimation(.galleryEase) { isLeftEdgeHovered = hovering } }
-                .onTapGesture { onPrevious?() }
+                .onTapGesture { 
+                    onPrevious? { newWallpaper in
+                        withAnimation(.galleryEase) {
+                            self.wallpaper = newWallpaper
+                        }
+                    }
+                }
                 .overlay(
                     ZStack {
                         // 1. 底层：弥散柔光
@@ -139,7 +145,13 @@ struct WallpaperDetailView: View {
                 .frame(width: 80)
                 .contentShape(Rectangle())
                 .onHover { hovering in withAnimation(.galleryEase) { isRightEdgeHovered = hovering } }
-                .onTapGesture { onNext?() }
+                .onTapGesture { 
+                    onNext? { newWallpaper in
+                        withAnimation(.galleryEase) {
+                            self.wallpaper = newWallpaper
+                        }
+                    }
+                }
                 .overlay(
                     ZStack {
                         // 1. 底层：弥散柔光
