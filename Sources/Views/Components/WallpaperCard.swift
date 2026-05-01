@@ -1,12 +1,14 @@
 import SwiftUI
 
-// MARK: - 升级版液态玻璃壁纸卡片 (Step 4: 高保真复刻)
+// MARK: - Artisan Wallpaper Card (Scheme C: Artisan Gallery)
+// 这不仅仅是一个卡片，它是数字画廊中的一个精致展位。
+
 struct WallpaperCard: View {
     let wallpaper: Wallpaper
     let onTap: () -> Void
     
     @State private var isHovered = false
-    private let cornerRadius: CGFloat = 18
+    private let cardCornerRadius: CGFloat = 24
 
     var body: some View {
         Button(action: onTap) {
@@ -14,182 +16,158 @@ struct WallpaperCard: View {
                 imageSection
                 infoSection
             }
-            .frame(width: 200)
+            // 严格遵循 LAYOUT ORDER RULE
+            .frame(width: 220) // 方案 C 增加呼吸感
             .background {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .fill(LiquidGlassColors.primaryPink.opacity(isHovered ? 0.08 : 0.03))
-                    }
+                RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                    .fill(LiquidGlassColors.surfaceBackground.opacity(0.6))
+                    .background(.ultraThinMaterial)
             }
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
                     .stroke(
                         LinearGradient(
                             colors: [
-                                .white.opacity(isHovered ? 0.35 : 0.2),
-                                .white.opacity(0.1),
-                                .white.opacity(isHovered ? 0.15 : 0.05)
+                                .white.opacity(isHovered ? 0.2 : 0.1),
+                                .white.opacity(0.05)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: isHovered ? 1.2 : 0.5
+                        lineWidth: 0.5
                     )
             }
-            .shadow(color: .black.opacity(isHovered ? 0.2 : 0.1), radius: isHovered ? 15 : 5, x: 0, y: 8)
-            .scaleEffect(isHovered ? 1.025 : 1.0)
+            .shadow(color: .black.opacity(isHovered ? 0.2 : 0.1), radius: isHovered ? 40 : 15, x: 0, y: isHovered ? 20 : 10)
+            .scaleEffect(isHovered ? 1.04 : 1.0)
         }
         .buttonStyle(.plain)
-        .frame(width: 200)
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isHovered)
+        .animation(.gallerySpring, value: isHovered)
         .onHover { isHovered = $0 }
     }
     
-    // MARK: - 图片区域
+    // MARK: - 图片区域 (Gallery Canvas)
     private var imageSection: some View {
         ZStack(alignment: .topLeading) {
-            // 缩略图加载（优先使用 thumbnailPath，回退到 filePath）
+            // 壁纸渲染核心 (遵守 ASYNC IMAGE STANDARDS)
             Group {
                 if let thumbPath = wallpaper.thumbnailPath, !thumbPath.isEmpty,
                    let thumbURL = URL(string: thumbPath) {
-                    AsyncImage(url: thumbURL) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().aspectRatio(contentMode: .fill)
-                        case .failure:
-                            fallbackPlaceholder
-                        case .empty:
-                            loadingPlaceholder
-                        @unknown default:
-                            fallbackPlaceholder
-                        }
-                    }
+                    artisanAsyncImage(url: thumbURL)
                 } else if let fileURL = URL(string: wallpaper.filePath) {
-                    AsyncImage(url: fileURL) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().aspectRatio(contentMode: .fill)
-                        case .failure:
-                            fallbackPlaceholder
-                        case .empty:
-                            loadingPlaceholder
-                        @unknown default:
-                            fallbackPlaceholder
-                        }
-                    }
+                    artisanAsyncImage(url: fileURL)
                 } else {
                     fallbackPlaceholder
                 }
             }
-            .frame(width: 200, height: 130)
+            .frame(width: 220, height: 140)
             .clipped()
 
-            // 左上角标签 (分类)
-            HStack(spacing: 6) {
+            // 艺术标签 (悬浮在画面之上)
+            HStack(spacing: 8) {
                 if wallpaper.type == .video, let duration = wallpaper.duration {
-                    HStack(spacing: 3) {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 8))
-                        Text(formatDuration(duration))
-                    }
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(.black.opacity(0.4))
-                    .clipShape(Capsule())
-                    .overlay(Capsule().stroke(.white.opacity(0.2), lineWidth: 0.5))
+                    artisanChip(text: formatDuration(duration), icon: "play.fill", color: LiquidGlassColors.accentGold)
                 }
                 
-                tagLabel(text: "SFW", color: .green)
+                // 默认 SFW 标签，使用鼠尾草绿
+                artisanChip(text: "SFW", icon: "shield.check.fill", color: LiquidGlassColors.onlineGreen)
             }
-            .padding(10)
-
-            // 右下角分辨率 (悬浮)
+            .padding(12)
+            .opacity(isHovered ? 1.0 : 0.6)
+            
+            // 分辨率指示器 (极简，悬停可见)
             VStack {
                 Spacer()
                 HStack {
                     Spacer()
                     Text(wallpaper.resolution ?? "N/A")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(.black.opacity(0.5))
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                        .font(.system(size: 9, weight: .black, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.4))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Capsule())
                 }
-                .padding(8)
+                .padding(10)
             }
+            .opacity(isHovered ? 1.0 : 0)
         }
     }
-
-    // 加载中占位
-    private var loadingPlaceholder: some View {
-        Rectangle()
-            .fill(Color.white.opacity(0.03))
-            .overlay { ProgressView().tint(.white.opacity(0.3)) }
-    }
-
-    // 加载失败占位图
-    private var fallbackPlaceholder: some View {
-        Rectangle()
-            .fill(Color.white.opacity(0.05))
-            .overlay {
-                LinearGradient(
-                    colors: [
-                        Color(hex: "5A7CFF").opacity(0.3),
-                        Color(hex: "FF5A7D").opacity(0.3)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            }
-    }
     
-    // MARK: - 信息区域
+    // MARK: - 信息区域 (Gallery Tag)
     private var infoSection: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(wallpaper.name.isEmpty ? "未命名壁纸" : wallpaper.name)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .lineLimit(1)
+        VStack(alignment: .leading, spacing: 6) {
+            // 衬线体标题
+            Text(wallpaper.name.isEmpty ? "Untitled Art" : wallpaper.name)
+                .font(.custom("Georgia", size: 15).bold())
+                .foregroundStyle(isHovered ? LiquidGlassColors.primaryPink : LiquidGlassColors.textPrimary)
+                .lineLimit(1)
+                .kerning(0.5)
 
-                HStack(spacing: 8) {
-                    Label("1.2k", systemImage: "eye.fill")
-                    Label("456", systemImage: "heart.fill")
+            HStack(spacing: 12) {
+                Label("1.2k", systemImage: "eye")
+                Label("456", systemImage: "heart")
+                Spacer()
+                if isHovered {
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(LiquidGlassColors.textQuaternary)
                 }
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.white.opacity(0.4))
             }
-
-            Spacer()
-
-            Button(action: {}) {
-                Image(systemName: "heart")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.white.opacity(0.6))
-                    .frame(width: 32, height: 32)
-                    .background(Circle().fill(.white.opacity(0.05)))
-            }
-            .buttonStyle(.plain)
+            .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(LiquidGlassColors.textSecondary)
         }
-        .frame(width: 200)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
+
+    // MARK: - 辅助子视图
     
-    private func tagLabel(text: String, color: Color) -> some View {
-        Text(text)
-            .font(.system(size: 9, weight: .bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(color.opacity(0.6))
-            .clipShape(Capsule())
+    private func artisanAsyncImage(url: URL) -> some View {
+        AsyncImage(url: url) { phase in
+            switch phase {
+            case .success(let image):
+                image.resizable().aspectRatio(contentMode: .fill)
+                    .transition(.opacity.combined(with: .scale(scale: 1.05)))
+            case .failure:
+                fallbackPlaceholder
+            case .empty:
+                loadingPlaceholder
+            @unknown default:
+                fallbackPlaceholder
+            }
+        }
+    }
+
+    private var loadingPlaceholder: some View {
+        ZStack {
+            Rectangle().fill(LiquidGlassColors.surfaceBackground)
+            ProgressView().controlSize(.small).tint(LiquidGlassColors.textQuaternary)
+        }
+    }
+
+    private var fallbackPlaceholder: some View {
+        ZStack {
+            Rectangle().fill(LiquidGlassColors.surfaceBackground)
+            Image(systemName: "photo.on.rectangle.angled")
+                .foregroundStyle(LiquidGlassColors.textQuaternary)
+        }
+    }
+
+    private func artisanChip(text: String, icon: String? = nil, color: Color) -> some View {
+        HStack(spacing: 4) {
+            if let icon {
+                Image(systemName: icon).font(.system(size: 7))
+            }
+            Text(text).font(.system(size: 8, weight: .black))
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(color.opacity(0.6))
+        .background(.ultraThinMaterial)
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
     }
     
     private func formatDuration(_ seconds: Double) -> String {

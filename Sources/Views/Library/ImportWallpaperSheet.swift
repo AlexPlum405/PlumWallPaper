@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
-/// 导入壁纸 Sheet - 完整复刻 v1 功能
+/// 导入壁纸 Sheet (Scheme C: Artisan Gallery)
 struct ImportWallpaperSheet: View {
     @Environment(\.dismiss) var dismiss
     var viewModel: LibraryViewModel
@@ -29,319 +29,265 @@ struct ImportWallpaperSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
+            // Header: 画廊表头
             headerSection
 
-            // Content
+            // Content: 典藏中心
             ScrollView {
                 VStack(spacing: 0) {
                     if step == .selectFiles {
-                        selectFilesView
+                        artisanSelectFilesView
                     } else {
-                        metadataView
+                        artisanMetadataView
                     }
                 }
-                .padding(40)
+                .padding(48)
             }
 
-            // Footer
+            // Footer: 动作栏
             footerSection
         }
-        .frame(width: step == .selectFiles ? 640 : 560, height: 600)
+        .frame(width: step == .selectFiles ? 680 : 580, height: 640)
         .background(LiquidGlassBackgroundView(material: .hudWindow, blendingMode: .withinWindow))
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 28).stroke(.white.opacity(0.1), lineWidth: 1))
-        .shadow(color: .black.opacity(0.6), radius: 50, y: 30)
+        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 32, style: .continuous).stroke(LiquidGlassColors.glassBorder, lineWidth: 0.5))
+        .artisanShadow()
     }
 
-    // MARK: - Header
+    // MARK: - Header (Artisan Table)
 
     private var headerSection: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(step == .selectFiles ? "导入壁纸资源" : "完善壁纸信息")
-                    .font(.system(size: 22, weight: .semibold))
+            VStack(alignment: .leading, spacing: 6) {
+                Text(step == .selectFiles ? "导入本地资源" : "完善资源信息")
+                    .artisanTitleStyle(size: 24)
 
-                Text(step == .selectFiles ? "支持 Apple ProRAW, HEIC 及 8K 视频" : "已选择 \(selectedFiles.count) 个文件")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.white.opacity(0.3))
+                Text(step == .selectFiles ? "支持 Apple ProRAW, HEIC 及 8K CINEMATIC" : "即将入库 \(selectedFiles.count) 件艺术品")
+                    .font(.system(size: 11, weight: .black))
+                    .kerning(1)
+                    .foregroundStyle(LiquidGlassColors.textQuaternary)
             }
 
             Spacer()
 
-            Button {
-                dismiss()
-            } label: {
+            Button { dismiss() } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .font(.system(size: 14, weight: .light))
+                    .foregroundStyle(LiquidGlassColors.textSecondary)
                     .frame(width: 36, height: 36)
-                    .background(Circle().fill(.white.opacity(0.05)))
+                    .background(Circle().fill(Color.white.opacity(0.05)))
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 40)
-        .padding(.vertical, 28)
+        .padding(.horizontal, 48)
+        .padding(.top, 40)
+        .padding(.bottom, 24)
         .background(Color.white.opacity(0.02))
         .overlay(alignment: .bottom) {
-            Rectangle().fill(.white.opacity(0.08)).frame(height: 1)
+            Rectangle().fill(LiquidGlassColors.glassBorder).frame(height: 0.5)
         }
     }
 
-    // MARK: - Select Files View
+    // MARK: - Step 1: Select Files
 
-    private var selectFilesView: some View {
-        VStack(spacing: 32) {
+    private var artisanSelectFilesView: some View {
+        VStack(spacing: 40) {
             if isChecking {
-                checkingView
+                artisanCheckingView
             } else {
-                dropZone
-                actionButtons
+                artisanDropZone
+                artisanActionButtons
             }
         }
     }
 
-    private var checkingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.2)
-                .tint(LiquidGlassColors.primaryPink)
-
-            Text("正在检查文件...")
-                .font(.system(size: 14))
-                .foregroundStyle(.white.opacity(0.4))
+    private var artisanCheckingView: some View {
+        VStack(spacing: 24) {
+            CustomProgressView(tint: LiquidGlassColors.primaryPink, scale: 1.5)
+            Text("验证艺术品一致性...")
+                .font(.custom("Georgia", size: 14).italic())
+                .foregroundStyle(LiquidGlassColors.textSecondary)
         }
-        .frame(height: 240)
+        .frame(height: 280)
     }
 
-    private var dropZone: some View {
+    private var artisanDropZone: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(LiquidGlassColors.primaryPink.opacity(0.3), style: StrokeStyle(lineWidth: 2, dash: [8, 8]))
-                .background(RoundedRectangle(cornerRadius: 24).fill(.white.opacity(0.02)))
+                .stroke(LiquidGlassColors.primaryPink.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [6, 6]))
+                .background(RoundedRectangle(cornerRadius: 24).fill(Color.white.opacity(0.02)))
 
-            VStack(spacing: 20) {
+            VStack(spacing: 24) {
                 ZStack {
-                    Circle()
-                        .fill(.white.opacity(0.05))
-                        .frame(width: 80, height: 80)
-                        .shadow(color: .black.opacity(0.2), radius: 10)
-
-                    Image(systemName: "plus")
-                        .font(.system(size: 40, weight: .light))
+                    Circle().fill(Color.white.opacity(0.03)).frame(width: 80, height: 80)
+                    Image(systemName: "plus.app").font(.system(size: 32, weight: .ultraLight))
                         .foregroundStyle(LiquidGlassColors.primaryPink)
                 }
 
-                VStack(spacing: 8) {
-                    Text("在此处添加您的资源")
-                        .font(.system(size: 18, weight: .bold))
+                VStack(spacing: 10) {
+                    Text("ADD ARTWORK")
+                        .font(.custom("Georgia", size: 18).bold())
+                        .kerning(4)
                         .foregroundStyle(.white)
 
-                    Text("或者拖拽文件到窗口内")
+                    Text("将资源拖拽至展柜，或点击此处浏览")
                         .font(.system(size: 13))
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(LiquidGlassColors.textQuaternary)
                 }
             }
         }
-        .frame(height: 240)
+        .frame(height: 280)
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
             handleDrop(providers: providers)
             return true
         }
-        .onTapGesture {
-            openFilePicker(multiple: true)
-        }
+        .onTapGesture { openFilePicker(multiple: true) }
     }
 
-    private var actionButtons: some View {
-        HStack(spacing: 16) {
-            Button {
-                openFilePicker(multiple: true)
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "photo.stack")
-                        .font(.system(size: 18))
-                    Text("批量文件")
-                        .font(.system(size: 14, weight: .semibold))
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.05)))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                openFolderPicker()
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "folder")
-                        .font(.system(size: 18))
-                    Text("整包导入")
-                        .font(.system(size: 14, weight: .semibold))
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.05)))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
+    private var artisanActionButtons: some View {
+        HStack(spacing: 20) {
+            artisanImportOption(title: "批量文件", icon: "photo.stack", subtitle: "FILES") { openFilePicker(multiple: true) }
+            artisanImportOption(title: "整包导入", icon: "folder.badge.plus", subtitle: "FOLDER") { openFolderPicker() }
         }
     }
+    
+    private func artisanImportOption(title: String, icon: String, subtitle: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                Image(systemName: icon).font(.system(size: 18)).foregroundStyle(LiquidGlassColors.primaryPink)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.system(size: 13, weight: .bold))
+                    Text(subtitle).font(.system(size: 9, weight: .black)).kerning(1).foregroundStyle(LiquidGlassColors.textQuaternary)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+            .frame(maxWidth: .infinity)
+            .frame(height: 60)
+            .galleryCardStyle(radius: 16, padding: 0)
+        }.buttonStyle(.plain)
+    }
 
-    // MARK: - Metadata View
+    // MARK: - Step 2: Metadata
 
-    private var metadataView: some View {
-        VStack(alignment: .leading, spacing: 24) {
+    private var artisanMetadataView: some View {
+        VStack(alignment: .leading, spacing: 32) {
             // 资源名称
-            VStack(alignment: .leading, spacing: 8) {
-                Text("资源名称")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.4))
-
-                TextField("", text: $customName)
+            VStack(alignment: .leading, spacing: 12) {
+                Text("作品命名").font(.system(size: 11, weight: .black)).kerning(2).foregroundStyle(LiquidGlassColors.textQuaternary)
+                TextField("如果不填写，将保留原始文件名", text: $customName)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 14))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.05)))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 1))
+                    .font(.system(size: 14, weight: .bold))
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .galleryCardStyle(radius: 14, padding: 0)
             }
 
-            // 所属分类标签
-            VStack(alignment: .leading, spacing: 12) {
-                Text("所属分类标签")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.4))
+            // 分类索引
+            VStack(alignment: .leading, spacing: 16) {
+                Text("策展索引").font(.system(size: 11, weight: .black)).kerning(2).foregroundStyle(LiquidGlassColors.textQuaternary)
 
-                FlowLayout(spacing: 8) {
+                FlowLayout(spacing: 10) {
                     ForEach(tagOptions, id: \.self) { tag in
-                        tagChip(tag: tag, isSelected: !showCustomTagInput && selectedTag == tag) {
-                            selectedTag = tag
-                            showCustomTagInput = false
+                        FilterChip(title: tag, isSelected: !showCustomTagInput && selectedTag == tag) {
+                            withAnimation(.gallerySpring) { selectedTag = tag; showCustomTagInput = false }
                         }
                     }
 
                     if !showCustomTagInput {
-                        Button {
-                            showCustomTagInput = true
-                        } label: {
-                            Text("+ 新增分类")
-                                .font(.system(size: 12, weight: .medium))
+                        Button { withAnimation(.gallerySpring) { showCustomTagInput = true } } label: {
+                            Text("+ 新增索引")
+                                .font(.system(size: 12, weight: .bold))
                                 .foregroundStyle(LiquidGlassColors.primaryPink)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 6)
-                                .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.05)))
-                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.1), lineWidth: 1))
-                        }
-                        .buttonStyle(.plain)
+                                .padding(.horizontal, 16).padding(.vertical, 8)
+                                .galleryCardStyle(radius: 10, padding: 0)
+                        }.buttonStyle(.plain)
                     } else {
-                        HStack(spacing: 6) {
-                            TextField("输入分类名...", text: $customTag)
+                        HStack(spacing: 8) {
+                            TextField("输入索引...", text: $customTag)
                                 .textFieldStyle(.plain)
-                                .font(.system(size: 12))
-                                .frame(width: 120)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.05)))
-                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(LiquidGlassColors.primaryPink, lineWidth: 1))
+                                .font(.system(size: 12, weight: .bold))
+                                .frame(width: 140)
+                                .padding(.horizontal, 16).padding(.vertical, 8)
+                                .galleryCardStyle(radius: 10, padding: 0)
 
                             Button {
                                 if !customTag.isEmpty {
-                                    selectedTag = customTag
-                                    showCustomTagInput = false
-                                    customTag = ""
+                                    withAnimation(.gallerySpring) { selectedTag = customTag; showCustomTagInput = false; customTag = "" }
                                 }
                             } label: {
-                                Text("确定")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(RoundedRectangle(cornerRadius: 8).fill(LiquidGlassColors.primaryPink))
-                            }
-                            .buttonStyle(.plain)
+                                Image(systemName: "checkmark").font(.system(size: 12, weight: .bold))
+                                    .foregroundStyle(.white).padding(10)
+                                    .background(Circle().fill(LiquidGlassColors.primaryPink))
+                            }.buttonStyle(.plain)
                         }
                     }
                 }
             }
 
-            // 加入我的收藏
+            // 收藏状态
             HStack {
-                Text("加入我的收藏")
-                    .font(.system(size: 14))
-
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("列为精选藏品").font(.system(size: 14, weight: .bold))
+                    Text("FEATURED ACQUISITION").font(.system(size: 9, weight: .black)).kerning(1).foregroundStyle(LiquidGlassColors.textQuaternary)
+                }
                 Spacer()
-
-                Toggle("", isOn: $isFavorite)
-                    .labelsHidden()
-                    .toggleStyle(SwitchToggleStyle(tint: LiquidGlassColors.primaryPink))
+                artisanToggle(isOn: $isFavorite)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-            .background(RoundedRectangle(cornerRadius: 16).fill(.white.opacity(0.02)))
+            .padding(24)
+            .galleryCardStyle(radius: 20, padding: 0)
+        }
+    }
+    
+    private struct artisanToggle: View {
+        @Binding var isOn: Bool
+        var body: some View {
+            Button { withAnimation(.gallerySpring) { isOn.toggle() } } label: {
+                ZStack {
+                    Capsule().fill(isOn ? LiquidGlassColors.primaryPink : Color.white.opacity(0.1)).frame(width: 40, height: 22)
+                    Circle().fill(Color.white).frame(width: 18, height: 18).shadow(color: .black.opacity(0.2), radius: 2).offset(x: isOn ? 9 : -9)
+                }
+            }.buttonStyle(.plain)
         }
     }
 
-    private func tagChip(tag: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(tag)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(isSelected ? .white : .white.opacity(0.4))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 6)
-                .background(RoundedRectangle(cornerRadius: 8).fill(isSelected ? LiquidGlassColors.primaryPink : .white.opacity(0.05)))
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(isSelected ? LiquidGlassColors.primaryPink : .white.opacity(0.1), lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - Footer
+    // MARK: - Footer (Artisan Bar)
 
     private var footerSection: some View {
         HStack {
-            Text(step == .selectFiles ? "支持 MP4, MOV, M4V, HEIC, JPG, PNG 等格式" : "即将导入 \(selectedFiles.count) 个资源")
-                .font(.system(size: 12))
-                .foregroundStyle(.white.opacity(0.3))
+            Text(step == .selectFiles ? "READY FOR ARCHIVING" : "FINALIZING GALLERY")
+                .font(.system(size: 10, weight: .black))
+                .kerning(2)
+                .foregroundStyle(LiquidGlassColors.textQuaternary)
 
             Spacer()
 
-            HStack(spacing: 12) {
+            HStack(spacing: 16) {
                 Button {
-                    if step == .selectFiles {
-                        dismiss()
-                    } else {
-                        step = .selectFiles
-                        duplicates = []
-                    }
+                    if step == .selectFiles { dismiss() } 
+                    else { withAnimation(.gallerySpring) { step = .selectFiles; duplicates = [] } }
                 } label: {
-                    Text(step == .selectFiles ? "取消" : "返回上一步")
-                        .font(.system(size: 13, weight: .medium))
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 10)
-                        .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.05)))
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    handlePrimaryAction()
-                } label: {
-                    Text(step == .selectFiles ? "选择文件" : "确认并导入")
+                    Text(step == .selectFiles ? "取消" : "上一步")
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 32)
-                        .padding(.vertical, 10)
-                        .background(RoundedRectangle(cornerRadius: 10).fill(LinearGradient(colors: [LiquidGlassColors.primaryPink, LiquidGlassColors.secondaryViolet], startPoint: .leading, endPoint: .trailing)))
-                }
-                .buttonStyle(.plain)
+                        .padding(.horizontal, 24).padding(.vertical, 12)
+                        .galleryCardStyle(radius: 12, padding: 0)
+                }.buttonStyle(.plain)
+
+                Button { handlePrimaryAction() } label: {
+                    HStack(spacing: 10) {
+                        if viewModel.isImporting { CustomProgressView(tint: .white, scale: 0.8) }
+                        Text(step == .selectFiles ? "选择文件" : "确认入库")
+                            .font(.system(size: 13, weight: .bold)).kerning(1)
+                    }
+                    .padding(.horizontal, 36).padding(.vertical, 12)
+                    .background(Capsule().fill(LiquidGlassColors.primaryPink))
+                    .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.3), radius: 15)
+                }.buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 40)
-        .padding(.vertical, 24)
+        .padding(.horizontal, 48)
+        .padding(.vertical, 32)
         .background(Color.white.opacity(0.02))
-        .overlay(alignment: .top) {
-            Rectangle().fill(.white.opacity(0.08)).frame(height: 1)
-        }
+        .overlay(alignment: .top) { Rectangle().fill(LiquidGlassColors.glassBorder).frame(height: 0.5) }
     }
-
 }

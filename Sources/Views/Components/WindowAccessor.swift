@@ -1,6 +1,22 @@
 import SwiftUI
 import AppKit
 
+// MARK: - Window Dragging Extension
+extension View {
+    /// 允许通过拖拽该 View 来移动整个窗口
+    func windowDragGesture() -> some View {
+        self.gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    if let window = NSApp.keyWindow {
+                        // 触发系统原生窗口拖拽
+                        window.performDrag(with: NSApp.currentEvent!)
+                    }
+                }
+        )
+    }
+}
+
 // MARK: - EdgeToEdgeHostingView (强制零安全区域)
 final class EdgeToEdgeHostingView<Content: View>: NSHostingView<Content> {
     private let edgeToEdgeLayoutGuide = NSLayoutGuide()

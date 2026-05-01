@@ -16,4 +16,9 @@ extension WallpaperDetailView {
     func resetFilters() {
         applyPreset(.original)
     }
+
+    func openShaderEditor() {
+        print("openShaderEditor called")
+        isShowingShaderEditor = true
+    }
 }

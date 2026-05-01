@@ -1,210 +1,185 @@
 import SwiftUI
 
+// MARK: - Artisan Tag Manager (Scheme C: Artisan Gallery)
+// 这里是 Plum 的策展索引库，通过艺术标签组织您的数字藏品。
+
 struct TagManagerSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var searchText = ""
     @State private var selectedTagID: UUID?
     
-    // 模拟标签数据
+    // 模拟标签数据 (同步至莫兰迪色系)
     @State private var tags: [TagMock] = [
-        TagMock(name: "4K UHD", color: .blue, count: 128),
-        TagMock(name: "Cyberpunk", color: .purple, count: 45),
-        TagMock(name: "Minimalist", color: .gray, count: 89),
-        TagMock(name: "Landscape", color: .green, count: 210),
-        TagMock(name: "Abstract", color: .orange, count: 67)
+        TagMock(name: "4K UHD", color: LiquidGlassColors.tertiaryBlue, count: 128),
+        TagMock(name: "Cyberpunk", color: LiquidGlassColors.primaryViolet, count: 45),
+        TagMock(name: "Minimalist", color: LiquidGlassColors.textQuaternary, count: 89),
+        TagMock(name: "Landscape", color: LiquidGlassColors.onlineGreen, count: 210),
+        TagMock(name: "Abstract", color: LiquidGlassColors.warningOrange, count: 67)
     ]
     
     var body: some View {
+        HStack(spacing: 0) {
+            // 1. 左侧：索引侧栏
+            artisanSidebar
+            
+            // 2. 右侧：编辑工作室
+            VStack {
+                if let selectedTagID = selectedTagID, let tag = tags.first(where: { $0.id == selectedTagID }) {
+                    artisanTagEditor(tag: tag)
+                        .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .opacity))
+                } else {
+                    artisanEmptySelectionView
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(LiquidGlassColors.deepBackground)
+        }
+        .frame(width: 800, height: 580)
+        .background(LiquidGlassBackgroundView(material: .hudWindow))
+        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 32, style: .continuous).stroke(LiquidGlassColors.glassBorder, lineWidth: 0.5))
+        .artisanShadow()
+    }
+    
+    // MARK: - A. 侧栏组件
+    
+    private var artisanSidebar: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("标签管理中心")
-                    .font(.system(size: 16, weight: .black))
-                    .kerning(1)
-                
-                Spacer()
-                
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.white.opacity(0.2))
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(24)
-            
-            HStack(spacing: 0) {
-                // 左侧：标签列表与搜索
-                VStack(spacing: 16) {
-                    searchField
-                    
-                    ScrollView {
-                        VStack(spacing: 4) {
-                            ForEach(filteredTags) { tag in
-                                TagListRow(tag: tag, isSelected: selectedTagID == tag.id) {
-                                    selectedTagID = tag.id
-                                }
-                            }
-                        }
-                    }
-                    
+            // 表头
+            VStack(alignment: .leading, spacing: 20) {
+                HStack {
+                    Text("策展索引")
+                        .artisanTitleStyle(size: 20)
                     Spacer()
-                    
-                    // 新建按钮
-                    Button {
-                        // TODO: Create new tag
-                    } label: {
-                        HStack {
-                            Image(systemName: "plus")
-                            Text("新建标签")
-                        }
-                        .font(.system(size: 13, weight: .bold))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 38)
-                        .background(LiquidGlassColors.primaryPink.opacity(0.15))
-                        .foregroundStyle(LiquidGlassColors.primaryPink)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
-                    .buttonStyle(.plain)
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark").font(.system(size: 12, weight: .bold)).foregroundStyle(LiquidGlassColors.textQuaternary)
+                    }.buttonStyle(.plain)
                 }
-                .padding(20)
-                .frame(width: 260)
-                .background(Color.black.opacity(0.15))
                 
-                // 分割线
-                Rectangle().fill(.white.opacity(0.06)).frame(width: 1)
-                
-                // 右侧：详情编辑区
-                VStack {
-                    if let selectedTagID = selectedTagID, let tag = tags.first(where: { $0.id == selectedTagID }) {
-                        tagEditor(tag: tag)
-                    } else {
-                        emptySelectionView
-                    }
+                // 搜索框 (画廊化)
+                HStack {
+                    Image(systemName: "magnifyingglass").font(.system(size: 11)).foregroundStyle(LiquidGlassColors.textQuaternary)
+                    TextField("检索标签...", text: $searchText).textFieldStyle(.plain).font(.system(size: 12, weight: .bold))
                 }
-                .frame(maxWidth: .infinity)
-                .background(Color.white.opacity(0.02))
+                .padding(.horizontal, 12).frame(height: 36).galleryCardStyle(radius: 10, padding: 0)
             }
-        }
-        .frame(width: 700, height: 500)
-        .background(LiquidGlassBackgroundView(material: .hudWindow, blendingMode: .withinWindow))
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.1), lineWidth: 1))
-    }
-    
-    // MARK: - 子组件
-    
-    private var searchField: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 12))
-                .foregroundStyle(.white.opacity(0.4))
+            .padding(28)
             
-            TextField("搜索标签...", text: $searchText)
-                .textFieldStyle(.plain)
-                .font(.system(size: 13))
+            // 标签列表
+            ScrollView {
+                VStack(spacing: 4) {
+                    ForEach(filteredTags) { tag in
+                        ArtisanTagRow(tag: tag, isSelected: selectedTagID == tag.id) {
+                            withAnimation(.gallerySpring) { selectedTagID = tag.id }
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+            
+            Spacer()
+            
+            // 新建索引按钮
+            Button { /* 逻辑 */ } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "plus.circle.fill")
+                    Text("新增索引项")
+                }
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity).frame(height: 44)
+                .background(Capsule().fill(LiquidGlassColors.primaryPink))
+                .padding(24)
+            }
+            .buttonStyle(.plain)
         }
-        .padding(.horizontal, 12)
-        .frame(height: 34)
-        .background(Color.white.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .frame(width: 280)
+        .background(LiquidGlassBackgroundView(material: .sidebar))
+        .overlay(Rectangle().fill(LiquidGlassColors.glassBorder).frame(width: 0.5), alignment: .trailing)
     }
     
-    private func tagEditor(tag: TagMock) -> some View {
-        VStack(alignment: .leading, spacing: 32) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("标签名称")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.3))
+    // MARK: - B. 编辑区组件
+    
+    private func artisanTagEditor(tag: TagMock) -> some View {
+        VStack(alignment: .leading, spacing: 48) {
+            // 索引名称
+            VStack(alignment: .leading, spacing: 14) {
+                Text("INDEX NAME")
+                    .font(.system(size: 10, weight: .black)).kerning(3).foregroundStyle(LiquidGlassColors.textQuaternary)
                 
                 TextField("输入名称", text: .constant(tag.name))
-                    .font(.system(size: 24, weight: .bold))
+                    .artisanTitleStyle(size: 44)
                     .textFieldStyle(.plain)
             }
             
-            VStack(alignment: .leading, spacing: 16) {
-                Text("视觉标记")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.3))
+            // 视觉标记器
+            VStack(alignment: .leading, spacing: 20) {
+                Text("VISUAL IDENTIFIER")
+                    .font(.system(size: 10, weight: .black)).kerning(3).foregroundStyle(LiquidGlassColors.textQuaternary)
                 
-                HStack(spacing: 12) {
-                    ForEach([Color.blue, .red, .green, .orange, .purple, .pink], id: \.self) { color in
+                HStack(spacing: 16) {
+                    ForEach([LiquidGlassColors.tertiaryBlue, .red, .green, .orange, .purple, LiquidGlassColors.primaryPink], id: \.self) { color in
                         Circle()
                             .fill(color)
-                            .frame(width: 24, height: 24)
-                            .overlay(Circle().stroke(.white.opacity(0.5), lineWidth: tag.color == color ? 2 : 0))
-                            .onTapGesture {
-                                // TODO: Update color
-                            }
+                            .frame(width: 28, height: 28)
+                            .overlay(Circle().stroke(Color.white.opacity(0.8), lineWidth: tag.color == color ? 3 : 0))
+                            .artisanShadow(color: color.opacity(0.2), radius: 10)
+                            .onTapGesture { /* 逻辑更新 */ }
                     }
                 }
             }
             
-            VStack(alignment: .leading, spacing: 8) {
-                Text("统计信息")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.3))
+            // 统计看板
+            VStack(alignment: .leading, spacing: 20) {
+                Text("COLLECTION STATS")
+                    .font(.system(size: 10, weight: .black)).kerning(3).foregroundStyle(LiquidGlassColors.textQuaternary)
                 
                 HStack(spacing: 20) {
-                    statBox(label: "已绑定壁纸", value: "\(tag.count)")
-                    statBox(label: "最后使用", value: "2 小时前")
+                    artisanStatBox(label: "已绑定画作", value: "\(tag.count)", unit: "PIECES")
+                    artisanStatBox(label: "索引热度", value: "HIGH", unit: "DEMAND")
                 }
             }
             
             Spacer()
             
+            // 操作栏
             HStack(spacing: 16) {
-                Button {
-                    // TODO: Delete
-                } label: {
-                    Text("删除标签")
+                Button { /* 逻辑 */ } label: {
+                    Text("移除此索引")
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(.red.opacity(0.7))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(Color.red.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
+                        .foregroundStyle(LiquidGlassColors.errorRed)
+                        .frame(maxWidth: .infinity).frame(height: 48)
+                        .galleryCardStyle(radius: 12, padding: 0)
+                }.buttonStyle(.plain)
                 
-                Button {
-                    // TODO: Save
-                } label: {
-                    Text("保存更改")
+                Button { /* 逻辑 */ } label: {
+                    Text("保存典藏")
                         .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(LiquidGlassColors.primaryPink)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
+                        .frame(maxWidth: .infinity).frame(height: 48)
+                        .background(Capsule().fill(LiquidGlassColors.primaryPink))
+                }.buttonStyle(.plain)
             }
         }
-        .padding(40)
+        .padding(60)
     }
     
-    private func statBox(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.system(size: 10)).foregroundStyle(.white.opacity(0.4))
-            Text(value).font(.system(size: 15, weight: .bold)).foregroundStyle(.white)
+    private func artisanStatBox(label: String, value: String, unit: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(label).font(.system(size: 11, weight: .bold)).foregroundStyle(LiquidGlassColors.textQuaternary)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(value).font(.custom("Georgia", size: 28).bold()).foregroundStyle(LiquidGlassColors.textPrimary)
+                Text(unit).font(.system(size: 9, weight: .black)).foregroundStyle(LiquidGlassColors.primaryPink)
+            }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.white.opacity(0.04))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal, 24).padding(.vertical, 20)
+        .galleryCardStyle(radius: 20, padding: 0)
     }
     
-    private var emptySelectionView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "tag.slash")
-                .font(.system(size: 48, weight: .ultraLight))
-                .foregroundStyle(.white.opacity(0.1))
-            Text("请从左侧选择一个标签进行管理")
-                .font(.system(size: 13))
-                .foregroundStyle(.white.opacity(0.3))
+    private var artisanEmptySelectionView: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "tag.circle").font(.system(size: 64, weight: .ultraLight)).foregroundStyle(LiquidGlassColors.textQuaternary)
+            Text("请在左侧选择索引进行管理").font(.custom("Georgia", size: 16).italic()).foregroundStyle(LiquidGlassColors.textQuaternary)
         }
     }
     
@@ -214,7 +189,9 @@ struct TagManagerSheet: View {
     }
 }
 
-private struct TagListRow: View {
+// MARK: - 辅助子组件
+
+private struct ArtisanTagRow: View {
     let tag: TagMock
     let isSelected: Bool
     let action: () -> Void
@@ -222,32 +199,25 @@ private struct TagListRow: View {
     
     var body: some View {
         Button(action: action) {
-            HStack {
-                Circle()
-                    .fill(tag.color)
-                    .frame(width: 8, height: 8)
-                
-                Text(tag.name)
-                    .font(.system(size: 13, weight: isSelected ? .bold : .medium))
-                
+            HStack(spacing: 12) {
+                Circle().fill(tag.color).frame(width: 6, height: 6)
+                Text(tag.name).font(.system(size: 13, weight: isSelected ? .bold : .medium)).kerning(0.5)
                 Spacer()
-                
-                Text("\(tag.count)")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.3))
+                Text("\(tag.count)").font(.system(size: 10, weight: .black, design: .monospaced)).foregroundStyle(isSelected ? LiquidGlassColors.primaryPink : LiquidGlassColors.textQuaternary)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(isSelected ? LiquidGlassColors.primaryPink.opacity(0.15) : (isHovered ? Color.white.opacity(0.05) : Color.clear))
-            .foregroundStyle(isSelected ? LiquidGlassColors.primaryPink : .white.opacity(0.8))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .padding(.horizontal, 16).padding(.vertical, 12)
+            .background {
+                if isSelected || isHovered {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous).fill(isSelected ? LiquidGlassColors.primaryPink.opacity(0.12) : Color.white.opacity(0.04))
+                }
+            }
+            .foregroundStyle(isSelected ? LiquidGlassColors.textPrimary : LiquidGlassColors.textSecondary)
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
     }
 }
 
-// 模拟数据结构
 private struct TagMock: Identifiable {
     let id = UUID()
     var name: String

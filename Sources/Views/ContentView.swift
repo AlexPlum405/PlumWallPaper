@@ -1,36 +1,36 @@
 import SwiftUI
 import AppKit
 
+// MARK: - Artisan Gallery Container (Scheme C: Interactive Fix)
 struct ContentView: View {
     @State private var selectedTab: MainTab = .home
     @State private var selectedWallpaper: Wallpaper?
 
     var body: some View {
         ZStack(alignment: .top) {
-            // 1. 全屏沉浸背景 (底层)
+            // 1. 统一底层背景
             LiquidGlassAtmosphereBackground()
+            GrainTextureOverlay(opacity: 0.08)
 
-            GrainTextureOverlay(opacity: 0.1)
-
-            // 2. 页面内容 (中层)
-            ZStack {
+            // 2. 动态内容区
+            Group {
                 switch selectedTab {
                 case .home:
                     HomeView(selectedWallpaper: $selectedWallpaper)
                 case .wallpaper:
                     WallpaperExploreView()
-                        .padding(.top, 80)
                 case .media:
                     MediaExploreView()
-                        .padding(.top, 80)
                 case .myLibrary:
                     MyLibraryView()
-                        .padding(.top, 80)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            // 3. 顶部导航栏 (顶层悬浮)
+            .id(selectedTab) // 确保 Tab 切换时完全重置
+        }
+        .ignoresSafeArea() // 统一全屏处理
+        // 3. 核心修复：使用 overlay 挂载导航栏，确保 100% 可点击
+        .overlay(alignment: .top) {
             TopNavigationBar(
                 selectedTab: $selectedTab,
                 onOpenSettings: {
@@ -42,9 +42,9 @@ struct ContentView: View {
                 onMaximize: { NSApp.mainWindow?.toggleFullScreen(nil) },
                 onZoom: { NSApp.mainWindow?.zoom(nil) }
             )
-            .zIndex(100)
+            .padding(.top, 0) // 在 overlay 中已经脱离了主布局流
         }
-        .frame(minWidth: 1100, minHeight: 750)
+        .frame(minWidth: 1200, minHeight: 800)
         .preferredColorScheme(.dark)
     }
 }

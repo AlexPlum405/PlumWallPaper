@@ -1,299 +1,207 @@
 import SwiftUI
 import AppKit
-import Charts // 用于性能图表
+import Charts
+
+// MARK: - Artisan Studio Snippet (MenuBar)
+// 这里是 Plum 工作室的缩影，实时监控着每一帧艺术的跃动。
 
 struct MenuBarView: View {
     @State private var viewModel = MenuBarViewModel()
     @State private var isHovered = false
     
-    // 模拟实时数据流用于展示“最强性能”视觉
-    @State private var fpsHistory: [PerformancePoint] = (0..<20).map { PerformancePoint(index: $0, value: Double.random(in: 58...60)) }
-    let timer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
+    // 实时数据流 (用于性能美学展示)
+    @State private var fpsHistory: [PerformancePoint] = (0..<24).map { PerformancePoint(index: $0, value: Double.random(in: 55...60)) }
+    let timer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
     
-    private let panelWidth: CGFloat = 340
+    private let panelWidth: CGFloat = 360
     
     var body: some View {
         VStack(spacing: 0) {
-            // 1. 顶部：品牌与快速开关
-            headerSection
+            // 1. 顶部：画廊品牌与状态
+            artisanHeaderSection
+                .padding(.horizontal, 24).padding(.top, 24).padding(.bottom, 20)
             
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 24) {
-                    // 2. 核心：当前动态内容监控器 (带实时波形)
-                    liveMonitorSection
+                VStack(spacing: 28) {
+                    // 2. 映画监控：实时波形
+                    artisanLiveMonitor
                     
-                    // 3. 播放控制：液态按钮组
-                    playbackControlSection
+                    // 3. 工作室控制组
+                    artisanPlaybackControl
                     
-                    // 4. 资源调度状态：GPU & MEM
-                    resourceStatsSection
+                    // 4. 调度参数板
+                    artisanResourceStats
                     
-                    // 5. 快速导航
-                    quickNavSection
+                    // 5. 快速索引
+                    artisanQuickNav
                 }
-                .padding(20)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 32)
             }
             
-            // 6. 底部：系统级操作
-            footerSection
+            // 6. 底部：工作室退出
+            artisanFooterSection
         }
         .frame(width: panelWidth)
         .background {
             ZStack {
-                LiquidGlassBackgroundView(material: .hudWindow, blendingMode: .withinWindow)
+                LiquidGlassBackgroundView(material: .hudWindow)
                 
-                // 动态呼吸光晕：根据壁纸状态改变颜色
+                // 匠心光晕：根据状态微调颜色
                 Circle()
-                    .fill(viewModel.isPaused ? Color.orange.opacity(0.12) : LiquidGlassColors.primaryPink.opacity(0.15))
-                    .frame(width: 300, height: 300)
-                    .blur(radius: 60)
-                    .offset(x: 100, y: -150)
+                    .fill(viewModel.isPaused ? LiquidGlassColors.warningOrange.opacity(0.1) : LiquidGlassColors.primaryPink.opacity(0.12))
+                    .frame(width: 200, height: 200).blur(radius: 60).offset(x: 100, y: -150)
             }
-            .ignoresSafeArea()
         }
-        .onReceive(timer) { _ in
-            updateLiveStats()
-        }
+        .onReceive(timer) { _ in updateLiveStats() }
     }
     
-    // MARK: - Header (品牌感知)
-    private var headerSection: some View {
+    // MARK: - A. 视觉子组件
+    
+    private var artisanHeaderSection: some View {
         HStack {
-            HStack(spacing: 10) {
-                ZStack {
-                    Circle()
-                        .fill(LinearGradient(colors: [LiquidGlassColors.primaryPink, LiquidGlassColors.secondaryViolet], startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 28, height: 28)
-                    
-                    Image(systemName: "leaf.fill")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.white)
-                }
-                .shadow(color: LiquidGlassColors.primaryPink.opacity(0.4), radius: 8)
-                
-                Text("PLUM")
-                    .font(.system(size: 14, weight: .black))
-                    .kerning(2)
+            HStack(spacing: 12) {
+                Image(nsImage: NSApp.applicationIconImage ?? NSImage()).resizable().frame(width: 28, height: 28)
+                Text("Studio")
+                    .font(.custom("Georgia", size: 18).bold().italic())
+                    .foregroundStyle(LiquidGlassColors.primaryPink)
             }
             
             Spacer()
             
-            // 状态指示器
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(viewModel.isPaused ? Color.orange : Color.green)
+            // 状态呼吸灯
+            HStack(spacing: 8) {
+                Circle().fill(viewModel.isPaused ? LiquidGlassColors.warningOrange : LiquidGlassColors.onlineGreen)
                     .frame(width: 6, height: 6)
-                
-                Text(viewModel.isPaused ? "已暂停渲染" : "渲染中")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(viewModel.isPaused ? .orange : .green)
+                Text(viewModel.isPaused ? "IDLE" : "ACTIVE")
+                    .font(.system(size: 10, weight: .black)).kerning(1)
+                    .foregroundStyle(viewModel.isPaused ? LiquidGlassColors.warningOrange : LiquidGlassColors.onlineGreen)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(Capsule().fill(viewModel.isPaused ? Color.orange.opacity(0.1) : Color.green.opacity(0.1)))
+            .padding(.horizontal, 10).padding(.vertical, 4)
+            .background(Capsule().fill(Color.white.opacity(0.05)))
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
-        .padding(.bottom, 16)
     }
     
-    // MARK: - 实时监控区 (最核心视觉)
-    private var liveMonitorSection: some View {
-        VStack(spacing: 16) {
-            // 壁纸预览卡片
-            ZStack(alignment: .bottomLeading) {
-                if viewModel.isWallpaperActive {
-                    AsyncImage(url: URL(string: "https://mock.placeholder/wallpaper.jpg")) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().aspectRatio(contentMode: .fill)
-                        case .failure:
-                            Rectangle().fill(Color.white.opacity(0.05))
-                        case .empty:
-                            Rectangle().fill(Color.white.opacity(0.03))
-                                .overlay { ProgressView().tint(.white.opacity(0.3)) }
-                        @unknown default:
-                            Rectangle().fill(Color.white.opacity(0.05))
-                        }
+    private var artisanLiveMonitor: some View {
+        ZStack(alignment: .bottom) {
+            // 背景预览 (Subdued)
+            Rectangle().fill(LiquidGlassColors.surfaceBackground.opacity(0.4))
+                .frame(height: 180)
+                .overlay {
+                    if !viewModel.isWallpaperActive {
+                        VStack(spacing: 12) {
+                            Image(systemName: "engine.combustion").font(.system(size: 32, weight: .ultraLight))
+                            Text("ENGINE READY").font(.system(size: 10, weight: .black)).kerning(2)
+                        }.foregroundStyle(LiquidGlassColors.textQuaternary)
                     }
-                    .frame(width: panelWidth - 40, height: 180)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    
-                    // 实时 FPS 曲线图叠加
-                    Chart(fpsHistory) { point in
-                        AreaMark(
-                            x: .value("Time", point.index),
-                            y: .value("FPS", point.value)
-                        )
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [LiquidGlassColors.primaryPink.opacity(0.5), .clear],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .interpolationMethod(.catmullRom)
-                        
-                        LineMark(
-                            x: .value("Time", point.index),
-                            y: .value("FPS", point.value)
-                        )
-                        .foregroundStyle(LiquidGlassColors.primaryPink)
-                        .lineStyle(StrokeStyle(lineWidth: 2))
-                        .interpolationMethod(.catmullRom)
-                    }
-                    .chartYScale(domain: 30...65)
-                    .chartXAxis(.hidden)
-                    .chartYAxis(.hidden)
-                    .frame(height: 60)
-                    .padding(.bottom, 10)
-                } else {
-                    emptyEnginePlaceholder
                 }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(LinearGradient(colors: [.white.opacity(0.2), .clear], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-            }
-            .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
-        }
-    }
-    
-    private var emptyEnginePlaceholder: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "engine.combustion")
-                .font(.system(size: 40, weight: .ultraLight))
-                .foregroundStyle(LiquidGlassColors.textQuaternary)
             
-            Text("引擎未启动")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(LiquidGlassColors.textTertiary)
+            // 实时波形 (Artistic Waveform)
+            if viewModel.isWallpaperActive && !viewModel.isPaused {
+                Chart(fpsHistory) { point in
+                    AreaMark(x: .value("T", point.index), y: .value("F", point.value))
+                        .foregroundStyle(LinearGradient(colors: [LiquidGlassColors.tertiaryBlue.opacity(0.3), .clear], startPoint: .top, endPoint: .bottom))
+                        .interpolationMethod(.catmullRom)
+                    LineMark(x: .value("T", point.index), y: .value("F", point.value))
+                        .foregroundStyle(LiquidGlassColors.tertiaryBlue)
+                        .interpolationMethod(.catmullRom)
+                }
+                .chartYScale(domain: 40...65).chartXAxis(.hidden).chartYAxis(.hidden)
+                .frame(height: 80).padding(.bottom, 10)
+            }
         }
-        .frame(width: panelWidth - 40, height: 180)
-        .background(Color.white.opacity(0.03))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(LiquidGlassColors.glassBorder, lineWidth: 0.5))
+        .artisanShadow()
     }
     
-    // MARK: - 播放控制 (液态交互)
-    private var playbackControlSection: some View {
-        HStack(spacing: 15) {
-            playButton(
+    private var artisanPlaybackControl: some View {
+        HStack(spacing: 20) {
+            artisanCircleControl(
                 icon: viewModel.isWallpaperActive ? (viewModel.isPaused ? "play.fill" : "pause.fill") : "power",
-                label: viewModel.isWallpaperActive ? (viewModel.isPaused ? "继续" : "暂停") : "启动",
                 isPrimary: true
             ) {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                    viewModel.toggleWallpaper()
-                }
+                withAnimation(.gallerySpring) { viewModel.toggleWallpaper() }
             }
             
-            playButton(icon: "forward.fill", label: "下一张", isPrimary: false) {
-                // TODO: Next
-            }
-            
-            playButton(icon: "gearshape.fill", label: "偏好", isPrimary: false) {
-                viewModel.openMainWindow()
-            }
+            artisanCircleControl(icon: "forward.fill", isPrimary: false) { }
+            artisanCircleControl(icon: "slider.horizontal.3", isPrimary: false) { viewModel.openMainWindow() }
         }
     }
     
-    private func playButton(icon: String, label: String, isPrimary: Bool, action: @escaping () -> Void) -> some View {
+    private func artisanCircleControl(icon: String, isPrimary: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 10) {
-                ZStack {
-                    if isPrimary {
-                        Circle()
-                            .fill(LinearGradient(colors: [LiquidGlassColors.primaryPink, LiquidGlassColors.secondaryViolet], startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .shadow(color: LiquidGlassColors.primaryPink.opacity(0.4), radius: 12, y: 4)
-                    } else {
-                        Circle()
-                            .fill(.white.opacity(0.06))
-                            .overlay(Circle().stroke(.white.opacity(0.1), lineWidth: 1))
-                    }
-                    
-                    Image(systemName: icon)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(.white)
+            ZStack {
+                if isPrimary {
+                    Circle().fill(LiquidGlassColors.primaryPink)
+                        .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.3), radius: 15)
+                } else {
+                    Circle().fill(Color.white.opacity(0.04))
+                        .overlay(Circle().stroke(LiquidGlassColors.glassBorder, lineWidth: 0.5))
                 }
-                .frame(width: 56, height: 56)
-                
-                Text(label)
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(LiquidGlassColors.textSecondary)
+                Image(systemName: icon).font(.system(size: 16, weight: .bold)).foregroundStyle(.white)
             }
-        }
-        .buttonStyle(PlainButtonStyle())
-        .scaleEffect(isHovered ? 1.05 : 1.0)
+            .frame(width: 52, height: 52)
+        }.buttonStyle(.plain)
     }
     
-    // MARK: - 性能看板
-    private var resourceStatsSection: some View {
+    private var artisanResourceStats: some View {
         HStack(spacing: 12) {
-            resourceCard(label: "帧率", value: "\(Int(viewModel.fps))", unit: "FPS", color: LiquidGlassColors.onlineGreen)
-            resourceCard(label: "显存", value: "1.2", unit: "GB", color: LiquidGlassColors.accentCyan)
-            resourceCard(label: "负载", value: "\(Int(viewModel.gpuUsage))", unit: "%", color: LiquidGlassColors.secondaryViolet)
+            artisanStatMini(label: "RENDER", value: "\(Int(viewModel.fps))", unit: "FPS", color: LiquidGlassColors.onlineGreen)
+            artisanStatMini(label: "MEMORY", value: "1.2", unit: "GB", color: LiquidGlassColors.accentGold)
+            artisanStatMini(label: "LOAD", value: "\(Int(viewModel.gpuUsage))", unit: "%", color: LiquidGlassColors.primaryViolet)
         }
     }
     
-    private func resourceCard(label: String, value: String, unit: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(label)
-                .font(.system(size: 10, weight: .black))
-                .foregroundStyle(LiquidGlassColors.textQuaternary)
-            
+    private func artisanStatMini(label: String, value: String, unit: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label).font(.system(size: 9, weight: .black)).kerning(1).foregroundStyle(LiquidGlassColors.textQuaternary)
             HStack(alignment: .firstTextBaseline, spacing: 2) {
-                Text(value)
-                    .font(.system(size: 18, weight: .bold, design: .monospaced))
-                    .foregroundStyle(LiquidGlassColors.textPrimary)
-                Text(unit)
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(color)
+                Text(value).font(.system(size: 16, weight: .bold, design: .monospaced)).foregroundStyle(LiquidGlassColors.textPrimary)
+                Text(unit).font(.system(size: 8, weight: .black)).foregroundStyle(color)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Color.white.opacity(0.03))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(.white.opacity(0.05), lineWidth: 1))
+        .padding(14).galleryCardStyle(radius: 16, padding: 0)
     }
     
-    // MARK: - 快速导航
-    private var quickNavSection: some View {
-        VStack(spacing: 8) {
-            LiquidGlassNavButton(title: "管理壁纸库", icon: "square.grid.2x2.fill", isSelected: false) {
-                viewModel.openMainWindow()
-            }
-            
-            LiquidGlassNavButton(title: "性能调节", icon: "bolt.fill", isSelected: false) {
-                // TODO: Open Performance Settings
-            }
+    private var artisanQuickNav: some View {
+        VStack(spacing: 10) {
+            artisanNavRow(title: "管理壁纸库", icon: "archivebox.fill") { viewModel.openMainWindow() }
+            artisanNavRow(title: "实验室后期", icon: "sparkles") { }
         }
     }
     
-    // MARK: - Footer
-    private var footerSection: some View {
+    private func artisanNavRow(title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon).font(.system(size: 13)).foregroundStyle(LiquidGlassColors.primaryPink)
+                Text(title).font(.system(size: 13, weight: .bold)).foregroundStyle(LiquidGlassColors.textSecondary)
+                Spacer()
+                Image(systemName: "chevron.right").font(.system(size: 10, weight: .bold)).foregroundStyle(LiquidGlassColors.textQuaternary)
+            }
+            .padding(.horizontal, 16).frame(height: 48)
+            .galleryCardStyle(radius: 12, padding: 0)
+        }.buttonStyle(.plain)
+    }
+    
+    private var artisanFooterSection: some View {
         HStack {
-            Button("反馈问题") { }
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(LiquidGlassColors.textTertiary)
-            
+            Button("反馈建议") { }
+                .font(.system(size: 11, weight: .bold)).foregroundStyle(LiquidGlassColors.textQuaternary)
             Spacer()
-            
-            Button {
-                viewModel.quit()
-            } label: {
-                Text("退出 PLUM")
-                    .font(.system(size: 11, weight: .black))
-                    .foregroundStyle(.red.opacity(0.7))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Capsule().stroke(.red.opacity(0.3), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
+            Button { viewModel.quit() } label: {
+                Text("退出工作室")
+                    .font(.system(size: 10, weight: .black)).kerning(1)
+                    .foregroundStyle(LiquidGlassColors.errorRed)
+                    .padding(.horizontal, 12).padding(.vertical, 6)
+                    .galleryCardStyle(radius: 8, padding: 0)
+            }.buttonStyle(.plain)
         }
-        .padding(20)
-        .background(Color.black.opacity(0.2))
+        .padding(20).background(Color.black.opacity(0.15))
     }
+    
+    // MARK: - 逻辑对齐
     
     private func updateLiveStats() {
         if !viewModel.isPaused && viewModel.isWallpaperActive {
@@ -309,13 +217,9 @@ struct MenuBarView: View {
     }
 }
 
-// 辅助结构体
-struct PerformancePoint: Identifiable {
+// 辅助结构体 (MenuBar 专属)
+private struct PerformancePoint: Identifiable {
     let id = UUID()
     let index: Int
     let value: Double
-}
-
-#Preview {
-    MenuBarView()
 }

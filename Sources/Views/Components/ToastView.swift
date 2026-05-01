@@ -1,6 +1,8 @@
 import SwiftUI
 
-// MARK: - Toast 组件（符合 LiquidGlass 设计系统）
+// MARK: - Artisan Toast (Scheme C: Artisan Gallery)
+// 优雅的说明签，如画廊展板般自然浮现。
+
 struct ToastView: View {
     let message: String
     let type: ToastType
@@ -10,41 +12,42 @@ struct ToastView: View {
 
         var icon: String {
             switch self {
-            case .success: return "checkmark.circle.fill"
-            case .warning: return "exclamationmark.triangle.fill"
-            case .error: return "xmark.circle.fill"
-            case .info: return "info.circle.fill"
+            case .success: return "checkmark.seal.fill"
+            case .warning: return "exclamationmark.octagon.fill"
+            case .error: return "xmark.seal.fill"
+            case .info: return "info.bubble.fill"
             }
         }
 
         var color: Color {
             switch self {
             case .success: return LiquidGlassColors.onlineGreen
-            case .warning: return .orange
-            case .error: return .red
-            case .info: return LiquidGlassColors.accentCyan
+            case .warning: return LiquidGlassColors.warningOrange
+            case .error: return LiquidGlassColors.errorRed
+            case .info: return LiquidGlassColors.tertiaryBlue
             }
         }
     }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
             Image(systemName: type.icon)
                 .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(type.color)
 
             Text(message)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.white.opacity(0.9))
+                .font(.system(size: 13, weight: .bold))
+                .kerning(0.5)
+                .foregroundStyle(LiquidGlassColors.textPrimary)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 16)
         .background {
-            Capsule()
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(.ultraThinMaterial)
-                .overlay(Capsule().stroke(type.color.opacity(0.3), lineWidth: 1))
-                .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
+                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(type.color.opacity(0.3), lineWidth: 0.5))
         }
+        .artisanShadow()
     }
 }
 
@@ -60,18 +63,21 @@ struct ToastModifier: ViewModifier {
                 VStack {
                     Spacer()
                     ToastView(message: toast.message, type: toast.type)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.9)),
+                            removal: .opacity.combined(with: .scale(scale: 0.95))
+                        ))
                         .padding(.bottom, 60)
                         .id(toast.id)
                 }
-                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: toast.id)
+                .animation(.gallerySpring, value: toast.id)
             }
         }
         .onChange(of: toast?.id) { _, newId in
             guard let newId = newId, let t = toast else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + t.duration) {
                 if self.toast?.id == newId {
-                    withAnimation { self.toast = nil }
+                    withAnimation(.galleryEase) { self.toast = nil }
                 }
             }
         }

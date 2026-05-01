@@ -2,7 +2,8 @@ import SwiftUI
 import AppKit
 import Charts
 
-// MARK: - 高保真复刻 WaifuX 设置窗口 (像素级同步版)
+// MARK: - Artisan Parameter Studio (Scheme C: Artisan Gallery)
+// 这里是 Plum 的精密心脏，每一个参数都以艺术化的方式呈现。
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
@@ -10,439 +11,200 @@ struct SettingsView: View {
     @State private var selectedTab: SettingsTab = .general
     @State private var toast: ToastConfig?
 
-    private let sidebarWidth: CGFloat = 180
+    private let sidebarWidth: CGFloat = 200 
 
     var body: some View {
         HStack(spacing: 0) {
-            // === 左侧导航栏 ===
-            sidebar
+            // === 左侧策展导航 ===
+            artisanSidebar
 
-            // 分割线 (WaifuX 风格极细线)
-            Rectangle()
-                .fill(Color.white.opacity(0.08))
-                .frame(width: 1)
-
-            // === 右侧内容区 ===
+            // === 右侧工作室内容 ===
             VStack(spacing: 0) {
-                // 标题行
+                // 画廊风格 Header
                 HStack {
                     Text(selectedTab.title)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.9))
+                        .artisanTitleStyle(size: 24, kerning: 1.5)
+                        .foregroundStyle(LiquidGlassColors.textPrimary)
 
                     Spacer()
 
-                    // 关闭按钮
-                    Button {
-                        // 关闭窗口
-                        NSApp.keyWindow?.performClose(nil)
-                    } label: {
+                    Button { NSApp.keyWindow?.performClose(nil) } label: {
                         Image(systemName: "xmark")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Color.white.opacity(0.45))
-                            .frame(width: 24, height: 24)
-                            .contentShape(Rectangle())
+                            .font(.system(size: 14, weight: .light))
+                            .foregroundStyle(LiquidGlassColors.textQuaternary)
+                            .frame(width: 32, height: 32)
+                            .background(Circle().fill(Color.white.opacity(0.05)))
                     }
                     .buttonStyle(.plain)
                 }
-                .padding(.horizontal, 28)
-                .padding(.vertical, 16)
+                .padding(.horizontal, 40)
+                .padding(.top, 32)
+                .padding(.bottom, 24)
 
-                Divider()
-                    .background(Color.white.opacity(0.06))
-
-                // 内容区域 (使用 WaifuX 同款容器)
-                MacSettingsForm {
+                // 核心内容容器
+                ZStack {
                     contentView(for: selectedTab)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .background(LiquidGlassColors.deepBackground)
         }
-        .frame(width: 800, height: 550)
-        .background(Color(hex: "1C1C1E")) // 强制 WaifuX 背景色
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .frame(width: 960, height: 680) // 略微增加尺寸以容纳更多控件
+        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 32, style: .continuous).stroke(LiquidGlassColors.glassBorder, lineWidth: 0.5))
         .toast($toast)
-        .onAppear {
-            viewModel.configure(modelContext: modelContext)
-        }
+        .onAppear { viewModel.configure(modelContext: modelContext) }
     }
 
-    // MARK: 左侧导航栏
-    private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            ForEach(SettingsTab.allCases) { tab in
-                SidebarItem(
-                    tab: tab,
-                    isSelected: selectedTab == tab,
-                    action: {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            selectedTab = tab
+    // MARK: - 视觉组件
+    
+    private var artisanSidebar: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // 品牌标识
+            HStack(spacing: 12) {
+                Image(nsImage: NSApp.applicationIconImage ?? NSImage()).resizable().frame(width: 32, height: 32)
+                Text("Studio")
+                    .font(.custom("Georgia", size: 18).bold().italic())
+                    .foregroundStyle(LiquidGlassColors.primaryPink)
+            }
+            .padding(.leading, 12)
+            .padding(.bottom, 20)
+            
+            ScrollView {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(SettingsTab.allCases) { tab in
+                        LiquidGlassNavButton(
+                            title: tab.title,
+                            icon: tab.icon,
+                            isSelected: selectedTab == tab,
+                            color: LiquidGlassColors.primaryPink
+                        ) {
+                            withAnimation(.gallerySpring) { selectedTab = tab }
                         }
                     }
-                )
+                }
             }
+            .scrollIndicators(.hidden)
+            
             Spacer()
         }
-        .padding(.top, 16)
-        .padding(.horizontal, 10)
+        .padding(.top, 32)
+        .padding(.horizontal, 16)
         .frame(width: sidebarWidth)
-        .background(
-            ZStack {
-                Color(hex: "1A1A1A").opacity(0.85) // WaifuX 同款侧边栏背景
-                VisualEffectView(material: .sidebar)
-                    .allowsHitTesting(false)
-            }
-        )
+        .background(LiquidGlassBackgroundView(material: .sidebar))
+        .overlay(Rectangle().fill(LiquidGlassColors.glassBorder).frame(width: 0.5), alignment: .trailing)
     }
 
     @ViewBuilder
     private func contentView(for tab: SettingsTab) -> some View {
         switch tab {
         case .general: GeneralSettingsTab(viewModel: viewModel)
-        case .appearance: AppearanceSettingsTab(viewModel: viewModel)
-        case .performance: PerformanceSettingsTab(viewModel: viewModel)
-        case .display: DisplaySettingsTab(viewModel: viewModel)
+        case .playback: PlaybackTab(viewModel: viewModel)
+        case .audio: AudioTab(viewModel: viewModel)
+        case .performance: PerformanceTab(viewModel: viewModel)
         case .appRules: AppRulesTabV2(viewModel: viewModel, toast: $toast)
-        case .library: LibrarySettingsTab(viewModel: viewModel)
+        case .slideshow: SlideshowTab(viewModel: viewModel)
+        case .display: DisplayTab(viewModel: viewModel)
+        case .shortcuts: ShortcutsTab()
+        case .appearance: AppearanceTab(viewModel: viewModel)
+        case .library: LibraryTab(viewModel: viewModel)
         case .about: AboutSettingsTab()
         }
     }
 }
 
-// MARK: - 设置标签枚举
+// MARK: - 设置标签枚举 (完全补全版)
 private enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, appearance, performance, display, appRules, library, about
+    case general, playback, audio, performance, appRules, slideshow, display, shortcuts, appearance, library, about
     var id: Self { self }
     var title: String {
         switch self {
         case .general: return "通用"
-        case .appearance: return "外观"
+        case .playback: return "渲染"
+        case .audio: return "音效"
         case .performance: return "性能"
+        case .appRules: return "智能暂停"
+        case .slideshow: return "轮播"
         case .display: return "显示器"
-        case .appRules: return "应用规则"
+        case .shortcuts: return "快捷键"
+        case .appearance: return "界面"
         case .library: return "存储"
         case .about: return "关于"
         }
     }
     var icon: String {
         switch self {
-        case .general: return "gearshape"
-        case .appearance: return "paintpalette"
-        case .performance: return "cpu"
-        case .display: return "desktopcomputer"
-        case .appRules: return "shield.fill"
-        case .library: return "folder"
-        case .about: return "info.circle"
+        case .general: return "command"
+        case .playback: return "play.circle.fill"
+        case .audio: return "speaker.wave.3.fill"
+        case .performance: return "gauge.medium"
+        case .appRules: return "bolt.shield.fill"
+        case .slideshow: return "arrow.2.squarepath"
+        case .display: return "display.2"
+        case .shortcuts: return "keyboard"
+        case .appearance: return "paintpalette.fill"
+        case .library: return "archivebox.fill"
+        case .about: return "info.circle.fill"
         }
     }
 }
 
-// MARK: - 侧边栏项
-private struct SidebarItem: View {
-    let tab: SettingsTab
-    let isSelected: Bool
-    let action: () -> Void
-    @State private var isHovered = false
+// MARK: - 画廊设置容器函数 (供所有 Tab 使用)
 
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: tab.icon)
-                    .font(.system(size: 14, weight: isSelected ? .semibold : .regular))
-                    .frame(width: 20)
-                Text(tab.title)
-                    .font(.system(size: 13, weight: isSelected ? .medium : .regular))
-                Spacer()
-            }
-            .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.5))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(isSelected ? Color.white.opacity(0.1) : (isHovered ? Color.white.opacity(0.05) : Color.clear))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .stroke(isSelected ? Color.white.opacity(0.12) : Color.clear, lineWidth: 0.5)
-            )
+@ViewBuilder
+func artisanSettingsSection<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
+    VStack(alignment: .leading, spacing: 16) {
+        if let header {
+            Text(header).font(.system(size: 10, weight: .black)).kerning(2.5).foregroundStyle(LiquidGlassColors.textQuaternary)
+                .padding(.leading, 4)
         }
-        .buttonStyle(.plain)
-        .onHover { isHovered = $0 }
+        VStack(spacing: 0) { content() }
+        .galleryCardStyle(radius: 20, padding: 0)
     }
 }
 
-// MARK: - WaifuX 风格设置表单组件
-
-struct MacSettingsForm<Content: View>: View {
-    let content: Content
-    init(@ViewBuilder content: () -> Content) { self.content = content() }
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 24) { content }
-            .padding(.horizontal, 28)
-            .padding(.vertical, 20)
+@ViewBuilder
+func artisanSettingsRow<Trailing: View>(title: String, subtitle: String? = nil, showDivider: Bool = true, @ViewBuilder trailing: () -> Trailing) -> some View {
+    VStack(spacing: 0) {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.system(size: 13, weight: .bold)).foregroundStyle(LiquidGlassColors.textPrimary)
+                if let subtitle { Text(subtitle).font(.system(size: 11)).foregroundStyle(LiquidGlassColors.textSecondary) }
+            }
+            Spacer()
+            trailing()
         }
-        .scrollIndicators(.hidden)
+        .padding(.horizontal, 24).padding(.vertical, 16)
+        if showDivider { GlassDivider().padding(.horizontal, 24) }
     }
 }
 
-struct MacSettingsSection<Content: View>: View {
-    let header: String?
-    let content: Content
-    init(header: String? = nil, @ViewBuilder content: () -> Content) {
-        self.header = header
-        self.content = content()
-    }
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if let header {
-                Text(header)
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundStyle(Color.white.opacity(0.4))
-                    .padding(.leading, 2)
-            }
-            VStack(spacing: 0) { content }
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.05)))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+@ViewBuilder
+func artisanToggle(isOn: Binding<Bool>) -> some View {
+    Button { withAnimation(.gallerySpring) { isOn.wrappedValue.toggle() } } label: {
+        ZStack {
+            Capsule().fill(isOn.wrappedValue ? LiquidGlassColors.primaryPink : Color.white.opacity(0.1)).frame(width: 36, height: 20)
+            Circle().fill(Color.white).frame(width: 16, height: 16).shadow(color: .black.opacity(0.2), radius: 2).offset(x: isOn.wrappedValue ? 8 : -8)
         }
-    }
+    }.buttonStyle(.plain)
 }
 
-struct MacSettingsRow<Trailing: View>: View {
-    let title: String
-    let subtitle: String?
-    let trailing: Trailing
-    let showDivider: Bool
-    init(title: String, subtitle: String? = nil, showDivider: Bool = true, @ViewBuilder trailing: () -> Trailing) {
-        self.title = title; self.subtitle = subtitle; self.showDivider = showDivider; self.trailing = trailing()
-    }
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(.white.opacity(0.9))
-                    if let subtitle { Text(subtitle).font(.system(size: 11)).foregroundStyle(.white.opacity(0.4)) }
-                }
-                Spacer()
-                trailing
-            }
-            .padding(.horizontal, 16).padding(.vertical, 12)
-            if showDivider { Divider().background(Color.white.opacity(0.06)).padding(.leading, 16) }
-        }
-    }
-}
-
-struct MacToggle: View {
-    @Binding var isOn: Bool
-    var body: some View {
-        Button {
-            withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) { isOn.toggle() }
-        } label: {
-            ZStack {
-                Capsule()
-                    .fill(isOn ? Color(hex: "30D158") : Color.white.opacity(0.2))
-                    .frame(width: 38, height: 20)
-                Circle()
-                    .fill(Color.white)
-                    .frame(width: 16, height: 16)
-                    .shadow(color: .black.opacity(0.2), radius: 1, y: 0.5)
-                    .offset(x: isOn ? 9 : -9)
-            }
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-// MARK: - 子模块实现
-
-private struct GeneralSettingsTab: View {
-    var viewModel: SettingsViewModel
-    var body: some View {
-        VStack(spacing: 24) {
-            MacSettingsSection(header: "语言与地区") {
-                MacSettingsRow(title: "显示语言", subtitle: "设置应用程序界面的显示语言") {
-                    HStack(spacing: 4) {
-                        Text("中文").font(.system(size: 13)).foregroundStyle(.white.opacity(0.6))
-                        Image(systemName: "chevron.up.chevron.down").font(.system(size: 10)).foregroundStyle(.white.opacity(0.4))
-                    }
-                }
-            }
-            MacSettingsSection(header: "外观设置") {
-                MacSettingsRow(title: "颗粒材质", subtitle: "胶片颗粒效果，让界面更有质感") {
-                    MacToggle(isOn: .constant(true))
-                }
-                MacSettingsRow(title: "自动下载原图", showDivider: false) {
-                    MacToggle(isOn: .constant(false))
-                }
-            }
-        }
-    }
-}
-
-private struct AppearanceSettingsTab: View {
-    var viewModel: SettingsViewModel
-    var body: some View {
-        MacSettingsSection(header: "主题") {
-            MacSettingsRow(title: "外观模式", showDivider: false) {
-                Picker("", selection: Binding(get: { viewModel.settings?.themeMode ?? .auto }, set: { viewModel.setTheme($0) })) {
-                    Text("自动").tag(ThemeMode.auto)
-                    Text("浅色").tag(ThemeMode.light)
-                    Text("深色").tag(ThemeMode.dark)
-                }
-                .pickerStyle(.segmented).frame(width: 150)
-            }
-        }
-    }
-}
-
-private struct PerformanceSettingsTab: View {
-    var viewModel: SettingsViewModel
-    @State private var perfHistory: [PerformancePoint] = (0..<40).map { PerformancePoint(index: $0, value: Double.random(in: 55...60)) }
-    let timer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
-    
-    var body: some View {
-        VStack(spacing: 32) {
-            // 1. 实时分析看板 (极致专业感)
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    LiquidGlassSectionHeader(title: "实时性能分析", icon: "waveform.path.ecg", color: LiquidGlassColors.accentCyan)
-                    Spacer()
-                    Text("渲染压力: 低").font(.system(size: 11, weight: .bold)).foregroundStyle(LiquidGlassColors.onlineGreen)
-                }
-                
-                Chart(perfHistory) { point in
-                    LineMark(x: .value("Time", point.index), y: .value("FPS", point.value))
-                        .foregroundStyle(LiquidGlassColors.accentCyan)
-                        .interpolationMethod(.catmullRom)
-                    
-                    AreaMark(x: .value("Time", point.index), y: .value("FPS", point.value))
-                        .foregroundStyle(LinearGradient(colors: [LiquidGlassColors.accentCyan.opacity(0.2), .clear], startPoint: .top, endPoint: .bottom))
-                        .interpolationMethod(.catmullRom)
-                }
-                .chartYScale(domain: 0...120)
-                .chartXAxis(.hidden)
-                .frame(height: 120)
-                .padding(20)
-                .background(Color.black.opacity(0.2))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            .onReceive(timer) { _ in
-                perfHistory.removeFirst()
-                perfHistory.append(PerformancePoint(index: (perfHistory.last?.index ?? 0) + 1, value: Double.random(in: 58...60)))
-            }
-            
-            // 2. 帧率与同步
-            MacSettingsSection(header: "渲染调度") {
-                MacSettingsRow(title: "FPS 刷新上限", subtitle: "更高的帧率意味着更流畅的动画，但会消耗更多电力") {
-                    HStack(spacing: 12) {
-                        Slider(value: Binding(get: { Double(viewModel.settings?.fpsLimit ?? 60) }, set: { viewModel.settings?.fpsLimit = Int($0); viewModel.save() }), in: 15...144, step: 1)
-                            .frame(width: 120).tint(LiquidGlassColors.primaryPink)
-                        Text("\(viewModel.settings?.fpsLimit ?? 60)").font(.system(size: 12, weight: .bold, design: .monospaced)).frame(width: 30)
-                    }
-                }
-                MacSettingsRow(title: "开启垂直同步 (VSync)", subtitle: "消除画面撕裂，建议开启", showDivider: false) {
-                    MacToggle(isOn: Binding(get: { viewModel.settings?.vSyncEnabled ?? true }, set: { viewModel.settings?.vSyncEnabled = $0; viewModel.save() }))
-                }
-            }
-            
-            // 3. 智能暂停 (重头戏)
-            VStack(alignment: .leading, spacing: 16) {
-                LiquidGlassSectionHeader(title: "全自动智能暂停策略", icon: "bolt.shield.fill", color: Color.orange)
-                
-                VStack(spacing: 0) {
-                    MacSettingsRow(title: "使用电池时暂停") {
-                        MacToggle(isOn: Binding(get: { viewModel.settings?.pauseOnBattery ?? false }, set: { viewModel.settings?.pauseOnBattery = $0; viewModel.save() }))
-                    }
-                    
-                    MacSettingsRow(title: "低电量模式自动暂停") {
-                        HStack(spacing: 12) {
-                            let thresholdBinding = Binding<Double>(
-                                get: { Double(viewModel.settings?.lowBatteryThreshold ?? 20) },
-                                set: { viewModel.settings?.lowBatteryThreshold = Int($0); viewModel.save() }
-                            )
-                            Slider(value: thresholdBinding, in: 5...50, step: 5)
-                                .frame(width: 100).tint(.orange)
-                            let thresholdText: String = "\(viewModel.settings?.lowBatteryThreshold ?? 20)%"
-                            Text(thresholdText).font(.system(size: 11, weight: .bold)).frame(width: 35)
-                            let lowBatteryBinding = Binding<Bool>(
-                                get: { viewModel.settings?.pauseOnLowBattery ?? true },
-                                set: { viewModel.settings?.pauseOnLowBattery = $0; viewModel.save() }
-                            )
-                            MacToggle(isOn: lowBatteryBinding)
-                        }
-                    }
-                    
-                    MacSettingsRow(title: "高负载自动保护", subtitle: "当 CPU/GPU 负载超过阈值时暂停以保证系统流畅") {
-                        HStack(spacing: 12) {
-                            Text("阈值: 80%").font(.system(size: 11, weight: .bold)).foregroundStyle(.secondary)
-                            MacToggle(isOn: .constant(true))
-                        }
-                    }
-                    
-                    MacSettingsRow(title: "屏幕共享/录屏时暂停", showDivider: false) {
-                        MacToggle(isOn: Binding(get: { viewModel.settings?.pauseOnScreenSharing ?? true }, set: { viewModel.settings?.pauseOnScreenSharing = $0; viewModel.save() }))
-                    }
-                }
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.05)))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.08), lineWidth: 1))
-            }
-        }
-    }
-}
-
-private struct DisplaySettingsTab: View {
-    var viewModel: SettingsViewModel
-    var body: some View {
-        MacSettingsSection(header: "显示器配置") {
-            MacSettingsRow(title: "拓扑模式", showDivider: false) {
-                Picker("", selection: Binding(get: { viewModel.settings?.displayTopology ?? .independent }, set: { viewModel.setDisplayTopology($0) })) {
-                    Text("独立").tag(DisplayTopology.independent)
-                    Text("镜像").tag(DisplayTopology.mirror)
-                    Text("全景").tag(DisplayTopology.panorama)
-                }
-                .pickerStyle(.menu).frame(width: 100)
-            }
-        }
-    }
-}
-
-private struct LibrarySettingsTab: View {
-    var viewModel: SettingsViewModel
-    var body: some View {
-        MacSettingsSection(header: "存储管理") {
-            MacSettingsRow(title: "资源存储路径", subtitle: viewModel.settings?.libraryPath ?? "/Users/Shared/Plum") {
-                Button("更改") { }.buttonStyle(.bordered).controlSize(.small)
-            }
-        }
-    }
-}
-
+// MARK: - About 子页
 private struct AboutSettingsTab: View {
     var body: some View {
-        VStack(spacing: 20) {
-            Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 64, height: 64)
-            VStack(spacing: 4) {
-                Text("PlumWallPaper").font(.system(size: 18, weight: .bold))
-                Text("Version 1.0.0").font(.system(size: 12)).foregroundStyle(.white.opacity(0.4))
+        VStack(spacing: 32) {
+            Image(nsImage: NSApp.applicationIconImage ?? NSImage()).resizable().frame(width: 80, height: 80).artisanShadow()
+            VStack(spacing: 8) {
+                Text("PlumWallPaper").font(.custom("Georgia", size: 28).bold())
+                Text("CRAFTSMANSHIP EDITION v1.0.2").font(.system(size: 10, weight: .black)).kerning(2).foregroundStyle(LiquidGlassColors.textQuaternary)
             }
-            MacSettingsSection(header: "项目信息") {
+            artisanSettingsSection(header: "溯源") {
                 HStack {
-                    Text("开发者").font(.system(size: 13, weight: .medium)).foregroundStyle(.white.opacity(0.9))
+                    Text("策展团队").font(.system(size: 13, weight: .bold))
                     Spacer()
-                    Text("Plum Studio").font(.system(size: 13)).foregroundStyle(.white.opacity(0.45))
-                }
-                .padding(.horizontal, 16).padding(.vertical, 12)
+                    Text("Plum Studio").font(.system(size: 13, weight: .medium)).foregroundStyle(LiquidGlassColors.textSecondary)
+                }.padding(20)
             }
         }
     }
-}
-
-private struct VisualEffectView: NSViewRepresentable {
-    let material: NSVisualEffectView.Material
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let v = NSVisualEffectView(); v.material = material; v.blendingMode = .withinWindow; v.state = .active; return v
-    }
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) { nsView.material = material }
 }

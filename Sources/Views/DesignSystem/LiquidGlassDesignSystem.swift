@@ -1,247 +1,159 @@
 import SwiftUI
-import Combine
 
-// MARK: - Liquid Glass 设计系统
-// 基于 Apple 官方 Liquid Glass API (macOS 26+) 的兼容实现
+// MARK: - Plum Artisan Design System (Scheme C: Artisan Gallery)
+// 这是一个专注于内容、排版与人文呼吸感的设计系统。
 
-// MARK: - 颜色系统
+// MARK: - 颜色系统 (Palette)
 enum LiquidGlassColors {
-    // 恢复 WaifuX 经典主色调
-    static let primaryPink = Color(hex: "FF3366")
-    static let secondaryViolet = Color(hex: "8B5CF6")
-    static let tertiaryBlue = Color(hex: "3B8BFF")
-    static let accentCyan = Color(hex: "00D4FF")
-    static let accentOrange = Color(hex: "FF6B35")
-    static let onlineGreen = Color(hex: "34D399")
-    static let warningOrange = Color(hex: "FF9F43")
+    // 品牌色 - 匠心版 (Artisan Palette)
+    static let primaryPink = Color(hex: "F4C2C2")    // 柔和粉 (Soft Pink)
+    static let accentGold = Color(hex: "E5D1B0")     // 燕麦金 (Oatmeal Gold)
+    static let champagne = Color(hex: "F7E7CE")      // 香槟色
+    
+    // 状态色 - 艺术降噪版 (Muted Status)
+    static let onlineGreen = Color(hex: "A8D5BA")    // 鼠尾草绿
+    static let warningOrange = Color(hex: "EBCB8B")  // 复古黄
+    static let errorRed = Color(hex: "BF616A")       // 莫兰迪红
+    static let tertiaryBlue = Color(hex: "81A1C1")   // 冰川蓝
+    static let primaryViolet = Color(hex: "B4A0E5")  // 丁香紫
 
-    // 背景色
-    static let deepBackground = Color(hex: "0D0D0D")
-    static let midBackground = Color(hex: "12121F")
-    static let surfaceBackground = Color(hex: "1A1A2E")
-    static let elevatedBackground = Color(hex: "1E1E28")
+    // 背景色层级 (Gallery Depth)
+    static let deepBackground = Color(hex: "1C1C1E")     // 基础深色 (macOS Standard)
+    static let surfaceBackground = Color(hex: "252528")   // 表面层
+    static let elevatedBackground = Color(hex: "2D2D30")  // 悬浮层
+    
+    // 玻璃效果颜色 (Artisan Glass)
+    static let glassWhiteSubtle = Color.white.opacity(0.03)
+    static let glassWhiteRegular = Color.white.opacity(0.06)
+    static let glassBorder = Color.white.opacity(0.12)
 
-    // 玻璃效果颜色
-    static let glassWhite = Color.white.opacity(0.26)
-    static let glassWhiteLight = Color.white.opacity(0.34)
-    static let glassWhiteSubtle = Color.white.opacity(0.18)
-    static let glassBorder = Color.white.opacity(0.34)
-
-    // 文字颜色
+    // 文字颜色层级 (Gallery Standard)
     static let textPrimary: Color = Color.white
-    
-    static let textSecondary: Color = Color.white.opacity(0.7)
-    
-    static let textTertiary: Color = Color.white.opacity(0.5)
-    
-    static let textQuaternary: Color = Color.white.opacity(0.3)
-
-    // 边框颜色
-    static let borderSubtle: Color = Color.white.opacity(0.1)
-    
-    static let borderDefault: Color = Color.white.opacity(0.2)
-    
-    static let borderStrong: Color = Color.white.opacity(0.3)
-
-    // 发光色（不随主题变化）
-    static let glowPink = Color(hex: "FF3B6B").opacity(0.4)
-    static let glowViolet = Color(hex: "9D6FFF").opacity(0.4)
-    static let glowBlue = Color(hex: "3B8BFF").opacity(0.4)
+    static let textSecondary: Color = Color(hex: "A1A1A1") // 艺术灰 (Studio Gray)
+    static let textTertiary: Color = Color.white.opacity(0.4)
+    static let textQuaternary: Color = Color.white.opacity(0.2)
 }
 
-struct LiquidGlassAtmosphereBackground: View {
-    let primary: Color
-    let secondary: Color
-    let tertiary: Color
-    let baseTop: Color
-    let baseBottom: Color
-    
-    init(
-        primary: Color = LiquidGlassColors.secondaryViolet,
-        secondary: Color = LiquidGlassColors.primaryPink,
-        tertiary: Color = LiquidGlassColors.accentCyan,
-        baseTop: Color = LiquidGlassColors.midBackground,
-        baseBottom: Color = LiquidGlassColors.deepBackground
-    ) {
-        self.primary = primary
-        self.secondary = secondary
-        self.tertiary = tertiary
-        self.baseTop = baseTop
-        self.baseBottom = baseBottom
-    }
+// MARK: - 间距系统 (Spacing)
+enum GallerySpacing {
+    static let micro: CGFloat = 4
+    static let tiny: CGFloat = 8
+    static let small: CGFloat = 12
+    static let normal: CGFloat = 24  // 增加基础间距
+    static let large: CGFloat = 32
+    static let extraLarge: CGFloat = 48
+    static let huge: CGFloat = 64
+}
 
+// MARK: - 排版系统 (Typography)
+enum GalleryTypography {
+    // 核心：Georgia 衬线体标题
+    static func artisticTitle(_ size: CGFloat = 32) -> Font {
+        .custom("Georgia", size: size).bold()
+    }
+    
+    // 功能：系统默认 SF 字体
+    static func functionalText(_ size: CGFloat = 13, weight: Font.Weight = .medium) -> Font {
+        .system(size: size, weight: weight)
+    }
+}
+
+// MARK: - 基础背景组件
+struct LiquidGlassAtmosphereBackground: View {
     var body: some View {
         ZStack {
-            // 基础渐变
-            LinearGradient(
-                colors: [baseTop, baseBottom],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            // 主色调光晕
-            Circle()
-                .fill(primary.opacity(0.22))
-                .frame(width: 720, height: 720)
-                .blur(radius: 60)
-                .offset(x: -180, y: -220)
-
-            Circle()
-                .fill(secondary.opacity(0.18))
-                .frame(width: 640, height: 640)
-                .blur(radius: 60)
-                .offset(x: 220, y: -120)
-
-            Circle()
-                .fill(tertiary.opacity(0.12))
-                .frame(width: 560, height: 560)
-                .blur(radius: 50)
-                .offset(x: 60, y: 220)
+            LiquidGlassColors.deepBackground
+            
+            // 极简弥散光晕 (Scheme C 标准：极度柔和，避免干扰内容)
+            GeometryReader { geo in
+                ZStack {
+                    Circle()
+                        .fill(LiquidGlassColors.primaryPink.opacity(0.06))
+                        .frame(width: geo.size.width * 1.0)
+                        .blur(radius: 140)
+                        .offset(x: -geo.size.width * 0.3, y: -geo.size.height * 0.3)
+                    
+                    Circle()
+                        .fill(LiquidGlassColors.accentGold.opacity(0.04))
+                        .frame(width: geo.size.width * 0.8)
+                        .blur(radius: 120)
+                        .offset(x: geo.size.width * 0.4, y: geo.size.height * 0.5)
+                }
+            }
+            
+            // 背景艺术水印 (Artistic Watermark)
+            VStack {
+                Spacer()
+                Text("GALLERY")
+                    .font(.custom("Georgia", size: 140).bold())
+                    .foregroundStyle(Color.white.opacity(0.015))
+                    .kerning(30)
+                    .padding(.bottom, 60)
+            }
         }
         .ignoresSafeArea()
     }
 }
 
-// ... (LiquidGlassCard 等其他组件保持不变)
-// MARK: - Liquid Glass 卡片组件
+// MARK: - Liquid Glass 卡片基础实现
 struct LiquidGlassCard<Content: View>: View {
-    let variant: GlassVariant
     let cornerRadius: CGFloat
     let padding: CGFloat
-    let spacing: CGFloat
     let content: Content
 
     init(
-        padding: CGFloat = 20,
-        cornerRadius: CGFloat = 20,
-        variant: GlassVariant = .regular,
-        spacing: CGFloat = 8,
+        padding: CGFloat = GallerySpacing.normal,
+        cornerRadius: CGFloat = 24, // 方案 C 核心：大圆角
         @ViewBuilder content: () -> Content
     ) {
-        self.variant = variant
         self.cornerRadius = cornerRadius
         self.padding = padding
-        self.spacing = spacing
         self.content = content()
     }
 
     var body: some View {
         content
             .padding(padding)
-            .liquidGlassSurface(
-                variant.defaultLevel,
-                tint: variant.tintColor,
-                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .background {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .opacity(0.7)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(LiquidGlassColors.glassBorder, lineWidth: 0.5)
+            }
+            // 方案 C：深度弥散阴影
+            .shadow(color: Color.black.opacity(0.15), radius: 40, x: 0, y: 20)
+    }
+}
+
+// MARK: - 样式扩展 (Extensions)
+extension View {
+    // 注入 Georgia 艺术标题样式
+    func artisanTitleStyle(size: CGFloat = 32, kerning: CGFloat = 2) -> some View {
+        self.font(GalleryTypography.artisticTitle(size))
+            .kerning(kerning)
+            .foregroundStyle(LiquidGlassColors.textPrimary)
+    }
+    
+    // 快速应用画廊卡片样式
+    func galleryCardStyle(radius: CGFloat = 24, padding: CGFloat = 16) -> some View {
+        self.padding(padding)
+            .background(
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(LiquidGlassColors.surfaceBackground.opacity(0.4))
+                    .background(.ultraThinMaterial)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .stroke(LiquidGlassColors.glassBorder, lineWidth: 0.5)
             )
     }
 }
 
-enum GlassVariant {
-    case regular
-    case interactive
-    case tinted(Color)
-    case prominent
-    case clear
-}
-
-enum LiquidGlassLevel {
-    case subtle
-    case regular
-    case prominent
-    case max
-
-    var material: Material {
-        switch self {
-        case .subtle: return .ultraThinMaterial
-        case .regular: return .regularMaterial
-        case .prominent: return .thickMaterial
-        case .max: return .ultraThickMaterial
-        }
-    }
-
-    var fillOpacity: Double {
-        switch self {
-        case .subtle: return 0.72
-        case .regular: return 0.8
-        case .prominent: return 0.86
-        case .max: return 0.92
-        }
-    }
-
-    var tintOpacity: Double {
-        switch self {
-        case .subtle: return 0.04
-        case .regular: return 0.08
-        case .prominent: return 0.12
-        case .max: return 0.16
-        }
-    }
-
-    var highlightOpacity: Double {
-        switch self {
-        case .subtle: return 0.03
-        case .regular: return 0.05
-        case .prominent: return 0.08
-        case .max: return 0.11
-        }
-    }
-
-    var borderOpacity: Double {
-        switch self {
-        case .subtle: return 0.12
-        case .regular: return 0.18
-        case .prominent: return 0.26
-        case .max: return 0.34
-        }
-    }
-}
-
-private extension GlassVariant {
-    var defaultLevel: LiquidGlassLevel {
-        switch self {
-        case .regular: return .regular
-        case .interactive: return .prominent
-        case .tinted: return .prominent
-        case .prominent: return .max
-        case .clear: return .subtle
-        }
-    }
-
-    var tintColor: Color? {
-        switch self {
-        case .tinted(let color): return color
-        default: return nil
-        }
-    }
-}
-
-@MainActor
-class ThemeManager: ObservableObject {
-    static let shared = ThemeManager()
-    @Published var themeMode: ThemeMode = .dark
-    var isDarkMode: Bool { true }
-    private init() {}
-}
-
-
-extension View {
-    func liquidGlassSurface(_ level: LiquidGlassLevel = .regular, tint: Color? = nil, in shape: some Shape = RoundedRectangle(cornerRadius: 20, style: .continuous)) -> some View {
-        self.background {
-            ZStack {
-                AnyShape(shape).fill(level.material).opacity(level.fillOpacity)
-                if let tint { AnyShape(shape).fill(tint.opacity(level.tintOpacity)) }
-                AnyShape(shape).fill(LinearGradient(colors: [Color.white.opacity(level.highlightOpacity), Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
-            }
-        }
-        .overlay {
-            AnyShape(shape).stroke(LinearGradient(colors: [Color.white.opacity(level.borderOpacity), Color.white.opacity(level.borderOpacity * 0.5)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-        }
-    }
-    func liquidGlassEffect(_ variant: GlassVariant = .regular) -> some View {
-        self.liquidGlassSurface(variant.defaultLevel, tint: variant.tintColor)
-    }
-}
-
+// MARK: - 工具
 extension Color {
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
@@ -255,3 +167,25 @@ extension Color {
         self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255, opacity: 1)
     }
 }
+
+// MARK: - macOS 视觉效果 (Visual Effects)
+struct VisualEffectView: NSViewRepresentable {
+    let material: NSVisualEffectView.Material
+    let blendingMode: NSVisualEffectView.BlendingMode
+    
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = .active
+        return view
+    }
+    
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
+    }
+}
+
+// MARK: - 工具
+

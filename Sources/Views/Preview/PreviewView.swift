@@ -17,7 +17,7 @@ struct PreviewView: View {
                 // 主图预览（占位）
                 ZStack {
                     RoundedRectangle(cornerRadius: 32, style: .continuous)
-                        .fill(LiquidGlassColors.midBackground)
+                        .fill(LiquidGlassColors.elevatedBackground)
                         .shadow(color: .black.opacity(0.3), radius: 40, x: 0, y: 20)
                     
                     VStack(spacing: 20) {
@@ -57,7 +57,7 @@ struct PreviewView: View {
                         .frame(height: 60)
                         .background(
                             Capsule()
-                                .fill(LinearGradient(colors: [LiquidGlassColors.primaryPink, LiquidGlassColors.secondaryViolet], startPoint: .leading, endPoint: .trailing))
+                                .fill(LinearGradient(colors: [LiquidGlassColors.primaryPink, LiquidGlassColors.primaryViolet], startPoint: .leading, endPoint: .trailing))
                         )
                         .shadow(color: LiquidGlassColors.primaryPink.opacity(0.3), radius: 15, y: 8)
                     }

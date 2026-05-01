@@ -1,33 +1,33 @@
 import SwiftUI
 import AppKit
 
-// MARK: - 主标签类型 (重构版 - 4个 Tab)
-enum MainTab: String, CaseIterable {
-    case home           // 首页
-    case wallpaper      // 壁纸
-    case media          // 媒体
-    case myLibrary      // 我的
+// MARK: - 主标签类型 (画廊版)
+enum MainTab: Int, CaseIterable {
+    case home           // 精选
+    case wallpaper      // 静态
+    case media          // 动态
+    case myLibrary      // 本地
 
     var title: String {
         switch self {
-        case .home: return "首页"
-        case .wallpaper: return "壁纸"
-        case .media: return "媒体"
-        case .myLibrary: return "我的"
+        case .home: return "精选"
+        case .wallpaper: return "静态"
+        case .media: return "动态"
+        case .myLibrary: return "本地"
         }
     }
 
     var icon: String {
         switch self {
-        case .home: return "house.fill"
-        case .wallpaper: return "photo.on.rectangle"
-        case .media: return "play.rectangle.on.rectangle.fill"
-        case .myLibrary: return "person.crop.circle"
+        case .home: return "safari"
+        case .wallpaper: return "rectangle.on.rectangle.angled"
+        case .media: return "film.stack"
+        case .myLibrary: return "archivebox"
         }
     }
 }
 
-// MARK: - 顶部导航栏组件
+// MARK: - 匠心导航栏 (Artisan Navigation - 精致圆角修复版)
 struct TopNavigationBar: View {
     @Binding var selectedTab: MainTab
     let onOpenSettings: () -> Void
@@ -36,95 +36,63 @@ struct TopNavigationBar: View {
     let onMaximize: () -> Void
     let onZoom: () -> Void
     
-    private let controlHeight: CGFloat = 34
+    private let controlHeight: CGFloat = 40
 
     var body: some View {
         HStack(alignment: .center, spacing: 0) {
-            // 左侧红绿灯占位（macOS 原生控制按钮）
-            Color.clear
-                .frame(width: 80, height: controlHeight, alignment: Alignment.center)
+            // 左侧避让区
+            Color.clear.frame(width: 80, height: controlHeight)
 
             Spacer()
 
-            // 中间 Tabs - 核心复刻 WaifuX
-            TopBarSegmentedControl(
-                selectedTab: $selectedTab,
-                controlHeight: controlHeight
-            )
-            .frame(height: controlHeight, alignment: .center)
-
+            // 核心控制区 (修复：材质与圆角绝对对齐)
+            artisanTabControl
+            
             Spacer()
 
-            // 右侧设置按钮
-            TopBarCircleButton(icon: "gearshape", size: controlHeight) {
-                onOpenSettings()
+            // 右侧功能区
+            HStack(spacing: 12) {
+                TopBarCircleButton(icon: "magnifyingglass", size: controlHeight) { }
+                TopBarCircleButton(icon: "slider.horizontal.3", size: controlHeight) { onOpenSettings() }
             }
-            .frame(width: 48, height: controlHeight, alignment: .center)
+            .frame(width: 100, alignment: .trailing)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 12)
-        .padding(.bottom, 10)
+        .padding(.horizontal, 28)
+        .padding(.top, 16)
+        .padding(.bottom, 8)
     }
-}
-
-// MARK: - 子组件 (保持 internal，不使用 public)
-
-struct TopBarSegmentedControl: View {
-    @Binding var selectedTab: MainTab
-    let controlHeight: CGFloat
-
-    @Namespace private var selectionNamespace
-    @State private var hoveredTab: MainTab?
-
-    var body: some View {
-        HStack(spacing: 4) {
+    
+    private var artisanTabControl: some View {
+        HStack(spacing: 32) {
             ForEach(MainTab.allCases, id: \.self) { tab in
                 Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        selectedTab = tab
-                    }
+                    withAnimation(.gallerySpring) { selectedTab = tab }
                 } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: tab.icon)
-                            .font(.system(size: 12))
-                        Text(tab.title)
-                            .font(.system(size: 13, weight: .semibold))
-                    }
-                    .foregroundStyle(labelColor(for: tab))
-                    .padding(.horizontal, 16)
-                    .frame(height: controlHeight)
-                    .background {
+                    VStack(spacing: 6) {
+                        HStack(spacing: 6) {
+                            Image(systemName: tab.icon).font(.system(size: 11, weight: .medium))
+                            Text(tab.title).font(.system(size: 13, weight: .bold)).kerning(1.5)
+                        }
+                        .foregroundStyle(selectedTab == tab ? LiquidGlassColors.textPrimary : LiquidGlassColors.textQuaternary)
+                        
                         if selectedTab == tab {
-                            Capsule()
-                                .fill(Color.white.opacity(0.12))
-                                .matchedGeometryEffect(id: "selectedTab", in: selectionNamespace)
-                        } else if hoveredTab == tab {
-                            Capsule()
-                                .fill(Color.white.opacity(0.05))
+                            Capsule().fill(LiquidGlassColors.primaryPink).frame(width: 14, height: 2)
+                                .transition(.scale.combined(with: .opacity))
+                        } else {
+                            Capsule().fill(Color.clear).frame(width: 14, height: 2)
                         }
                     }
                 }
                 .buttonStyle(.plain)
-                .onHover { hovering in
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        hoveredTab = hovering ? tab : nil
-                    }
-                }
             }
         }
-        .padding(4)
-        .background {
-            Capsule()
-                .fill(.ultraThinMaterial)
-                .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
-        }
-    }
-
-    private func labelColor(for tab: MainTab) -> Color {
-        if selectedTab == tab {
-            return .white
-        }
-        return .white.opacity(0.6)
+        .padding(.horizontal, 28)
+        .padding(.vertical, 8)
+        // 修复：强制剪裁与材质同步，消除硬边
+        .background(.ultraThinMaterial, in: Capsule())
+        .background(Capsule().fill(Color.white.opacity(0.02)))
+        .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+        .clipShape(Capsule()) 
     }
 }
 
@@ -132,22 +100,17 @@ struct TopBarCircleButton: View {
     let icon: String
     let size: CGFloat
     let action: () -> Void
-
     @State private var isHovered = false
-
     var body: some View {
         Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.white.opacity(isHovered ? 1.0 : 0.7))
-                .frame(width: size + 10, height: size + 10)
-                .background {
-                    Circle()
-                        .fill(isHovered ? Color.white.opacity(0.1) : Color.white.opacity(0.05))
-                        .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
-                }
+            Image(systemName: icon).font(.system(size: 13, weight: .medium))
+                .foregroundStyle(isHovered ? LiquidGlassColors.primaryPink : LiquidGlassColors.textSecondary)
+                .frame(width: 34, height: 34)
+                .background(.ultraThinMaterial, in: Circle())
+                .background(Circle().fill(isHovered ? Color.white.opacity(0.08) : Color.clear))
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
+        .animation(.galleryEase, value: isHovered)
     }
 }
