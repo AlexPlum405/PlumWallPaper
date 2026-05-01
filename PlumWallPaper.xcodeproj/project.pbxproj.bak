@@ -289,7 +289,6 @@
 			children = (
 				33948DCF99565DEC4FEF469D /* App */,
 				350B3A361D4B60897435CC32 /* Core */,
-				E88F6D36488842EBABA20BFB /* Engine */,
 				1B035FF823EEDBCCB8EE65AE /* Resources */,
 				F5F01C22EC0668E59DE3D0FE /* Storage */,
 				679A16F91DE1E547E88F081D /* ViewModels */,
@@ -302,6 +301,7 @@
 			isa = PBXGroup;
 			children = (
 				E6B16A800A7ACAFA1FA98E59 /* PreviewView.swift */,
+				E88F6D36488842EBABA20BFB /* Engine */,
 			);
 			path = Preview;
 			sourceTree = "<group>";

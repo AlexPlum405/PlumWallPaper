@@ -14,10 +14,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             window.minSize = NSSize(width: 900, height: 600)
         }
 
-        // TODO: Uncomment after Engine files are added to Xcode project
-        // Task {
-        //     try? RenderPipeline.shared.setupRenderers()
-        // }
+        Task {
+            try? RenderPipeline.shared.setupRenderers()
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

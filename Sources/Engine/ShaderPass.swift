@@ -2,12 +2,6 @@
 import Foundation
 import Metal
 
-enum ShaderPassType: String, Codable {
-    case filter
-    case particle
-    case postprocess
-}
-
 struct ShaderParameter: Identifiable, Codable {
     let id: UUID
     let key: String
