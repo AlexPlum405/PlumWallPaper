@@ -23,6 +23,7 @@
 		51BF133243509E7E07A4B531 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD7FD3FCEE90906A82E005D /* HomeView.swift */; };
 		520967807CC3596759A27B9C /* WindowAccessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E099A767DEA20EA00487AE5F /* WindowAccessor.swift */; };
 		57407784ADD7C2D72970B8D0 /* WallpaperExploreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A759316C525C53C16D2F9010 /* WallpaperExploreView.swift */; };
+		6A1F8B92C3D4E5F607182930 /* WallpaperExploreView+Logic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E9C7A41D8B2F06514A3E7C2 /* WallpaperExploreView+Logic.swift */; };
 		59E796E942F5185E0C24B4D2 /* AppRulesTabV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21678164A5C66B62064D17AF /* AppRulesTabV2.swift */; };
 		5D8094B56D819F23B06B982A /* TagManagerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90836F84AC56879790FFDE1A /* TagManagerSheet.swift */; };
 		5FC9D607DF0A0DF58EA4798F /* ShaderPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 163C20723526A250CB94C6B9 /* ShaderPreset.swift */; };
