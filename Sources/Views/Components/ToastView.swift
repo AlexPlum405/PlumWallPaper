@@ -62,14 +62,16 @@ struct ToastModifier: ViewModifier {
                     ToastView(message: toast.message, type: toast.type)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                         .padding(.bottom, 60)
+                        .id(toast.id)
                 }
                 .animation(.spring(response: 0.4, dampingFraction: 0.8), value: toast.id)
-                .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + toast.duration) {
-                        withAnimation {
-                            self.toast = nil
-                        }
-                    }
+            }
+        }
+        .onChange(of: toast?.id) { _, newId in
+            guard let newId = newId, let t = toast else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + t.duration) {
+                if self.toast?.id == newId {
+                    withAnimation { self.toast = nil }
                 }
             }
         }
