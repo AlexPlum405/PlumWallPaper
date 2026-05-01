@@ -23,6 +23,7 @@ final class Settings {
     var pauseOnBattery: Bool
     var pauseOnFullscreen: Bool
     var pauseOnLowBattery: Bool
+    var lowBatteryThreshold: Int
     var pauseOnScreenSharing: Bool
     var pauseOnHighLoad: Bool
     var pauseOnLostFocus: Bool
@@ -59,6 +60,7 @@ final class Settings {
         self.pauseOnBattery = true
         self.pauseOnFullscreen = true
         self.pauseOnLowBattery = true
+        self.lowBatteryThreshold = 20
         self.pauseOnScreenSharing = false
         self.pauseOnHighLoad = true
         self.pauseOnLostFocus = false

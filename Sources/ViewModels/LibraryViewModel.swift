@@ -7,8 +7,16 @@ import Observation
 @MainActor
 final class LibraryViewModel {
 
+    // MARK: - SubTabs
+    enum LibraryTab: String, CaseIterable {
+        case favorites = "收藏"
+        case downloads = "下载"
+        case history = "历史记录"
+    }
+
     // MARK: - State
 
+    var selectedTab: LibraryTab = .favorites
     var wallpapers: [Wallpaper] = []
     var selectedWallpaper: Wallpaper?
     var searchText: String = ""
@@ -21,9 +29,21 @@ final class LibraryViewModel {
 
     // MARK: - Init
 
+    init() {
+        // 初始 Mock 数据，确保符合 Wallpaper 初始化规范 (必需 filePath)
+        self.wallpapers = [
+            Wallpaper(name: "霓虹雨夜", filePath: "", type: .video, resolution: "4K", thumbnailPath: "", isFavorite: true),
+            Wallpaper(name: "赛博之城", filePath: "", type: .image, resolution: "8K", thumbnailPath: "", isFavorite: true),
+            Wallpaper(name: "寂静森林", filePath: "", type: .video, resolution: "4K", thumbnailPath: "", isFavorite: false),
+            Wallpaper(name: "极光边缘", filePath: "", type: .heic, resolution: "5K", thumbnailPath: "", isFavorite: true),
+            Wallpaper(name: "数字海洋", filePath: "", type: .video, resolution: "4K", thumbnailPath: "", isFavorite: false),
+            Wallpaper(name: "量子脉冲", filePath: "", type: .image, resolution: "4K", thumbnailPath: "", isFavorite: true)
+        ]
+    }
+
     func configure(modelContext: ModelContext) {
         self.store = WallpaperStore(modelContext: modelContext)
-        loadWallpapers()
+        // loadWallpapers() // 先保留 Mock，不覆盖
     }
 
     // MARK: - Actions
@@ -71,5 +91,16 @@ final class LibraryViewModel {
     var filteredWallpapers: [Wallpaper] {
         guard !searchText.isEmpty else { return wallpapers }
         return wallpapers.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    // MARK: - Batch Operations
+
+    func save() {
+        guard let store else { return }
+        do {
+            try store.modelContext.save()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }

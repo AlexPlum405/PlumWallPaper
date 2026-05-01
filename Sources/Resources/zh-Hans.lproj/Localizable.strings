@@ -1,0 +1,11 @@
+/*
+  Localizable.strings
+  PlumWallPaper
+
+  Created for Chinese localization.
+*/
+
+/* NSOpenPanel */
+"Choose" = "选择";
+"Cancel" = "取消";
+"Open" = "打开";

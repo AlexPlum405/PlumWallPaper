@@ -1,43 +1,50 @@
-// Sources/Views/ContentView.swift
 import SwiftUI
-
-enum SidebarItem: String, CaseIterable, Identifiable {
-    case library = "壁纸库"
-    case shaderEditor = "着色器编辑器"
-    case settings = "设置"
-
-    var id: String { rawValue }
-
-    var icon: String {
-        switch self {
-        case .library: return "photo.on.rectangle"
-        case .shaderEditor: return "slider.horizontal.3"
-        case .settings: return "gearshape"
-        }
-    }
-}
+import AppKit
 
 struct ContentView: View {
-    @State private var selectedItem: SidebarItem? = .library
+    @State private var selectedTab: MainTab = .home
+    @State private var selectedWallpaper: Wallpaper?
 
     var body: some View {
-        NavigationSplitView {
-            List(SidebarItem.allCases, selection: $selectedItem) { item in
-                Label(item.rawValue, systemImage: item.icon)
-                    .tag(item)
+        ZStack(alignment: .top) {
+            // 1. 全屏沉浸背景 (底层)
+            LiquidGlassAtmosphereBackground()
+
+            GrainTextureOverlay(opacity: 0.1)
+
+            // 2. 页面内容 (中层)
+            ZStack {
+                switch selectedTab {
+                case .home:
+                    HomeView(selectedWallpaper: $selectedWallpaper)
+                case .wallpaper:
+                    WallpaperExploreView()
+                        .padding(.top, 80)
+                case .media:
+                    MediaExploreView()
+                        .padding(.top, 80)
+                case .myLibrary:
+                    MyLibraryView()
+                        .padding(.top, 80)
+                }
             }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
-        } detail: {
-            switch selectedItem {
-            case .library:
-                Text("壁纸库 - 待实现")
-            case .shaderEditor:
-                Text("着色器编辑器 - 待实现")
-            case .settings:
-                Text("设置 - 待实现")
-            case nil:
-                Text("选择一个页面")
-            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            // 3. 顶部导航栏 (顶层悬浮)
+            TopNavigationBar(
+                selectedTab: $selectedTab,
+                onOpenSettings: {
+                    guard let appDelegate = NSApp.delegate as? AppDelegate else { return }
+                    appDelegate.showSettingsWindow(nil)
+                },
+                onClose: { NSApp.terminate(nil) },
+                onMinimize: { NSApp.mainWindow?.miniaturize(nil) },
+                onMaximize: { NSApp.mainWindow?.toggleFullScreen(nil) },
+                onZoom: { NSApp.mainWindow?.zoom(nil) }
+            )
+            .zIndex(100)
         }
+        .frame(minWidth: 1100, minHeight: 750)
+        .preferredColorScheme(.dark)
     }
 }
