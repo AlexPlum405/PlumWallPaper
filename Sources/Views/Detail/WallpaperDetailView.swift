@@ -10,78 +10,64 @@ struct WallpaperDetailView: View {
     
     @Environment(\.dismiss) private var dismiss
     
-    // 感应状态 (精确热区控制)
-    @State private var isLeftHovered = false
-    @State private var isRightHovered = false
-    @State private var isTopHovered = false
-    @State private var isBottomHovered = false
-    @State private var isCloseButtonHovered = false
+    // 状态驱动
+    @State internal var isStudioActive = false      // 实验室面板是否展开
+    @State internal var studioTab = 0               // 0: 预设, 1: 光学, 2: 风格, 3: 粒子
+    @State internal var isApplying = false           // 应用壁纸中
+
+    // 侧翼导航悬停
+    @State internal var isLeftEdgeHovered = false
+    @State internal var isRightEdgeHovered = false
     
-    @State private var isEditingShaders = false
-    @State private var isApplying = false
+    // 滤镜状态 (保留现有变量名)
+    @State internal var exposure: Double = 100
+    @State internal var contrast: Double = 100
+    @State internal var saturation: Double = 100
+    @State internal var hue: Double = 0
+    @State internal var blur: Double = 0
+    @State internal var grain: Double = 0
+    @State internal var vignette: Double = 0
+    @State internal var grayscale: Double = 0
+    @State internal var invert: Double = 0
+    @State internal var currentPresetName: String = "原图"
+
     @State var isShowingShaderEditor = false
-    
-    // 显示器选择
-    @State private var selectedDisplays: Set<String> = ["built-in"]
-    private let mockDisplays = [
-        (id: "built-in", name: "内建显示器", icon: "laptopcomputer"),
-        (id: "external-1", name: "Studio Display", icon: "display"),
-        (id: "external-2", name: "LG UltraFine", icon: "display")
-    ]
-    
-    // 滤镜状态
-    @State var exposure: Double = 100
-    @State var contrast: Double = 100
-    @State var saturation: Double = 100
-    @State var hue: Double = 0
-    @State var blur: Double = 0
-    @State var grain: Double = 0
-    @State var vignette: Double = 0
-    @State var grayscale: Double = 0
-    @State var invert: Double = 0
-    @State var currentPresetName: String = "原始"
-    
-    private let sidebarWidth: CGFloat = 360 // 缩减宽度，更精致
     
     var body: some View {
         ZStack {
-            // 1. 底层：全屏画布 (无任何交互干扰)
+            // 1. 底层：纯净画布（100% 视野）
             fullscreenCanvas
-            
-            // 2. 交互层：透明拖拽锚点 (支持全窗口拖动)
-            Color.clear
-                .contentShape(Rectangle())
-                .windowDragGesture()
-            
-            // 3. 左侧：艺术标题
+
+            // 2. 交互辅助层：透明拖拽与背景点击
+            Color.clear.contentShape(Rectangle()).windowDragGesture()
+
+            // 3. 侧翼导航（左右两侧边缘感应）
+            sideNavigationArrows
+
+            // 4. 标题 HUD（左上角，极简感应）
             artisanTitleHUD
-                .opacity(isLeftHovered ? 1 : 0)
-                .onHover { hovering in withAnimation(.galleryEase) { isLeftHovered = hovering } }
-                .padding(.leading, 80)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            
-            // 4. 右侧：参数工作室 (悬浮卡片，自带位移与感应)
-            artisanSidebarHUD
-                .offset(x: isRightHovered ? 0 : 40)
-                .opacity(isRightHovered ? 1 : 0)
-                .onHover { hovering in withAnimation(.gallerySpring) { isRightHovered = hovering } }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-            
-            // 5. 顶部：导航箭头
-            navArrowHUD(icon: "chevron.up") { onPrevious?() }
-                .padding(.top, 40)
-                .opacity(isTopHovered ? 0.8 : 0)
-                .onHover { hovering in withAnimation(.gallerySpring) { isTopHovered = hovering } }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            
-            // 6. 底部：核心动作中心
-            artisanActionCenter
-                .padding(.bottom, 48)
-                .opacity(isBottomHovered ? 1 : 0)
-                .onHover { hovering in withAnimation(.gallerySpring) { isBottomHovered = hovering } }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-            
-            // 7. 全局关闭控制
+                .padding(.leading, 80).padding(.top, 80)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+            // 5. 核心地平线 HUD（Dock + Studio，底部居中）
+            VStack(spacing: 24) {
+                Spacer()
+
+                // 次地平线：调节工作室（点击"实验室"按钮后升起）
+                if isStudioActive {
+                    artisanStudioHUD
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .bottom).combined(with: .opacity),
+                            removal: .opacity
+                        ))
+                }
+
+                // 地平线底座：主控 Dock
+                artisanMainDock
+            }
+            .padding(.bottom, 40)
+
+            // 6. 关闭按钮（右上角）
             closeButtonHUD
         }
         .sheet(isPresented: $isShowingShaderEditor) {
@@ -91,294 +77,328 @@ struct WallpaperDetailView: View {
         .preferredColorScheme(.dark)
     }
     
-    // MARK: - A. 视觉子层级
+    // MARK: - A. 视觉子层级 (Artisan Horizon HUD)
     
     private var fullscreenCanvas: some View {
         ZStack {
             if let url = URL(string: wallpaper.filePath) {
                 AsyncImage(url: url) { phase in
                     if let image = phase.image {
-                        image.resizable().aspectRatio(contentMode: .fill)
+                        image.resizable().aspectRatio(contentMode: .fit) // .fit 确保不裁切
                     } else { Color.black }
                 }
             } else { Color.black }
-            RadialGradient(colors: [.clear, .black.opacity(0.4)], center: .center, startRadius: 200, endRadius: 1000)
-        }.ignoresSafeArea()
+            // 径向暗角
+            RadialGradient(colors: [.clear, .black.opacity(0.3)], center: .center, startRadius: 300, endRadius: 1000)
+        }
+        .background(Color.black)
+        .ignoresSafeArea()
     }
-    
-    private var artisanTitleHUD: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            Text("EXHIBITION CURATED").font(.system(size: 12, weight: .black)).kerning(6).foregroundStyle(LiquidGlassColors.primaryPink)
-            VStack(alignment: .leading, spacing: -20) {
-                Text(wallpaper.name.prefix(1)).font(.custom("Georgia", size: 160)).foregroundStyle(.white.opacity(0.08)).offset(x: -20, y: 40)
-                Text(wallpaper.name).artisanTitleStyle(size: 64, kerning: 2).shadow(color: .black.opacity(0.5), radius: 20)
-            }
-            HStack(spacing: 24) {
-                metadataTag(icon: "ruler", text: wallpaper.resolution ?? "8K")
-                metadataTag(icon: "cpu", text: "ULTRA RENDERING")
-            }
-        }.fixedSize() // 确保热区仅包裹内容
-    }
-    
-    private var artisanSidebarHUD: some View {
+
+    private var sideNavigationArrows: some View {
         ZStack {
-            if isEditingShaders {
-                artisanShaderPanel
-            } else {
-                // 作品详情面板 (悬浮卡片感)
-                VStack(alignment: .leading, spacing: 32) {
-                    ArtisanHeader(title: "CURATION INFO", subtitle: "作品策展详情")
-                    
-                    VStack(spacing: 20) {
-                        metadataRow(label: "Format", value: wallpaper.type == .video ? "Dynamic" : "Still")
-                        metadataRow(label: "Dimension", value: wallpaper.resolution ?? "8K")
-                        metadataRow(label: "Size", value: ByteCountFormatter.string(fromByteCount: wallpaper.fileSize, countStyle: .file))
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("GENRE").font(.system(size: 9, weight: .black)).kerning(2).foregroundStyle(LiquidGlassColors.textQuaternary)
-                        FlowLayout(spacing: 8) {
-                            ForEach(wallpaper.tags) { tag in
-                                Text(tag.name).font(.system(size: 10, weight: .bold)).padding(.horizontal, 12).padding(.vertical, 5)
-                                    .background(Color.white.opacity(0.05)).clipShape(Capsule())
-                                    .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+            // 左侧翼
+            ZStack(alignment: .leading) {
+                Rectangle().fill(Color.white.opacity(0.001)).frame(width: 100)
+                HStack(spacing: 0) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 2).fill(.ultraThinMaterial)
+                            .frame(width: 4, height: 160)
+                            .overlay(RoundedRectangle(cornerRadius: 2)
+                                .stroke(LiquidGlassColors.primaryPink.opacity(isLeftEdgeHovered ? 0.6 : 0.2), lineWidth: 0.5))
+                        VStack(spacing: 4) {
+                            ForEach(0..<6) { i in
+                                Rectangle().fill(.white.opacity(isLeftEdgeHovered ? 0.4 : 0.2))
+                                    .frame(width: i == 3 ? 10 : 6, height: 1)
                             }
-                        }
+                        }.offset(x: 10)
                     }
-                    
-                    Spacer()
-                    
-                    Button(action: { withAnimation(.gallerySpring) { isEditingShaders = true } }) {
-                        HStack {
-                            Image(systemName: "slider.vertical.3").font(.system(size: 14))
-                            Text("ENTER STUDIO").font(.system(size: 11, weight: .black)).kerning(2)
-                            Spacer()
-                            Image(systemName: "arrow.right").font(.system(size: 10))
-                        }
-                        .padding(20).background(LiquidGlassColors.primaryPink).clipShape(RoundedRectangle(cornerRadius: 16))
-                        .foregroundStyle(.black)
+                    .offset(x: isLeftEdgeHovered ? 20 : 0)
+                    VStack(spacing: 12) {
+                        Image(systemName: "chevron.left.circle.fill")
+                            .font(.system(size: 24, weight: .thin))
+                        Text("上一张").font(.system(size: 9, weight: .bold))
+                            .opacity(isLeftEdgeHovered ? 0.8 : 0)
+                    }
+                    .foregroundStyle(isLeftEdgeHovered ? LiquidGlassColors.primaryPink : .white.opacity(0.4))
+                    .offset(x: isLeftEdgeHovered ? 30 : 10)
+                }
+            }
+            .contentShape(Rectangle())
+            .onHover { hovering in withAnimation(.gallerySpring) { isLeftEdgeHovered = hovering } }
+            .onTapGesture { onPrevious?() }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            // 右侧翼 (镜像对称)
+            ZStack(alignment: .trailing) {
+                Rectangle().fill(Color.white.opacity(0.001)).frame(width: 100)
+                HStack(spacing: 0) {
+                    VStack(spacing: 12) {
+                        Image(systemName: "chevron.right.circle.fill")
+                            .font(.system(size: 24, weight: .thin))
+                        Text("下一张").font(.system(size: 9, weight: .bold))
+                            .opacity(isRightEdgeHovered ? 0.8 : 0)
+                    }
+                    .foregroundStyle(isRightEdgeHovered ? LiquidGlassColors.primaryPink : .white.opacity(0.4))
+                    .offset(x: isRightEdgeHovered ? -30 : -10)
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 2).fill(.ultraThinMaterial)
+                            .frame(width: 4, height: 160)
+                            .overlay(RoundedRectangle(cornerRadius: 2)
+                                .stroke(LiquidGlassColors.primaryPink.opacity(isRightEdgeHovered ? 0.6 : 0.2), lineWidth: 0.5))
+                        VStack(spacing: 4) {
+                            ForEach(0..<6) { i in
+                                Rectangle().fill(.white.opacity(isRightEdgeHovered ? 0.4 : 0.2))
+                                    .frame(width: i == 3 ? 10 : 6, height: 1)
+                            }
+                        }.offset(x: -10)
+                    }
+                    .offset(x: isRightEdgeHovered ? -20 : 0)
+                }
+            }
+            .contentShape(Rectangle())
+            .onHover { hovering in withAnimation(.gallerySpring) { isRightEdgeHovered = hovering } }
+            .onTapGesture { onNext?() }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .zIndex(100)
+    }
+
+    private var artisanTitleHUD: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("精选画廊")
+                .font(.system(size: 12, weight: .black)).kerning(5)
+                .foregroundStyle(LiquidGlassColors.primaryPink)
+
+            Text(wallpaper.name)
+                .artisanTitleStyle(size: 48, kerning: 1)
+                .shadow(color: .black.opacity(0.5), radius: 20)
+
+            HStack(spacing: 20) {
+                metadataTag(icon: "ruler", text: wallpaper.resolution ?? "8K 超清")
+                metadataTag(icon: "cpu", text: "全动态渲染")
+            }
+        }
+    }
+
+    private func metadataTag(icon: String, text: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon).font(.system(size: 10))
+            Text(text).font(.system(size: 10, weight: .bold))
+        }
+        .foregroundStyle(.white.opacity(0.6))
+        .padding(.horizontal, 12).padding(.vertical, 6)
+        .background(Capsule().fill(Color.white.opacity(0.05)))
+    }
+
+    private var artisanMainDock: some View {
+        HStack(spacing: 24) {
+            // 1. 收藏按钮（圆形）
+            actionCircleButton(
+                icon: wallpaper.isFavorite ? "heart.fill" : "heart",
+                color: wallpaper.isFavorite ? LiquidGlassColors.primaryPink : .white.opacity(0.6)
+            ) { /* 收藏逻辑 */ }
+
+            // 2. 应用壁纸（主按钮，粉色胶囊）
+            Button(action: {
+                isApplying = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { isApplying = false }
+            }) {
+                HStack(spacing: 16) {
+                    if isApplying { CustomProgressView(tint: .white, scale: 0.8) }
+                    else { Text("设为壁纸").font(.system(size: 14, weight: .bold)).kerning(2) }
+                }
+                .padding(.horizontal, 60).frame(height: 52)
+                .background(LiquidGlassColors.primaryPink)
+                .clipShape(Capsule())
+                .foregroundStyle(.black)
+                .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.3), radius: 20)
+            }.buttonStyle(.plain)
+
+            // 3. 实验室按钮（圆形，toggle 控制 isStudioActive）
+            Button(action: { withAnimation(.gallerySpring) { isStudioActive.toggle() } }) {
+                VStack(spacing: 4) {
+                    Image(systemName: "camera.aperture").font(.system(size: 18))
+                    Text("实验室").font(.system(size: 8, weight: .bold))
+                }
+                .foregroundStyle(isStudioActive ? LiquidGlassColors.primaryPink : .white.opacity(0.6))
+                .frame(width: 52, height: 52)
+                .background(Circle().fill(Color.white.opacity(0.05)))
+                .overlay(Circle().stroke(
+                    isStudioActive ? LiquidGlassColors.primaryPink.opacity(0.5) : Color.white.opacity(0.1),
+                    lineWidth: 1
+                ))
+            }.buttonStyle(.plain)
+
+            // 4. 下载按钮（圆形）
+            actionCircleButton(icon: "arrow.down.to.line.compact", color: .white.opacity(0.6)) { }
+        }
+        .padding(12)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+        .artisanShadow(color: .black.opacity(0.2), radius: 30)
+    }
+
+    private var artisanStudioHUD: some View {
+        HStack(spacing: 40) {
+            // === 左侧：Tab 切换按钮（竖排） ===
+            VStack(spacing: 12) {
+                ArtisanHorizonTab(icon: "grid", label: "预设", isSelected: studioTab == 0) { studioTab = 0 }
+                ArtisanHorizonTab(icon: "camera.filters", label: "光学", isSelected: studioTab == 1) { studioTab = 1 }
+                ArtisanHorizonTab(icon: "crop", label: "风格", isSelected: studioTab == 2) { studioTab = 2 }
+                ArtisanHorizonTab(icon: "sparkles", label: "粒子", isSelected: studioTab == 3) { studioTab = 3 }
+            }
+
+            Divider().frame(height: 140).opacity(0.1)
+
+            // === 中间：对应 Tab 的内容区（横向滚动） ===
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 32) {
+                    if studioTab == 0 {
+                        // 预设 Tab：快速滤镜网格
+                        presetTabContent
+                    } else if studioTab == 1 {
+                        // 光学 Tab：曝光/对比度/饱和度/色相
+                        ArtisanRulerDial(label: "曝光", value: $exposure, range: 0...200, unit: "ev")
+                        ArtisanRulerDial(label: "对比度", value: $contrast, range: 50...150, unit: "%")
+                        ArtisanRulerDial(label: "饱和度", value: $saturation, range: 0...200, unit: "%")
+                        ArtisanRulerDial(label: "色相", value: $hue, range: -180...180, unit: "°")
+                    } else if studioTab == 2 {
+                        // 风格 Tab：模糊/噪点/暗角/黑白/反相
+                        ArtisanRulerDial(label: "模糊", value: $blur, range: 0...40, unit: "px")
+                        ArtisanRulerDial(label: "噪点", value: $grain, range: 0...100, unit: "%")
+                        ArtisanRulerDial(label: "暗角", value: $vignette, range: 0...100, unit: "%")
+                        ArtisanRulerDial(label: "黑白", value: $grayscale, range: 0...100, unit: "%")
+                        ArtisanRulerDial(label: "反相", value: $invert, range: 0...100, unit: "%")
+                    } else if studioTab == 3 {
+                        // 粒子 Tab
+                        particleTabContent
+                    }
+                }
+                .padding(.vertical, 10)
+            }
+            .frame(maxWidth: 750)
+
+            Divider().frame(height: 140).opacity(0.1)
+
+            // === 右侧：重置/应用按钮 ===
+            VStack(spacing: 16) {
+                Button(action: { resetFilters() }) {
+                    VStack(spacing: 4) {
+                        Image(systemName: "arrow.counterclockwise.circle.fill").font(.system(size: 20))
+                        Text("重置").font(.system(size: 8, weight: .bold))
+                    }.foregroundStyle(.white.opacity(0.4))
+                }.buttonStyle(.plain)
+
+                Button(action: { /* 应用 */ }) {
+                    VStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill").font(.system(size: 20))
+                        Text("应用").font(.system(size: 8, weight: .bold))
+                    }.foregroundStyle(LiquidGlassColors.primaryPink)
+                }.buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 32).padding(.vertical, 24)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 32))
+        .overlay(RoundedRectangle(cornerRadius: 32).stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+        .artisanShadow(color: .black.opacity(0.4), radius: 50)
+    }
+
+    private var presetTabContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("快速滤镜").font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.3))
+            LazyHGrid(rows: [GridItem(.fixed(32)), GridItem(.fixed(32))], spacing: 10) {
+                ForEach(BuiltInPreset.allCases) { preset in
+                    Button(action: { applyPreset(preset) }) {
+                        Text(preset.name).font(.system(size: 11, weight: .bold))
+                            .padding(.horizontal, 16).frame(height: 32)
+                            .background(currentPresetName == preset.name
+                                ? LiquidGlassColors.primaryPink
+                                : Color.white.opacity(0.08))
+                            .foregroundStyle(currentPresetName == preset.name ? Color.black : .white)
+                            .clipShape(Capsule())
                     }.buttonStyle(.plain)
                 }
-                .padding(32)
-                .background(VisualEffectView(material: .hudWindow, blendingMode: .withinWindow))
-                .clipShape(RoundedRectangle(cornerRadius: 32))
-                .overlay(RoundedRectangle(cornerRadius: 32).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
-                .artisanShadow(color: .black.opacity(0.3), radius: 40)
-                .frame(width: 320) 
             }
         }
-        .padding(.trailing, 40) 
     }
 
-    private var artisanActionCenter: some View {
-        VStack(spacing: 36) {
-            HStack(spacing: 32) {
-                actionCircleButton(icon: wallpaper.isFavorite ? "heart.fill" : "heart", color: wallpaper.isFavorite ? LiquidGlassColors.primaryPink : .white.opacity(0.6)) { }
-                Button(action: {
-                    isApplying = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { isApplying = false }
-                }) {
-                    HStack(spacing: 16) {
-                        if isApplying { CustomProgressView(tint: .white, scale: 0.8) }
-                        else {
-                            Image(systemName: "paintpalette.fill").font(.system(size: 16))
-                            Text("应用此作").font(.system(size: 15, weight: .bold)).fixedSize().kerning(2)
-                        }
-                    }
-                    .padding(.horizontal, 48).frame(height: 56).background(Capsule().fill(LiquidGlassColors.primaryPink)).artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.3))
+    private var particleTabContent: some View {
+        HStack(spacing: 40) {
+            // 发射源
+            VStack(spacing: 8) {
+                Text("发射源").font(.system(size: 8, weight: .bold)).opacity(0.3)
+                Button(action: {}) {
+                    Circle().fill(LiquidGlassColors.primaryPink).frame(width: 36, height: 36)
+                        .overlay(Image(systemName: "plus").font(.system(size: 14, weight: .bold)).foregroundStyle(.black))
                 }.buttonStyle(.plain)
-                actionCircleButton(icon: "arrow.down.to.line.compact", color: .white.opacity(0.6)) { }
             }
-            .padding(12).background(.ultraThinMaterial, in: Capsule()).background(Capsule().fill(Color.white.opacity(0.02)))
-            .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
-            
-            navArrowHUD(icon: "chevron.down") { onNext?() }
-        }.fixedSize() // 重要：感应热区仅限组件物理面积，不再抢占右侧编辑器空间
-    }
-    
-    // MARK: - 辅助组件
-    
-    private func metadataTag(icon: String, text: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon).font(.system(size: 10, weight: .bold))
-            Text(text).font(.system(size: 10, weight: .black)).kerning(1)
-        }
-        .foregroundStyle(.white.opacity(0.4)).padding(.horizontal, 12).padding(.vertical, 6)
-        .background(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
-    }
-    
-    private func metadataRow(label: String, value: String) -> some View {
-        HStack {
-            Text(label).font(.system(size: 12, weight: .bold)).foregroundStyle(LiquidGlassColors.textQuaternary)
-            Spacer(); Text(value).font(.system(size: 12, weight: .bold)).foregroundStyle(LiquidGlassColors.textSecondary)
-        }
-    }
 
-    private func navArrowHUD(icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon).font(.system(size: 20, weight: .light)).foregroundStyle(.white).frame(width: 60, height: 40)
-                .background(.ultraThinMaterial, in: Capsule()).background(Capsule().fill(Color.white.opacity(0.05)))
-                .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
-        }.buttonStyle(.plain)
-    }
-    
-    private func actionCircleButton(icon: String, color: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon).font(.system(size: 20)).foregroundStyle(color).frame(width: 56, height: 56)
-                .background(Circle().fill(Color.white.opacity(0.05))).overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
-        }.buttonStyle(.plain)
+            Divider().frame(height: 60).opacity(0.1)
+
+            // 粒子样式选择
+            VStack(alignment: .leading, spacing: 12) {
+                Text("粒子样式").font(.system(size: 8, weight: .bold)).opacity(0.3)
+                HStack(spacing: 12) {
+                    ForEach(["circle.fill", "star.fill", "sparkles", "leaf.fill", "drop.fill"], id: \.self) { icon in
+                        Image(systemName: icon).font(.system(size: 14))
+                            .foregroundStyle(icon == "circle.fill" ? LiquidGlassColors.primaryPink : .white.opacity(0.4))
+                            .frame(width: 32, height: 32)
+                            .background(icon == "circle.fill" ? Color.white.opacity(0.1) : Color.clear)
+                            .clipShape(Circle())
+                    }
+                }
+            }
+
+            Divider().frame(height: 60).opacity(0.1)
+
+            // 色彩演化
+            VStack(alignment: .leading, spacing: 12) {
+                Text("色彩演化").font(.system(size: 8, weight: .bold)).opacity(0.3)
+                HStack(spacing: 12) {
+                    ColorPicker("", selection: .constant(Color.white)).labelsHidden()
+                    Image(systemName: "arrow.right").font(.system(size: 8)).opacity(0.2)
+                    ColorPicker("", selection: .constant(LiquidGlassColors.primaryPink)).labelsHidden()
+                }
+            }
+
+            Divider().frame(height: 60).opacity(0.1)
+
+            // 粒子参数旋钮
+            ArtisanRulerDial(label: "速率", value: .constant(60), range: 1...300, unit: "p/s")
+            ArtisanRulerDial(label: "寿命", value: .constant(3), range: 0.1...10, unit: "s")
+            ArtisanRulerDial(label: "尺寸", value: .constant(4), range: 1...40, unit: "px")
+            ArtisanRulerDial(label: "重力", value: .constant(9.8), range: -20...20, unit: "m/s²")
+            ArtisanRulerDial(label: "扰动", value: .constant(2), range: 0...20, unit: "px")
+        }
     }
     
     private var closeButtonHUD: some View {
         VStack {
             HStack {
+                Spacer()
                 Button(action: { dismiss() }) {
-                    Image(systemName: "xmark").font(.system(size: 16, weight: .light)).frame(width: 48, height: 48)
-                        .background(Circle().fill(Color.black.opacity(0.4))).overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .light))
+                        .frame(width: 44, height: 44)
+                        .background(Circle().fill(Color.black.opacity(0.4)))
+                        .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                 }
-                .buttonStyle(.plain).padding(40).opacity(isCloseButtonHovered || isTopHovered || isLeftHovered ? 1 : 0).onHover { isCloseButtonHovered = $0 }
-                Spacer()
-            }; Spacer()
-        }
+                .buttonStyle(.plain).padding(40)
+            }
+            Spacer()
+        }.zIndex(110)
     }
 
-    private var artisanShaderPanel: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Header: 紧凑版
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("LENS STUDIO").font(.system(size: 11, weight: .black)).kerning(2).foregroundStyle(LiquidGlassColors.primaryPink)
-                    Text("画面光学调节").font(.system(size: 13, weight: .bold))
-                }
-                Spacer()
-                Button(action: { withAnimation { isEditingShaders = false } }) {
-                    Image(systemName: "minus").font(.system(size: 14, weight: .bold)).foregroundStyle(LiquidGlassColors.textQuaternary)
-                }.buttonStyle(.plain)
-            }
-            .padding(.horizontal, 28).padding(.top, 32).padding(.bottom, 24)
-            
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 32) {
-                    // 1. 预设区 (胶囊网格)
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("PRESETS").font(.system(size: 9, weight: .black)).kerning(1.5).foregroundStyle(LiquidGlassColors.textQuaternary)
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                            ForEach(BuiltInPreset.allCases) { preset in
-                                Button(action: { applyPreset(preset) }) {
-                                    Text(preset.name).font(.system(size: 10, weight: .bold))
-                                        .frame(maxWidth: .infinity).frame(height: 32)
-                                        .background(currentPresetName == preset.name ? LiquidGlassColors.primaryPink : Color.white.opacity(0.05))
-                                        .foregroundStyle(currentPresetName == preset.name ? Color.black : LiquidGlassColors.textSecondary)
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                                }.buttonStyle(.plain)
-                            }
-                        }
-                    }
-                    
-                    // 2. 光学参数组
-                    VStack(alignment: .leading, spacing: 20) {
-                        ArtisanSubHeader(title: "OPTICAL")
-                        artisanInstrumentRow(icon: "sun.max.fill", label: "Exposure", value: $exposure, range: 0...200)
-                        artisanInstrumentRow(icon: "circle.lefthalf.filled", label: "Contrast", value: $contrast, range: 50...150)
-                        artisanInstrumentRow(icon: "drop.fill", label: "Saturation", value: $saturation, range: 0...200)
-                    }
-                    
-                    // 3. 构图参数组
-                    VStack(alignment: .leading, spacing: 20) {
-                        ArtisanSubHeader(title: "COMPOSITION")
-                        artisanInstrumentRow(icon: "camera.filters", label: "Blur", value: $blur, range: 0...20)
-                        artisanInstrumentRow(icon: "scope", label: "Vignette", value: $vignette, range: 0...100)
-                    }
-                }
-                .padding(.horizontal, 28).padding(.bottom, 40)
-            }
-            
-            // 底部操作区 (Fixed & Small)
-            HStack(spacing: 12) {
-                Button(action: { resetFilters() }) {
-                    Image(systemName: "arrow.counterclockwise").font(.system(size: 12))
-                        .frame(width: 44, height: 44).background(Color.white.opacity(0.05)).clipShape(Circle())
-                }.buttonStyle(.plain)
-
-                Button(action: { openShaderEditor() }) {
-                    Text("ADVANCED")
-                        .font(.system(size: 10, weight: .black)).kerning(2)
-                        .frame(maxWidth: .infinity).frame(height: 44)
-                        .background(Capsule().stroke(LiquidGlassColors.tertiaryBlue, lineWidth: 1))
-                        .foregroundStyle(LiquidGlassColors.tertiaryBlue)
-                }.buttonStyle(.plain)
-
-                Button(action: { /* 保存 */ }) {
-                    Image(systemName: "checkmark").font(.system(size: 14, weight: .bold))
-                        .frame(width: 44, height: 44).background(LiquidGlassColors.primaryPink).clipShape(Circle()).foregroundStyle(.black)
-                }.buttonStyle(.plain)
-            }
-            .padding(24).background(Color.black.opacity(0.2))
-        }
-        .frame(width: 320, height: 640) 
-        .background(VisualEffectView(material: .hudWindow, blendingMode: .withinWindow))
-        .clipShape(RoundedRectangle(cornerRadius: 32))
-        .overlay(RoundedRectangle(cornerRadius: 32).stroke(Color.white.opacity(0.12), lineWidth: 0.5))
-        .artisanShadow(color: .black.opacity(0.4), radius: 50)
-    }
+    // MARK: - 辅助组件
     
-    private func artisanInstrumentRow(icon: String, label: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
-        VStack(spacing: 8) {
-            HStack {
-                Image(systemName: icon).font(.system(size: 10)).foregroundStyle(LiquidGlassColors.primaryPink)
-                Text(label).font(.system(size: 10, weight: .bold)).foregroundStyle(LiquidGlassColors.textSecondary)
-                Spacer()
-                Text("\(Int(value.wrappedValue))").font(.system(size: 10, weight: .medium, design: .monospaced)).foregroundStyle(LiquidGlassColors.textQuaternary)
-            }
-            Slider(value: value, in: range).tint(LiquidGlassColors.primaryPink).controlSize(.mini)
-        }
-    }
-    
-    private func artisanFilterGroup<Content: View>(header: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text(header).font(.system(size: 11, weight: .black)).kerning(2).foregroundStyle(LiquidGlassColors.textQuaternary)
-            VStack(spacing: 24) { content() }.padding(24).galleryCardStyle(radius: 20, padding: 0)
-        }
-    }
-    
-    private func artisanSlider(label: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(label).font(.system(size: 12, weight: .bold)).foregroundStyle(LiquidGlassColors.textSecondary)
-                Spacer(); Text("\(Int(value.wrappedValue))").font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundStyle(LiquidGlassColors.primaryPink)
-            }
-            Slider(value: value, in: range).tint(LiquidGlassColors.primaryPink)
-        }
-    }
-
-    private func artisanDisplayCard(display: (id: String, name: String, icon: String)) -> some View {
-        let isSelected = selectedDisplays.contains(display.id)
-        return Button {
-            withAnimation(.gallerySpring) {
-                if selectedDisplays.contains(display.id) { if selectedDisplays.count > 1 { selectedDisplays.remove(display.id) } }
-                else { selectedDisplays.insert(display.id) }
-            }
-        } label: {
-            HStack(spacing: 16) {
-                Image(systemName: display.icon).font(.system(size: 16)).foregroundStyle(isSelected ? LiquidGlassColors.primaryPink : LiquidGlassColors.textTertiary)
-                Text(display.name).font(.system(size: 13, weight: .bold)).foregroundStyle(isSelected ? LiquidGlassColors.textPrimary : LiquidGlassColors.textSecondary)
-                Spacer(); if isSelected { Image(systemName: "checkmark.seal.fill").foregroundStyle(LiquidGlassColors.primaryPink) }
-            }
-            .padding(16).background(RoundedRectangle(cornerRadius: 16).fill(isSelected ? LiquidGlassColors.primaryPink.opacity(0.1) : Color.white.opacity(0.03)))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(isSelected ? LiquidGlassColors.primaryPink.opacity(0.4) : Color.clear, lineWidth: 1))
+    private func actionCircleButton(icon: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon).font(.system(size: 18)).foregroundStyle(color)
+                .frame(width: 52, height: 52)
+                .background(Circle().fill(Color.white.opacity(0.05)))
+                .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 1))
         }.buttonStyle(.plain)
-    }
-}
-
-// MARK: - Sub-Components
-
-struct ArtisanSubHeader: View {
-    let title: String
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.system(size: 9, weight: .black)).kerning(2).foregroundStyle(LiquidGlassColors.textSecondary)
-            Rectangle().frame(width: 20, height: 1).foregroundStyle(LiquidGlassColors.primaryPink)
-        }
     }
 }
 
@@ -389,7 +409,7 @@ enum BuiltInPreset: String, CaseIterable, Identifiable {
 
     var name: String {
         switch self {
-        case .original: return "原始"
+        case .original: return "原图"
         case .vivid: return "鲜艳"
         case .warm: return "暖色"
         case .cool: return "冷色"
@@ -515,5 +535,82 @@ enum BuiltInPreset: String, CaseIterable, Identifiable {
         case .cinematic: return 0
         case .fade: return 0
         }
+    }
+}
+
+// MARK: - Required Components (Duplicated from ArtisanControls.swift to bypass build issues)
+
+struct ArtisanRulerDial: View {
+    let label: String
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let unit: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(label)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(LiquidGlassColors.textSecondary)
+                Spacer()
+                Text("\(Int(value))")
+                    .font(.system(size: 20, weight: .light, design: .serif))
+                    .foregroundStyle(.white)
+                Text(unit)
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(LiquidGlassColors.primaryPink)
+            }
+            .padding(.horizontal, 2)
+            
+            ZStack {
+                Rectangle()
+                    .fill(Color.white.opacity(0.1))
+                    .frame(height: 1)
+                
+                HStack(spacing: 6) {
+                    ForEach(0..<21) { i in
+                        Rectangle()
+                            .fill(i % 5 == 0 ? Color.white.opacity(0.5) : Color.white.opacity(0.2))
+                            .frame(width: 1, height: i % 5 == 0 ? 10 : 5)
+                    }
+                }
+                
+                Rectangle()
+                    .fill(LiquidGlassColors.primaryPink)
+                    .frame(width: 2, height: 16)
+                    .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.5), radius: 4)
+                
+                Slider(value: $value, in: range)
+                    .accentColor(.clear)
+                    .opacity(0.01)
+            }
+            .frame(height: 20)
+        }
+        .frame(width: 130)
+    }
+}
+
+struct ArtisanHorizonTab: View {
+    let icon: String
+    let label: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(isSelected ? .black : .white)
+                    .frame(width: 40, height: 40)
+                    .background(isSelected ? LiquidGlassColors.primaryPink : Color.white.opacity(0.05))
+                    .clipShape(Circle())
+                
+                Text(label)
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(isSelected ? LiquidGlassColors.primaryPink : .white.opacity(0.4))
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
