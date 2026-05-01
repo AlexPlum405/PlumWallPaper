@@ -135,3 +135,47 @@ fragment float4 textureFragment(
     constexpr sampler s(mag_filter::linear, min_filter::linear);
     return tex.sample(s, in.texCoord);
 }
+
+// 粒子系统
+struct Particle {
+    float2 position;
+    float2 velocity;
+    float lifetime;
+    float age;
+    float size;
+    float4 color;
+};
+
+kernel void updateParticles(
+    device Particle *particles [[buffer(0)]],
+    constant float *params [[buffer(1)]],
+    uint id [[thread_position_in_grid]])
+{
+    Particle p = particles[id];
+    if (p.age >= p.lifetime) return;
+
+    float deltaTime = params[0];
+    float2 gravity = float2(params[1], params[2]);
+
+    p.velocity += gravity * deltaTime;
+    p.position += p.velocity * deltaTime;
+    p.age += deltaTime;
+
+    particles[id] = p;
+}
+
+kernel void renderParticles(
+    device Particle *particles [[buffer(0)]],
+    texture2d<float, access::write> output [[texture(0)]],
+    uint id [[thread_position_in_grid]])
+{
+    Particle p = particles[id];
+    if (p.age >= p.lifetime) return;
+
+    int2 pos = int2(p.position);
+    if (pos.x < 0 || pos.x >= output.get_width() || pos.y < 0 || pos.y >= output.get_height()) return;
+
+    float alpha = 1.0 - (p.age / p.lifetime);
+    float4 color = p.color * alpha;
+    output.write(color, uint2(pos));
+}
