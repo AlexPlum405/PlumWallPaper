@@ -22,6 +22,8 @@ struct HomeView: View {
     ]
 
     @State var detailWallpaper: Wallpaper?
+    @State private var isHeroLeftHovered = false
+    @State private var isHeroRightHovered = false
     private let mainPadding: CGFloat = 88
 
     var body: some View {
@@ -96,9 +98,42 @@ struct HomeView: View {
             }
             .padding(.leading, mainPadding).padding(.bottom, 100)
             
-            VStack { Spacer(); Image(systemName: "chevron.compact.down").font(.system(size: 32, weight: .ultraLight)).foregroundStyle(Color.white.opacity(0.3)).padding(.bottom, 30) }.frame(maxWidth: .infinity)
+            // 极简侧边导航箭头
+            HStack {
+                artisanHeroNavButton(isLeft: true)
+                Spacer()
+                artisanHeroNavButton(isLeft: false)
+            }
         }
         .frame(height: size.height)
+    }
+
+    private func artisanHeroNavButton(isLeft: Bool) -> some View {
+        let isHovered = isLeft ? isHeroLeftHovered : isHeroRightHovered
+        
+        return Button(action: {
+            withAnimation(.gallerySpring) {
+                if isLeft {
+                    currentHeroIndex = (currentHeroIndex - 1 + heroItems.count) % heroItems.count
+                } else {
+                    currentHeroIndex = (currentHeroIndex + 1) % heroItems.count
+                }
+            }
+        }) {
+            ZStack {
+                // 宽大的极简感应区
+                Rectangle()
+                    .fill(Color.white.opacity(0.001))
+                    .frame(width: 100, height: .infinity)
+                
+                Image(systemName: isLeft ? "chevron.left" : "chevron.right")
+                    .font(.system(size: 32, weight: .light))
+                    .foregroundStyle(.white.opacity(isHovered ? 0.9 : 0.2))
+                    .offset(x: isLeft ? 40 : -40)
+            }
+        }
+        .buttonStyle(.plain)
+        .onHover { isLeft ? (isHeroLeftHovered = $0) : (isHeroRightHovered = $0) }
     }
 
     private func artisanSection(title: String, meta: String, range: Range<Int>, isDynamic: Bool) -> some View {

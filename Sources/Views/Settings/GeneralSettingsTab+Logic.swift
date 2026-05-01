@@ -11,7 +11,15 @@ extension GeneralSettingsTab {
         print("setMenuBarEnabled: \(enabled)")
     }
 
-    func setWallpaperOpacity(_ opacity: Int) {
-        print("setWallpaperOpacity: \(opacity)")
+    func changeLibraryPath() {
+        print("changeLibraryPath triggered")
+    }
+
+    func clearCache() {
+        print("clearCache triggered")
+    }
+
+    func resetAllShortcuts() {
+        print("resetAllShortcuts triggered")
     }
 }

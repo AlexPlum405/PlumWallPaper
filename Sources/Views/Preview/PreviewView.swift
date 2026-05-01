@@ -4,83 +4,107 @@ struct PreviewView: View {
     let wallpaper: Wallpaper
     let onClose: () -> Void
     @State private var isVisible = false
+    @State private var isHoveringPrev = false
+    @State private var isHoveringNext = false
 
     var body: some View {
         ZStack {
-            // 毛玻璃背板
+            // 1. 全屏背景
             Rectangle()
                 .fill(.ultraThickMaterial)
                 .ignoresSafeArea()
                 .onTapGesture { onClose() }
 
-            VStack(spacing: 30) {
-                // 主图预览（占位）
-                ZStack {
-                    RoundedRectangle(cornerRadius: 32, style: .continuous)
-                        .fill(LiquidGlassColors.elevatedBackground)
-                        .shadow(color: .black.opacity(0.3), radius: 40, x: 0, y: 20)
-                    
-                    VStack(spacing: 20) {
-                        Image(systemName: "photo.artframe")
-                            .font(.system(size: 80))
-                            .foregroundStyle(LiquidGlassColors.primaryPink.opacity(0.5))
-                        
-                        Text(wallpaper.name)
-                            .font(.system(size: 32, weight: .bold))
+            HStack(spacing: 20) {
+                // 上一张按钮 (极简)
+                artisanNavButton(icon: "chevron.left", isHovered: isHoveringPrev) {
+                    isHoveringPrev = $0
+                } action: {
+                    // Previous logic
+                }
+
+                Spacer()
+
+                VStack(spacing: 40) {
+                    // 2. 主图预览 (移除占位图，换回 AsyncImage)
+                    ZStack {
+                        if let url = URL(string: wallpaper.filePath), url.scheme != nil {
+                            AsyncImage(url: url) { phase in
+                                switch phase {
+                                case .success(let image):
+                                    image.resizable().aspectRatio(contentMode: .fit)
+                                case .failure, .empty:
+                                    Color.black.overlay(ProgressView().tint(.white))
+                                @unknown default:
+                                    Color.black
+                                }
+                            }
+                        } else {
+                            Image(nsImage: NSImage(contentsOfFile: wallpaper.filePath) ?? NSImage())
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                        }
+                    }
+                    .frame(maxWidth: 900, maxHeight: 600)
+                    .background(RoundedRectangle(cornerRadius: 32).fill(Color.black))
+                    .clipShape(RoundedRectangle(cornerRadius: 32))
+                    .shadow(color: .black.opacity(0.4), radius: 60, x: 0, y: 30)
+
+                    // 3. 核心操作栏
+                    HStack(spacing: 25) {
+                        Button(action: onClose) {
+                            Image(systemName: "xmark").font(.system(size: 18, weight: .bold))
+                                .frame(width: 56, height: 56)
+                                .background(Circle().fill(Color.white.opacity(0.06)))
+                        }.buttonStyle(.plain)
+
+                        Button(action: onClose) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "desktopcomputer").font(.system(size: 16, weight: .bold))
+                                Text("设为壁纸").font(.system(size: 16, weight: .bold))
+                            }
                             .foregroundStyle(.white)
+                            .padding(.horizontal, 40)
+                            .frame(height: 56)
+                            .background(Capsule().fill(LiquidGlassColors.primaryPink))
+                        }.buttonStyle(.plain)
+
+                        Button(action: { }) {
+                            Image(systemName: wallpaper.isFavorite ? "heart.fill" : "heart")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundStyle(wallpaper.isFavorite ? LiquidGlassColors.primaryPink : .white)
+                                .frame(width: 56, height: 56)
+                                .background(Circle().fill(Color.white.opacity(0.06)))
+                        }.buttonStyle(.plain)
                     }
                 }
-                .frame(maxWidth: 800, maxHeight: 450)
-                .padding(.horizontal, 40)
 
-                // 操作按钮栏
-                HStack(spacing: 25) {
-                    // 返回
-                    Button(action: onClose) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(width: 60, height: 60)
-                            .background(Circle().fill(Color.white.opacity(0.1)))
-                    }
-                    .buttonStyle(.plain)
+                Spacer()
 
-                    // 设为壁纸
-                    Button(action: onClose) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "desktopcomputer")
-                            Text("设为壁纸")
-                                .font(.system(size: 18, weight: .bold))
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 40)
-                        .frame(height: 60)
-                        .background(
-                            Capsule()
-                                .fill(LinearGradient(colors: [LiquidGlassColors.primaryPink, LiquidGlassColors.primaryViolet], startPoint: .leading, endPoint: .trailing))
-                        )
-                        .shadow(color: LiquidGlassColors.primaryPink.opacity(0.3), radius: 15, y: 8)
-                    }
-                    .buttonStyle(.plain)
-
-                    // 收藏
-                    Button(action: {}) {
-                        Image(systemName: wallpaper.isFavorite ? "heart.fill" : "heart")
-                            .font(.system(size: 20))
-                            .foregroundStyle(wallpaper.isFavorite ? LiquidGlassColors.primaryPink : .white)
-                            .frame(width: 60, height: 60)
-                            .background(Circle().fill(Color.white.opacity(0.1)))
-                    }
-                    .buttonStyle(.plain)
+                // 下一张按钮 (极简)
+                artisanNavButton(icon: "chevron.right", isHovered: isHoveringNext) {
+                    isHoveringNext = $0
+                } action: {
+                    // Next logic
                 }
             }
-            .scaleEffect(isVisible ? 1 : 0.9)
+            .padding(.horizontal, 30)
             .opacity(isVisible ? 1 : 0)
         }
-        .onAppear {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                isVisible = true
+        .onAppear { withAnimation(.easeInOut(duration: 0.3)) { isVisible = true } }
+    }
+
+    private func artisanNavButton(icon: String, isHovered: Bool, onHover: @escaping (Bool) -> Void, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            ZStack {
+                Rectangle().fill(Color.white.opacity(0.001)).frame(width: 80, height: 140)
+                Image(systemName: icon)
+                    .font(.system(size: 36, weight: .light))
+                    .foregroundStyle(isHovered ? .white : .white.opacity(0.3))
+                    .scaleEffect(isHovered ? 1.1 : 1.0)
             }
-        }
+            .onHover(perform: onHover)
+            .animation(.easeInOut(duration: 0.2), value: isHovered)
+        }.buttonStyle(.plain)
     }
 }

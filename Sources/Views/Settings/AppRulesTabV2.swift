@@ -57,10 +57,6 @@ struct AppRulesTabV2: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 48) {
                     
-                    // ===== 新增：全局暂停策略区域 (GLOBAL PAUSE TRIGGERS) =====
-                    globalPauseStrategiesSection
-                        .padding(.horizontal, 32)
-                    
                     // 2. 活跃逻辑单元
                     VStack(alignment: .leading, spacing: 20) {
                         HStack(alignment: .firstTextBaseline) {
@@ -117,126 +113,11 @@ struct AppRulesTabV2: View {
                         }.padding(.horizontal, 32)
                     }
                 }
+                .padding(.top, 32)
                 .padding(.bottom, 60)
             }
         }
         .background(LiquidGlassColors.deepBackground)
-    }
-
-    // MARK: - 新增：全局暂停策略 UI
-    private var globalPauseStrategiesSection: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            HStack(alignment: .firstTextBaseline) {
-                LiquidGlassSectionHeader(title: "全局暂停策略", icon: "power", color: LiquidGlassColors.warningOrange)
-                Text("GLOBAL PAUSE TRIGGERS").font(.system(size: 10, weight: .black)).kerning(2).foregroundStyle(LiquidGlassColors.textQuaternary)
-            }
-
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                pauseStrategyCard(icon: "battery.100.bolt", title: "电池供电", 
-                                isOn: Binding(get: { viewModel.settings?.pauseOnBattery ?? true }, 
-                                            set: { setPauseOnBattery($0) }))
-
-                pauseStrategyCard(icon: "arrow.up.left.and.arrow.down.right", title: "全屏应用", 
-                                isOn: Binding(get: { viewModel.settings?.pauseOnFullscreen ?? true }, 
-                                            set: { setPauseOnFullscreen($0) }))
-
-                pauseStrategyCardWithThreshold(
-                    icon: "battery.25", 
-                    title: "低电量", 
-                    isOn: Binding(get: { viewModel.settings?.pauseOnLowBattery ?? true }, 
-                                set: { setPauseOnLowBattery($0) }),
-                    threshold: Binding(get: { viewModel.settings?.lowBatteryThreshold ?? 20 }, 
-                                     set: { setLowBatteryThreshold($0) })
-                )
-
-                pauseStrategyCard(icon: "rectangle.on.rectangle", title: "屏幕共享", 
-                                isOn: Binding(get: { viewModel.settings?.pauseOnScreenSharing ?? false }, 
-                                            set: { setPauseOnScreenSharing($0) }))
-
-                pauseStrategyCard(icon: "cpu", title: "高负载", 
-                                isOn: Binding(get: { viewModel.settings?.pauseOnHighLoad ?? true }, 
-                                            set: { setPauseOnHighLoad($0) }))
-
-                pauseStrategyCard(icon: "eye.slash", title: "失去焦点", 
-                                isOn: Binding(get: { viewModel.settings?.pauseOnLostFocus ?? false }, 
-                                            set: { setPauseOnLostFocus($0) }))
-
-                pauseStrategyCard(icon: "laptopcomputer", title: "合盖暂停", 
-                                isOn: Binding(get: { viewModel.settings?.pauseOnLidClosed ?? true }, 
-                                            set: { setPauseOnLidClosed($0) }))
-
-                pauseStrategyCard(icon: "moon.zzz", title: "睡眠前夕", 
-                                isOn: Binding(get: { viewModel.settings?.pauseBeforeSleep ?? true }, 
-                                            set: { setPauseBeforeSleep($0) }))
-
-                pauseStrategyCard(icon: "square.stack", title: "被遮挡时", 
-                                isOn: Binding(get: { viewModel.settings?.pauseOnOcclusion ?? false }, 
-                                            set: { setPauseOnOcclusion($0) }))
-            }
-        }
-    }
-
-    private func pauseStrategyCard(icon: String, title: String, isOn: Binding<Bool>) -> some View {
-        HStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.system(size: 20))
-                .foregroundStyle(isOn.wrappedValue ? LiquidGlassColors.warningOrange : LiquidGlassColors.textQuaternary)
-                .frame(width: 32)
-
-            Text(title)
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(LiquidGlassColors.textPrimary)
-
-            Spacer()
-
-            artisanToggle(isOn: isOn)
-        }
-        .padding(20)
-        .galleryCardStyle(radius: 16, padding: 0)
-    }
-
-    private func pauseStrategyCardWithThreshold(icon: String, title: String, isOn: Binding<Bool>, threshold: Binding<Int>) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 16) {
-                Image(systemName: icon)
-                    .font(.system(size: 20))
-                    .foregroundStyle(isOn.wrappedValue ? LiquidGlassColors.warningOrange : LiquidGlassColors.textQuaternary)
-                    .frame(width: 32)
-
-                Text(title)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(LiquidGlassColors.textPrimary)
-
-                Spacer()
-
-                artisanToggle(isOn: isOn)
-            }
-
-            if isOn.wrappedValue {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("触发阈值").font(.system(size: 11, weight: .medium)).foregroundStyle(LiquidGlassColors.textSecondary)
-                        Spacer()
-                        Text("\(threshold.wrappedValue)%").font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundStyle(LiquidGlassColors.warningOrange)
-                    }
-                    Slider(value: Binding(get: { Double(threshold.wrappedValue) }, set: { threshold.wrappedValue = Int($0) }), in: 5...50, step: 5)
-                        .tint(LiquidGlassColors.warningOrange)
-                }
-                .padding(.top, 4)
-                .transition(.move(edge: .top).combined(with: .opacity))
-            }
-        }
-        .padding(20)
-        .galleryCardStyle(radius: 16, padding: 0)
-    }
-
-    private func artisanToggle(isOn: Binding<Bool>) -> some View {
-        Button { withAnimation(.gallerySpring) { isOn.wrappedValue.toggle() } } label: {
-            ZStack {
-                Capsule().fill(isOn.wrappedValue ? LiquidGlassColors.primaryPink : Color.white.opacity(0.1)).frame(width: 36, height: 20)
-                Circle().fill(Color.white).frame(width: 16, height: 16).shadow(color: .black.opacity(0.2), radius: 2).offset(x: isOn.wrappedValue ? 8 : -8)
-            }
-        }.buttonStyle(.plain)
     }
 
     // MARK: - 原有 UI 组件

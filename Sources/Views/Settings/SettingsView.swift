@@ -100,35 +100,25 @@ struct SettingsView: View {
         switch tab {
         case .general: GeneralSettingsTab(viewModel: viewModel)
         case .playback: PlaybackTab(viewModel: viewModel)
-        case .audio: AudioTab(viewModel: viewModel)
         case .performance: PerformanceTab(viewModel: viewModel)
         case .appRules: AppRulesTabV2(viewModel: viewModel, toast: $toast)
-        case .slideshow: SlideshowTab(viewModel: viewModel)
         case .display: DisplayTab(viewModel: viewModel)
-        case .shortcuts: ShortcutsTab()
-        case .appearance: AppearanceTab(viewModel: viewModel)
-        case .library: LibraryTab(viewModel: viewModel)
         case .about: AboutSettingsTab()
         }
     }
 }
 
-// MARK: - 设置标签枚举 (完全补全版)
+// MARK: - 设置标签枚举 (重构精简版)
 private enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, playback, audio, performance, appRules, slideshow, display, shortcuts, appearance, library, about
+    case general, playback, performance, appRules, display, about
     var id: Self { self }
     var title: String {
         switch self {
         case .general: return "通用"
-        case .playback: return "渲染"
-        case .audio: return "音效"
+        case .playback: return "播放"
         case .performance: return "性能"
-        case .appRules: return "智能暂停"
-        case .slideshow: return "轮播"
-        case .display: return "显示器"
-        case .shortcuts: return "快捷键"
-        case .appearance: return "界面"
-        case .library: return "存储"
+        case .appRules: return "应用规则"
+        case .display: return "显示"
         case .about: return "关于"
         }
     }
@@ -136,14 +126,9 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "command"
         case .playback: return "play.circle.fill"
-        case .audio: return "speaker.wave.3.fill"
         case .performance: return "gauge.medium"
         case .appRules: return "bolt.shield.fill"
-        case .slideshow: return "arrow.2.squarepath"
         case .display: return "display.2"
-        case .shortcuts: return "keyboard"
-        case .appearance: return "paintpalette.fill"
-        case .library: return "archivebox.fill"
         case .about: return "info.circle.fill"
         }
     }
@@ -191,20 +176,129 @@ func artisanToggle(isOn: Binding<Bool>) -> some View {
 
 // MARK: - About 子页
 private struct AboutSettingsTab: View {
+    @State private var isHoveringWeb = false
+    @State private var isHoveringGit = false
+
     var body: some View {
-        VStack(spacing: 32) {
-            Image(nsImage: NSApp.applicationIconImage ?? NSImage()).resizable().frame(width: 80, height: 80).artisanShadow()
-            VStack(spacing: 8) {
-                Text("PlumWallPaper").font(.custom("Georgia", size: 28).bold())
-                Text("CRAFTSMANSHIP EDITION v1.0.2").font(.system(size: 10, weight: .black)).kerning(2).foregroundStyle(LiquidGlassColors.textQuaternary)
-            }
-            artisanSettingsSection(header: "溯源") {
-                HStack {
-                    Text("策展团队").font(.system(size: 13, weight: .bold))
-                    Spacer()
-                    Text("Plum Studio").font(.system(size: 13, weight: .medium)).foregroundStyle(LiquidGlassColors.textSecondary)
-                }.padding(20)
+        ScrollView {
+            VStack(spacing: 40) {
+                // 品牌核心展示
+                VStack(spacing: 24) {
+                    ZStack {
+                        Circle()
+                            .fill(LiquidGlassColors.primaryPink.opacity(0.15))
+                            .frame(width: 120, height: 120)
+                            .blur(radius: 20)
+                        
+                        Image(nsImage: NSApp.applicationIconImage ?? NSImage())
+                            .resizable()
+                            .frame(width: 80, height: 80)
+                            .artisanShadow(radius: 24)
+                    }
+                    
+                    VStack(spacing: 8) {
+                        Text("PlumWallPaper")
+                            .font(.custom("Georgia", size: 32).bold().italic())
+                            .foregroundStyle(LiquidGlassColors.textPrimary)
+                        
+                        Text("CRAFTSMANSHIP EDITION")
+                            .font(.system(size: 10, weight: .black))
+                            .kerning(4)
+                            .foregroundStyle(LiquidGlassColors.primaryPink)
+                    }
+                }
+                .padding(.top, 20)
+
+                // 品牌哲学描述
+                VStack(spacing: 16) {
+                    Text("数位艺术的策展人")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(LiquidGlassColors.textPrimary)
+                    
+                    Text("Plum 致力于打破桌面与艺术的边界。通过精密的粒子动力学与渲染调度，我们将每一帧静止的画面，转化为充满呼吸感的感官之旅。这不仅是一款壁纸引擎，更是您个人数字空间的艺术工作室。")
+                        .font(.system(size: 13))
+                        .lineSpacing(6)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(LiquidGlassColors.textSecondary)
+                        .padding(.horizontal, 40)
+                }
+
+                // 交互磁贴
+                HStack(spacing: 20) {
+                    artisanLinkTile(
+                        icon: "safari.fill",
+                        title: "官方站点",
+                        subtitle: "plumstudio.art",
+                        isHovered: isHoveringWeb
+                    ) {
+                        isHoveringWeb = $0
+                    } action: {
+                        NSWorkspace.shared.open(URL(string: "https://plumstudio.art")!)
+                    }
+
+                    artisanLinkTile(
+                        icon: "terminal.fill",
+                        title: "开源社区",
+                        subtitle: "GitHub Repos",
+                        isHovered: isHoveringGit
+                    ) {
+                        isHoveringGit = $0
+                    } action: {
+                        NSWorkspace.shared.open(URL(string: "https://github.com")!)
+                    }
+                }
+                .padding(.horizontal, 40)
+
+                // 团队与版本信息
+                VStack(spacing: 0) {
+                    artisanSettingsRow(title: "当前版本", subtitle: "Version 1.0.2 (Build 20260502)") {
+                        Text("已是最新").font(.system(size: 11, weight: .bold)).foregroundStyle(LiquidGlassColors.textQuaternary)
+                    }
+                    
+                    artisanSettingsRow(title: "策展团队", subtitle: "Plum Studio & Global Artisans", showDivider: false) {
+                        Image(systemName: "seal.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(LiquidGlassColors.primaryPink)
+                    }
+                }
+                .galleryCardStyle(radius: 20, padding: 0)
+                .padding(.horizontal, 40)
+
+                // 版权脚注
+                Text("COPYRIGHT © 2026 PLUM STUDIO. ALL RIGHTS RESERVED.")
+                    .font(.system(size: 9, weight: .medium))
+                    .kerning(1.5)
+                    .foregroundStyle(LiquidGlassColors.textQuaternary)
+                    .padding(.bottom, 40)
             }
         }
+    }
+
+    private func artisanLinkTile(icon: String, title: String, subtitle: String, isHovered: Bool, onHover: @escaping (Bool) -> Void, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 20))
+                    .foregroundStyle(isHovered ? LiquidGlassColors.primaryPink : LiquidGlassColors.textSecondary)
+                
+                VStack(spacing: 2) {
+                    Text(title).font(.system(size: 13, weight: .bold)).foregroundStyle(LiquidGlassColors.textPrimary)
+                    Text(subtitle).font(.system(size: 10)).foregroundStyle(LiquidGlassColors.textQuaternary)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 24)
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(isHovered ? Color.white.opacity(0.06) : Color.white.opacity(0.02))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(isHovered ? LiquidGlassColors.primaryPink.opacity(0.3) : LiquidGlassColors.glassBorder, lineWidth: 1)
+            )
+            .onHover(perform: onHover)
+            .animation(.gallerySpring, value: isHovered)
+        }
+        .buttonStyle(.plain)
     }
 }

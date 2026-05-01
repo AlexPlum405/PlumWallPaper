@@ -9,7 +9,7 @@ struct PerformanceTab: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 32) {
-                // 实时分析仪表盘
+                // MARK: - [动力实时分析]
                 VStack(alignment: .leading, spacing: 20) {
                     LiquidGlassSectionHeader(title: "动力实时分析", icon: "waveform.path.ecg", color: LiquidGlassColors.tertiaryBlue)
                     Chart(perfHistory) { point in
@@ -25,32 +25,76 @@ struct PerformanceTab: View {
                 }
                 .onReceive(timer) { _ in updatePerfHistory() }
 
-                artisanSettingsSection(header: "渲染调度中心") {
+                // MARK: - [渲染调度中心]
+                artisanSettingsSection(header: "渲染调度中心 (RENDERING HUB)") {
                     artisanSettingsRow(title: "物理帧率上限", subtitle: "限制最高渲染帧率以优化能效比") {
                         Picker("", selection: Binding(
                             get: { viewModel.settings?.fpsLimit ?? 60 },
                             set: { setFPSLimit($0) }
                         )) {
                             Text("不限").tag(0)
-                            Text("30 FPS").tag(30)
-                            Text("60 FPS").tag(60)
-                            Text("120 FPS").tag(120)
+                            Text("30").tag(30)
+                            Text("60").tag(60)
+                            Text("120").tag(120)
                         }
                         .frame(width: 140)
                     }
 
-                    artisanSettingsRow(title: "垂直同步 (V-Sync)", subtitle: "与显示器刷新率严格同步，消除画面撕裂", showDivider: false) {
+                    artisanSettingsRow(title: "垂直同步 V-Sync", subtitle: "与显示器刷新率严格同步，消除画面撕裂", showDivider: false) {
                         artisanToggle(isOn: Binding(
                             get: { viewModel.settings?.vSyncEnabled ?? true },
                             set: { setVSyncEnabled($0) }
                         ))
                     }
                 }
-                
-                VStack(spacing: 12) {
-                    Image(systemName: "cpu").font(.system(size: 16)).foregroundStyle(LiquidGlassColors.tertiaryBlue)
-                    Text("智能调度引擎正在根据您的暂停策略自动优化硬件负载。").font(.system(size: 11)).foregroundStyle(LiquidGlassColors.textQuaternary).multilineTextAlignment(.center)
-                }.padding(.top, 20)
+
+                // MARK: - [全局暂停策略]
+                VStack(alignment: .leading, spacing: 20) {
+                    LiquidGlassSectionHeader(title: "全局暂停策略", icon: "power", color: LiquidGlassColors.warningOrange)
+                    
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                        pauseStrategyCard(icon: "battery.100.bolt", title: "电池供电", 
+                                        isOn: Binding(get: { viewModel.settings?.pauseOnBattery ?? true }, 
+                                                    set: { setPauseOnBattery($0) }))
+
+                        pauseStrategyCard(icon: "arrow.up.left.and.arrow.down.right", title: "全屏应用", 
+                                        isOn: Binding(get: { viewModel.settings?.pauseOnFullscreen ?? true }, 
+                                                    set: { setPauseOnFullscreen($0) }))
+
+                        pauseStrategyCardWithThreshold(
+                            icon: "battery.25", 
+                            title: "低电量", 
+                            isOn: Binding(get: { viewModel.settings?.pauseOnLowBattery ?? true }, 
+                                        set: { setPauseOnLowBattery($0) }),
+                            threshold: Binding(get: { viewModel.settings?.lowBatteryThreshold ?? 20 }, 
+                                             set: { setLowBatteryThreshold($0) })
+                        )
+
+                        pauseStrategyCard(icon: "rectangle.on.rectangle", title: "屏幕共享", 
+                                        isOn: Binding(get: { viewModel.settings?.pauseOnScreenSharing ?? false }, 
+                                                    set: { setPauseOnScreenSharing($0) }))
+
+                        pauseStrategyCard(icon: "cpu", title: "高负载", 
+                                        isOn: Binding(get: { viewModel.settings?.pauseOnHighLoad ?? true }, 
+                                                    set: { setPauseOnHighLoad($0) }))
+
+                        pauseStrategyCard(icon: "eye.slash", title: "失去焦点", 
+                                        isOn: Binding(get: { viewModel.settings?.pauseOnLostFocus ?? false }, 
+                                                    set: { setPauseOnLostFocus($0) }))
+
+                        pauseStrategyCard(icon: "laptopcomputer", title: "合盖暂停", 
+                                        isOn: Binding(get: { viewModel.settings?.pauseOnLidClosed ?? true }, 
+                                                    set: { setPauseOnLidClosed($0) }))
+
+                        pauseStrategyCard(icon: "moon.zzz", title: "睡眠前夕", 
+                                        isOn: Binding(get: { viewModel.settings?.pauseBeforeSleep ?? true }, 
+                                                    set: { setPauseBeforeSleep($0) }))
+
+                        pauseStrategyCard(icon: "square.stack", title: "被遮挡时", 
+                                        isOn: Binding(get: { viewModel.settings?.pauseOnOcclusion ?? false }, 
+                                                    set: { setPauseOnOcclusion($0) }))
+                    }
+                }
             }
             .padding(.top, 32)
             .padding(.horizontal, 40)
@@ -61,6 +105,60 @@ struct PerformanceTab: View {
     private func updatePerfHistory() {
         perfHistory.removeFirst()
         perfHistory.append(PerformancePoint(index: (perfHistory.last?.index ?? 0) + 1, value: Double.random(in: 58...60)))
+    }
+
+    private func pauseStrategyCard(icon: String, title: String, isOn: Binding<Bool>) -> some View {
+        HStack(spacing: 16) {
+            Image(systemName: icon)
+                .font(.system(size: 20))
+                .foregroundStyle(isOn.wrappedValue ? LiquidGlassColors.warningOrange : LiquidGlassColors.textQuaternary)
+                .frame(width: 32)
+
+            Text(title)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(LiquidGlassColors.textPrimary)
+
+            Spacer()
+
+            artisanToggle(isOn: isOn)
+        }
+        .padding(20)
+        .galleryCardStyle(radius: 16, padding: 0)
+    }
+
+    private func pauseStrategyCardWithThreshold(icon: String, title: String, isOn: Binding<Bool>, threshold: Binding<Int>) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 16) {
+                Image(systemName: icon)
+                    .font(.system(size: 20))
+                    .foregroundStyle(isOn.wrappedValue ? LiquidGlassColors.warningOrange : LiquidGlassColors.textQuaternary)
+                    .frame(width: 32)
+
+                Text(title)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(LiquidGlassColors.textPrimary)
+
+                Spacer()
+
+                artisanToggle(isOn: isOn)
+            }
+
+            if isOn.wrappedValue {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("触发阈值").font(.system(size: 11, weight: .medium)).foregroundStyle(LiquidGlassColors.textSecondary)
+                        Spacer()
+                        Text("\(threshold.wrappedValue)%").font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundStyle(LiquidGlassColors.warningOrange)
+                    }
+                    Slider(value: Binding(get: { Double(threshold.wrappedValue) }, set: { threshold.wrappedValue = Int($0) }), in: 5...50, step: 5)
+                        .tint(LiquidGlassColors.warningOrange)
+                }
+                .padding(.top, 4)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .padding(20)
+        .galleryCardStyle(radius: 16, padding: 0)
     }
 }
 
