@@ -43,6 +43,7 @@ struct WallpaperDetailView: View {
 
             // 3. 侧翼导航（左右两侧边缘感应）
             sideNavigationArrows
+                .zIndex(10) // 降低层级，确保不遮挡 Dock 和 Studio
 
             // 4. 标题 HUD（左上角，极简感应）
             artisanTitleHUD
@@ -60,12 +61,15 @@ struct WallpaperDetailView: View {
                             insertion: .move(edge: .bottom).combined(with: .opacity),
                             removal: .opacity
                         ))
+                        .zIndex(50)
                 }
 
                 // 地平线底座：主控 Dock
                 artisanMainDock
+                    .zIndex(60)
             }
             .padding(.bottom, 40)
+            .zIndex(100) // 整体地平线 HUD 拥有最高点击优先级
 
             // 6. 关闭按钮（右上角）
             closeButtonHUD
@@ -97,71 +101,82 @@ struct WallpaperDetailView: View {
 
     private var sideNavigationArrows: some View {
         ZStack {
-            // 左侧翼
-            ZStack(alignment: .leading) {
-                Rectangle().fill(Color.white.opacity(0.001)).frame(width: 100)
-                HStack(spacing: 0) {
+            // 左侧感应区：晶莹圆润箭头
+            Color.clear
+                .frame(width: 80)
+                .contentShape(Rectangle())
+                .onHover { hovering in withAnimation(.galleryEase) { isLeftEdgeHovered = hovering } }
+                .onTapGesture { onPrevious?() }
+                .overlay(
                     ZStack {
-                        RoundedRectangle(cornerRadius: 2).fill(.ultraThinMaterial)
-                            .frame(width: 4, height: 160)
-                            .overlay(RoundedRectangle(cornerRadius: 2)
-                                .stroke(LiquidGlassColors.primaryPink.opacity(isLeftEdgeHovered ? 0.6 : 0.2), lineWidth: 0.5))
-                        VStack(spacing: 4) {
-                            ForEach(0..<6) { i in
-                                Rectangle().fill(.white.opacity(isLeftEdgeHovered ? 0.4 : 0.2))
-                                    .frame(width: i == 3 ? 10 : 6, height: 1)
-                            }
-                        }.offset(x: 10)
+                        // 1. 底层：弥散柔光
+                        RoundedChevron()
+                            .stroke(LiquidGlassColors.primaryPink.opacity(0.3), style: StrokeStyle(lineWidth: 12, lineCap: .round, lineJoin: .round))
+                            .blur(radius: 8)
+                        
+                        // 2. 中层：实体厚度 (白瓷质感)
+                        RoundedChevron()
+                            .stroke(.white.opacity(0.6), style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round))
+                            .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                        
+                        // 3. 顶层：棱镜高光
+                        RoundedChevron()
+                            .stroke(
+                                LinearGradient(colors: [.white, .white.opacity(0.2)], startPoint: .top, endPoint: .bottom),
+                                style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
+                            )
                     }
-                    .offset(x: isLeftEdgeHovered ? 20 : 0)
-                    VStack(spacing: 12) {
-                        Image(systemName: "chevron.left.circle.fill")
-                            .font(.system(size: 24, weight: .thin))
-                        Text("上一张").font(.system(size: 9, weight: .bold))
-                            .opacity(isLeftEdgeHovered ? 0.8 : 0)
-                    }
-                    .foregroundStyle(isLeftEdgeHovered ? LiquidGlassColors.primaryPink : .white.opacity(0.4))
-                    .offset(x: isLeftEdgeHovered ? 30 : 10)
-                }
-            }
-            .contentShape(Rectangle())
-            .onHover { hovering in withAnimation(.gallerySpring) { isLeftEdgeHovered = hovering } }
-            .onTapGesture { onPrevious?() }
-            .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(width: 14, height: 44)
+                    .rotationEffect(.degrees(180))
+                    .opacity(isLeftEdgeHovered ? 1 : 0)
+                    .offset(x: isLeftEdgeHovered ? 40 : 10),
+                    alignment: .leading
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            // 右侧翼 (镜像对称)
-            ZStack(alignment: .trailing) {
-                Rectangle().fill(Color.white.opacity(0.001)).frame(width: 100)
-                HStack(spacing: 0) {
-                    VStack(spacing: 12) {
-                        Image(systemName: "chevron.right.circle.fill")
-                            .font(.system(size: 24, weight: .thin))
-                        Text("下一张").font(.system(size: 9, weight: .bold))
-                            .opacity(isRightEdgeHovered ? 0.8 : 0)
-                    }
-                    .foregroundStyle(isRightEdgeHovered ? LiquidGlassColors.primaryPink : .white.opacity(0.4))
-                    .offset(x: isRightEdgeHovered ? -30 : -10)
+            // 右侧感应区：晶莹圆润箭头
+            Color.clear
+                .frame(width: 80)
+                .contentShape(Rectangle())
+                .onHover { hovering in withAnimation(.galleryEase) { isRightEdgeHovered = hovering } }
+                .onTapGesture { onNext?() }
+                .overlay(
                     ZStack {
-                        RoundedRectangle(cornerRadius: 2).fill(.ultraThinMaterial)
-                            .frame(width: 4, height: 160)
-                            .overlay(RoundedRectangle(cornerRadius: 2)
-                                .stroke(LiquidGlassColors.primaryPink.opacity(isRightEdgeHovered ? 0.6 : 0.2), lineWidth: 0.5))
-                        VStack(spacing: 4) {
-                            ForEach(0..<6) { i in
-                                Rectangle().fill(.white.opacity(isRightEdgeHovered ? 0.4 : 0.2))
-                                    .frame(width: i == 3 ? 10 : 6, height: 1)
-                            }
-                        }.offset(x: -10)
+                        // 1. 底层：弥散柔光
+                        RoundedChevron()
+                            .stroke(LiquidGlassColors.primaryPink.opacity(0.3), style: StrokeStyle(lineWidth: 12, lineCap: .round, lineJoin: .round))
+                            .blur(radius: 8)
+                        
+                        // 2. 中层：实体厚度
+                        RoundedChevron()
+                            .stroke(.white.opacity(0.6), style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round))
+                            .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                        
+                        // 3. 顶层：棱镜高光
+                        RoundedChevron()
+                            .stroke(
+                                LinearGradient(colors: [.white, .white.opacity(0.2)], startPoint: .top, endPoint: .bottom),
+                                style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
+                            )
                     }
-                    .offset(x: isRightEdgeHovered ? -20 : 0)
-                }
-            }
-            .contentShape(Rectangle())
-            .onHover { hovering in withAnimation(.gallerySpring) { isRightEdgeHovered = hovering } }
-            .onTapGesture { onNext?() }
-            .frame(maxWidth: .infinity, alignment: .trailing)
+                    .frame(width: 14, height: 44)
+                    .opacity(isRightEdgeHovered ? 1 : 0)
+                    .offset(x: isRightEdgeHovered ? -40 : -10),
+                    alignment: .trailing
+                )
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .zIndex(100)
+    }
+
+    // 自定义圆润箭头图形
+    private struct RoundedChevron: Shape {
+        func path(in rect: CGRect) -> Path {
+            var path = Path()
+            path.move(to: CGPoint(x: 0, y: 0))
+            path.addLine(to: CGPoint(x: rect.width, y: rect.height / 2))
+            path.addLine(to: CGPoint(x: 0, y: rect.height))
+            return path
+        }
     }
 
     private var artisanTitleHUD: some View {
