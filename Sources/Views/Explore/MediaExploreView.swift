@@ -2,13 +2,13 @@ import SwiftUI
 
 // MARK: - MediaExploreView (Step 5: 媒体探索页实现)
 struct MediaExploreView: View {
-    @State private var selectedResolution: String = "全部"
-    @State private var selectedSort: String = "最新"
-    
+    @State var selectedResolution: String = "全部"
+    @State var selectedSort: String = "最新"
+
     // 分页状态
-    @State private var displayedMedia: [Wallpaper] = []
-    @State private var isLoadingMore = false
-    @State private var hasMoreData = true
+    @State var displayedMedia: [Wallpaper] = []
+    @State var isLoadingMore = false
+    @State var hasMoreData = true
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -79,43 +79,7 @@ struct MediaExploreView: View {
         }
         .frame(maxWidth: .infinity)
     }
-    
-    // MARK: - 逻辑
-    
-    private func loadInitialData() {
-        displayedMedia = createMockBatch(count: 10)
-    }
-    
-    private func loadMoreData() {
-        guard !isLoadingMore && hasMoreData else { return }
-        isLoadingMore = true
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            let newBatch = createMockBatch(count: 6)
-            displayedMedia.append(contentsOf: newBatch)
-            isLoadingMore = false
-            
-            if displayedMedia.count > 30 {
-                hasMoreData = false
-            }
-        }
-    }
-    
-    private func createMockBatch(count: Int) -> [Wallpaper] {
-        let baseCount = displayedMedia.count
-        return (0..<count).map { i in
-            Wallpaper(
-                id: UUID(),
-                name: "引擎资源 #\(baseCount + i + 1)",
-                filePath: "https://mock.placeholder/media\(baseCount + i).jpg",
-                type: .video,
-                resolution: "4K · 60FPS",
-                duration: Double.random(in: 15...120), // 随机时长
-                thumbnailPath: ""
-            )
-        }
-    }
-    
+
     private func filterGroup(title: String, options: [String], selected: Binding<String>) -> some View {
         HStack(spacing: 12) {
             Text("\(title):")

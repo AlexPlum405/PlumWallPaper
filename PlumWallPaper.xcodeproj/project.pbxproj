@@ -19,11 +19,14 @@
 		308D3F40A13F062CD98499FA /* ToastConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081B839D96AF14B55C73861C /* ToastConfig.swift */; };
 		395FDA0325F104EFF1031EFF /* MyLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF7EB103470F1C91A037F62D /* MyLibraryView.swift */; };
 		41BBD3D0B830D4B9D10352EE /* LiquidGlassExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BFC070EB9E6FC67ECF0A30E /* LiquidGlassExtensions.swift */; };
+		4399A8AD043556EF419BFA86 /* MediaExploreView+Logic.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70AA56103E5ADDDF02D042D /* MediaExploreView+Logic.swift */; };
+		455E45F3BB92BC6CE20A3170 /* WallpaperExploreView+Logic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73F9829E6E346973389534FD /* WallpaperExploreView+Logic.swift */; };
 		46E4E3E6AD47CF341E95D939 /* MediaExploreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71153ED11B64EAC620D943C /* MediaExploreView.swift */; };
+		48D29BFA4EBB151E5DA5B0A7 /* HomeView+Logic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62DBB7ADDE4C7D34F2E92DD1 /* HomeView+Logic.swift */; };
+		4E8351BFE9BFBE4C94CFC85A /* ImportWallpaperSheet+Logic.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8D64F6129E91E1C6CAE3376 /* ImportWallpaperSheet+Logic.swift */; };
 		51BF133243509E7E07A4B531 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD7FD3FCEE90906A82E005D /* HomeView.swift */; };
 		520967807CC3596759A27B9C /* WindowAccessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E099A767DEA20EA00487AE5F /* WindowAccessor.swift */; };
 		57407784ADD7C2D72970B8D0 /* WallpaperExploreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A759316C525C53C16D2F9010 /* WallpaperExploreView.swift */; };
-		6A1F8B92C3D4E5F607182930 /* WallpaperExploreView+Logic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E9C7A41D8B2F06514A3E7C2 /* WallpaperExploreView+Logic.swift */; };
 		59E796E942F5185E0C24B4D2 /* AppRulesTabV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21678164A5C66B62064D17AF /* AppRulesTabV2.swift */; };
 		5D8094B56D819F23B06B982A /* TagManagerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90836F84AC56879790FFDE1A /* TagManagerSheet.swift */; };
 		5FC9D607DF0A0DF58EA4798F /* ShaderPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 163C20723526A250CB94C6B9 /* ShaderPreset.swift */; };
@@ -42,7 +45,9 @@
 		B75475FD6218E24AC8C7F70B /* GrainTextureOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E8478CD9D21B050F8C10944 /* GrainTextureOverlay.swift */; };
 		BA03667B57874A63D7C6CC14 /* WallpaperCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BF6BBAF2B8B615A3F464EDF /* WallpaperCard.swift */; };
 		BA9D1BD24C8FF8FFA0B0EB05 /* Tag.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACF1C1D9BC347E282F5C2F06 /* Tag.swift */; };
+		BCA66A027A19798478E0BE9C /* MyLibraryView+Logic.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6AEE717FCB89182FCBE55FA /* MyLibraryView+Logic.swift */; };
 		C03F4C27CCC0F897E002BC6E /* Wallpaper.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5ACA543E101FECACD5CA1D7 /* Wallpaper.swift */; };
+		D308C54081BE830054DA7F84 /* WallpaperDetailView+Logic.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6BF610ED27253866D5CBDBB /* WallpaperDetailView+Logic.swift */; };
 		D8FBE7D7B75742D2705276C9 /* WallpaperDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16431E5B65BB71E305CE1D26 /* WallpaperDetailView.swift */; };
 		E8F24A044181FE439EE2C8B3 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AE9A8B0D16C1B5C1C8AB5E7 /* ContentView.swift */; };
 		EB2BB8B32350F50CAA0F6F1F /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 3866DB4C03EEDDB3ADAD0532 /* Localizable.strings */; };
@@ -69,8 +74,10 @@
 		4E977D9275E8E861FC4D618E /* AppRulesTabV2+Logic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppRulesTabV2+Logic.swift"; sourceTree = "<group>"; };
 		5AE9A8B0D16C1B5C1C8AB5E7 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		60AD48DB3AC1A8944B151694 /* PlumWallPaper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PlumWallPaper.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		62DBB7ADDE4C7D34F2E92DD1 /* HomeView+Logic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+Logic.swift"; sourceTree = "<group>"; };
 		63AB7C972CC7EB8B5701124C /* FilterChips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterChips.swift; sourceTree = "<group>"; };
 		661E4F1C07FBFDC99AB1010B /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		73F9829E6E346973389534FD /* WallpaperExploreView+Logic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WallpaperExploreView+Logic.swift"; sourceTree = "<group>"; };
 		777318D7149CD291FA60B4B6 /* MenuBarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarViewModel.swift; sourceTree = "<group>"; };
 		7BFC070EB9E6FC67ECF0A30E /* LiquidGlassExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlassExtensions.swift; sourceTree = "<group>"; };
 		8465DED63AC93FCEE4BB7139 /* LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryViewModel.swift; sourceTree = "<group>"; };
@@ -88,14 +95,18 @@
 		BBE5FA06BA9E7ED726E742D2 /* ThumbnailGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailGenerator.swift; sourceTree = "<group>"; };
 		BF7EB103470F1C91A037F62D /* MyLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyLibraryView.swift; sourceTree = "<group>"; };
 		C5ACA543E101FECACD5CA1D7 /* Wallpaper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wallpaper.swift; sourceTree = "<group>"; };
+		C70AA56103E5ADDDF02D042D /* MediaExploreView+Logic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MediaExploreView+Logic.swift"; sourceTree = "<group>"; };
 		C772358D777023DF5DDA0881 /* PreferencesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesStore.swift; sourceTree = "<group>"; };
 		CBD7FD3FCEE90906A82E005D /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		CC0D0A105F06031860E8B5C3 /* PlumWallPaperApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlumWallPaperApp.swift; sourceTree = "<group>"; };
 		D5D49B71D9BDF3B9CB2EE95A /* Enums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enums.swift; sourceTree = "<group>"; };
+		D8D64F6129E91E1C6CAE3376 /* ImportWallpaperSheet+Logic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ImportWallpaperSheet+Logic.swift"; sourceTree = "<group>"; };
 		DC5E66565FDFD15599B1D3D7 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		DC71A3853630F86F1CF1A2FA /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		E099A767DEA20EA00487AE5F /* WindowAccessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowAccessor.swift; sourceTree = "<group>"; };
+		E6AEE717FCB89182FCBE55FA /* MyLibraryView+Logic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MyLibraryView+Logic.swift"; sourceTree = "<group>"; };
 		E6B16A800A7ACAFA1FA98E59 /* PreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewView.swift; sourceTree = "<group>"; };
+		E6BF610ED27253866D5CBDBB /* WallpaperDetailView+Logic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WallpaperDetailView+Logic.swift"; sourceTree = "<group>"; };
 		F6B491F4CA5A8D7216D2D6F8 /* ImportWallpaperSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportWallpaperSheet.swift; sourceTree = "<group>"; };
 		FDA23CF3F13A10057ACF6366 /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -105,6 +116,7 @@
 			isa = PBXGroup;
 			children = (
 				CBD7FD3FCEE90906A82E005D /* HomeView.swift */,
+				62DBB7ADDE4C7D34F2E92DD1 /* HomeView+Logic.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -204,7 +216,9 @@
 			isa = PBXGroup;
 			children = (
 				B71153ED11B64EAC620D943C /* MediaExploreView.swift */,
+				C70AA56103E5ADDDF02D042D /* MediaExploreView+Logic.swift */,
 				A759316C525C53C16D2F9010 /* WallpaperExploreView.swift */,
+				73F9829E6E346973389534FD /* WallpaperExploreView+Logic.swift */,
 			);
 			path = Explore;
 			sourceTree = "<group>";
@@ -234,6 +248,7 @@
 			isa = PBXGroup;
 			children = (
 				16431E5B65BB71E305CE1D26 /* WallpaperDetailView.swift */,
+				E6BF610ED27253866D5CBDBB /* WallpaperDetailView+Logic.swift */,
 			);
 			path = Detail;
 			sourceTree = "<group>";
@@ -286,8 +301,10 @@
 			isa = PBXGroup;
 			children = (
 				F6B491F4CA5A8D7216D2D6F8 /* ImportWallpaperSheet.swift */,
+				D8D64F6129E91E1C6CAE3376 /* ImportWallpaperSheet+Logic.swift */,
 				DC5E66565FDFD15599B1D3D7 /* LibraryView.swift */,
 				BF7EB103470F1C91A037F62D /* MyLibraryView.swift */,
+				E6AEE717FCB89182FCBE55FA /* MyLibraryView+Logic.swift */,
 				90836F84AC56879790FFDE1A /* TagManagerSheet.swift */,
 			);
 			path = Library;
@@ -380,16 +397,20 @@
 				1AFC146A2EB65DAF577B34E8 /* FileImporter.swift in Sources */,
 				2039778C4F41F6F30D044464 /* FilterChips.swift in Sources */,
 				B75475FD6218E24AC8C7F70B /* GrainTextureOverlay.swift in Sources */,
+				48D29BFA4EBB151E5DA5B0A7 /* HomeView+Logic.swift in Sources */,
 				51BF133243509E7E07A4B531 /* HomeView.swift in Sources */,
+				4E8351BFE9BFBE4C94CFC85A /* ImportWallpaperSheet+Logic.swift in Sources */,
 				F07D392C4096EED8FD00FD7F /* ImportWallpaperSheet.swift in Sources */,
 				A7FF1365633793988927514D /* LibraryView.swift in Sources */,
 				1646A3D557889FF58F140B3E /* LibraryViewModel.swift in Sources */,
 				716071EF31778DBE6DE8F113 /* LiquidGlassComponents.swift in Sources */,
 				F43406CEAE07A793A61705C9 /* LiquidGlassDesignSystem.swift in Sources */,
 				41BBD3D0B830D4B9D10352EE /* LiquidGlassExtensions.swift in Sources */,
+				4399A8AD043556EF419BFA86 /* MediaExploreView+Logic.swift in Sources */,
 				46E4E3E6AD47CF341E95D939 /* MediaExploreView.swift in Sources */,
 				7C942EB363F08E741764BDF4 /* MenuBarView.swift in Sources */,
 				AC0347332482B86C7EC02B69 /* MenuBarViewModel.swift in Sources */,
+				BCA66A027A19798478E0BE9C /* MyLibraryView+Logic.swift in Sources */,
 				395FDA0325F104EFF1031EFF /* MyLibraryView.swift in Sources */,
 				283D2B2FF747E8F0C39C8E9E /* PlumWallPaperApp.swift in Sources */,
 				F43FDE1B9A058397730912A9 /* PreferencesStore.swift in Sources */,
@@ -409,7 +430,9 @@
 				0E8AC13AE1ECF94630875871 /* TopNavigationBar.swift in Sources */,
 				C03F4C27CCC0F897E002BC6E /* Wallpaper.swift in Sources */,
 				BA03667B57874A63D7C6CC14 /* WallpaperCard.swift in Sources */,
+				D308C54081BE830054DA7F84 /* WallpaperDetailView+Logic.swift in Sources */,
 				D8FBE7D7B75742D2705276C9 /* WallpaperDetailView.swift in Sources */,
+				455E45F3BB92BC6CE20A3170 /* WallpaperExploreView+Logic.swift in Sources */,
 				57407784ADD7C2D72970B8D0 /* WallpaperExploreView.swift in Sources */,
 				71FBC63BEA5F27C41E73CB10 /* WallpaperStore.swift in Sources */,
 				520967807CC3596759A27B9C /* WindowAccessor.swift in Sources */,

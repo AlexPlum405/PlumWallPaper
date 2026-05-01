@@ -7,9 +7,9 @@ struct WallpaperExploreView: View {
     @State private var selectedSort: String = "最新"
     
     // 分页状态
-    @State private var displayedWallpapers: [Wallpaper] = []
-    @State private var isLoadingMore = false
-    @State private var hasMoreData = true
+    @State var displayedWallpapers: [Wallpaper] = []
+    @State var isLoadingMore = false
+    @State var hasMoreData = true
     
     // Mock 数据
     let categories = [
@@ -115,49 +115,6 @@ struct WallpaperExploreView: View {
         // 这里的 frame 处理要符合规范
         .frame(maxWidth: .infinity)
         .gridCellColumns(1) // 如果是 LazyVGrid 且需要占满一行，通常用 gridCellColumns(2) 等
-    }
-    
-    // MARK: - 逻辑
-    
-    private func loadInitialData() {
-        displayedWallpapers = createMockBatch(count: 12)
-    }
-    
-    private func loadMoreData() {
-        guard !isLoadingMore && hasMoreData else { return }
-        isLoadingMore = true
-        
-        // 模拟网络延迟
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            let newBatch = createMockBatch(count: 8)
-            displayedWallpapers.append(contentsOf: newBatch)
-            isLoadingMore = false
-            
-            // 模拟加载 4 次后到底
-            if displayedWallpapers.count > 40 {
-                hasMoreData = false
-            }
-        }
-    }
-    
-    private func refreshData() {
-        displayedWallpapers = []
-        hasMoreData = true
-        loadInitialData()
-    }
-    
-    private func createMockBatch(count: Int) -> [Wallpaper] {
-        let baseCount = displayedWallpapers.count
-        return (0..<count).map { i in
-            Wallpaper(
-                id: UUID(),
-                name: "壁纸资源 #\(baseCount + i + 1)",
-                filePath: "https://mock.placeholder/wp\(baseCount + i).jpg",
-                type: .image,
-                resolution: "3840x2160",
-                thumbnailPath: ""
-            )
-        }
     }
     
     private func filterGroup(title: String, options: [String], selected: Binding<String>) -> some View {

@@ -26,16 +26,16 @@ struct WallpaperDetailView: View {
     ]
     
     // 滤镜参数状态
-    @State private var exposure: Double = 100
-    @State private var contrast: Double = 100
-    @State private var saturation: Double = 100
-    @State private var hue: Double = 0
-    @State private var blur: Double = 0
-    @State private var grain: Double = 0
-    @State private var vignette: Double = 0
-    @State private var grayscale: Double = 0
-    @State private var invert: Double = 0
-    @State private var currentPresetName: String = "原始"
+    @State var exposure: Double = 100
+    @State var contrast: Double = 100
+    @State var saturation: Double = 100
+    @State var hue: Double = 0
+    @State var blur: Double = 0
+    @State var grain: Double = 0
+    @State var vignette: Double = 0
+    @State var grayscale: Double = 0
+    @State var invert: Double = 0
+    @State var currentPresetName: String = "原始"
     
     private let sidebarWidth: CGFloat = 380
     private let fadeAnim = Animation.easeInOut(duration: 0.3)
@@ -479,22 +479,6 @@ struct WallpaperDetailView: View {
                 .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.04)))
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(.white.opacity(0.08), lineWidth: 0.5))
         }
-    }
-
-    // MARK: - 预设操作
-    private func applyPreset(_ preset: BuiltInPreset) {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            currentPresetName = preset.name
-            exposure = preset.exposure; contrast = preset.contrast
-            saturation = preset.saturation; hue = preset.hue
-            blur = preset.blur; grain = preset.grain
-            vignette = preset.vignette; grayscale = preset.grayscale
-            invert = preset.invert
-        }
-    }
-
-    private func resetFilters() {
-        applyPreset(.original)
     }
 }
 
