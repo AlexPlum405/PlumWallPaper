@@ -1,11 +1,9 @@
-// Sources/Core/FileImporter.swift
 import Foundation
 import AVFoundation
 import AppKit
 import CryptoKit
 
-/// 文件导入器 - v2 版本
-@MainActor
+/// 文件导入器
 final class FileImporter {
     static let shared = FileImporter()
 
@@ -40,7 +38,7 @@ final class FileImporter {
             resolution: resolution,
             fileSize: fileSize,
             duration: duration,
-            frameRate: frameRate,
+            frameRate: frameRate.map { Double($0) },
             hasAudio: hasAudio,
             fileHash: fileHash,
             thumbnailPath: thumbnailPath
@@ -80,12 +78,12 @@ final class FileImporter {
         return CMTimeGetSeconds(duration)
     }
 
-    private func detectFrameRate(for url: URL, type: WallpaperType) async throws -> Double? {
+    private func detectFrameRate(for url: URL, type: WallpaperType) async throws -> Int? {
         guard type == .video else { return nil }
         let asset = AVAsset(url: url)
         guard let track = try await asset.loadTracks(withMediaType: .video).first else { return nil }
         let rate = try await track.load(.nominalFrameRate)
-        return Double(rate)
+        return Int(rate.rounded())
     }
 
     private func detectAudio(for url: URL, type: WallpaperType) async throws -> Bool {

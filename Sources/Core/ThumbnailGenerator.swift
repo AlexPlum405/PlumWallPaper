@@ -1,12 +1,9 @@
-// Sources/Core/ThumbnailGenerator.swift
 import Foundation
 import AVFoundation
 import AppKit
 import ImageIO
-import UniformTypeIdentifiers
 
-/// 缩略图生成器 - v2 版本
-@MainActor
+/// 缩略图生成器
 final class ThumbnailGenerator {
     static let shared = ThumbnailGenerator()
 
