@@ -2,77 +2,461 @@ import SwiftUI
 
 // MARK: - Artisan Wallpaper Explore (Scheme C: Pure Edition)
 struct WallpaperExploreView: View {
-    @State private var selectedCategory: String = "全部"
-    @State private var selectedPurity: String = "SFW"
-    @State private var selectedSort: String = "最新"
-    
-    @State var displayedWallpapers: [Wallpaper] = []
-    @State var isLoadingMore = false
-    @State var hasMoreData = true
-    @State var detailWallpaper: Wallpaper?
-    
+    @StateObject private var viewModel = WallpaperExploreViewModel()
+    @State private var detailWallpaper: RemoteWallpaper?
+    @State private var showFilters = false
+
     let mainPadding: CGFloat = 88
-    
+
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 48) {
-                // 1. 顶部筛选 (修复：移除 Hero，增加顶部避让)
+                // 1. 顶部筛选区域
                 artisanFilterSection
                     .padding(.top, 100) // 避开 TabBar
-                
-                // 2. 瀑布流画卷
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 220, maximum: 280), spacing: 32)], spacing: 32) {
-                    ForEach(displayedWallpapers) { wallpaper in
-                        WallpaperCard(wallpaper: wallpaper) { 
-                            detailWallpaper = wallpaper
-                        }
-                    }
-                    if hasMoreData { artisanLoadingIndicator }
+
+                // 2. 错误提示
+                if let errorMessage = viewModel.errorMessage {
+                    errorBanner(errorMessage)
+                }
+
+                // 3. 瀑布流画卷
+                if viewModel.wallpapers.isEmpty && !viewModel.isLoading {
+                    emptyStateView
+                } else {
+                    wallpaperGrid
                 }
             }
-            .padding(.horizontal, mainPadding).padding(.bottom, 100)
+            .padding(.horizontal, mainPadding)
+            .padding(.bottom, 100)
         }
         .background(LiquidGlassColors.deepBackground)
         .sheet(item: $detailWallpaper) { wallpaper in
-            WallpaperDetailView(wallpaper: wallpaper)
+            RemoteWallpaperDetailView(wallpaper: wallpaper)
         }
-        .onAppear { if displayedWallpapers.isEmpty { loadInitialData() } }
+        .onAppear {
+            NSLog("[WallpaperExploreView] .onAppear 被调用")
+            if viewModel.wallpapers.isEmpty {
+                Task {
+                    NSLog("[WallpaperExploreView] 开始加载初始数据")
+                    await viewModel.loadInitialData()
+                }
+            }
+        }
     }
-    
+
+    // MARK: - 筛选区域
     private var artisanFilterSection: some View {
         VStack(alignment: .leading, spacing: 24) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    ForEach(["全部", "风景", "建筑", "极简", "抽象"], id: \.self) { cat in
-                        FilterChip(title: cat, isSelected: selectedCategory == cat) {
-                            withAnimation(.gallerySpring) { selectedCategory = cat; refreshData() }
+            // 搜索栏
+            searchBar
+
+            // 分类筛选
+            categoryFilters
+
+            // 高级筛选按钮和选项
+            HStack(spacing: 32) {
+                purityFilters
+                Rectangle().fill(LiquidGlassColors.glassBorder).frame(width: 1, height: 20)
+                sortingFilters
+                Spacer()
+                advancedFiltersButton
+            }
+
+            // 展开的高级筛选
+            if showFilters {
+                advancedFiltersSection
+            }
+        }
+    }
+
+    // MARK: - 搜索栏
+    private var searchBar: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(LiquidGlassColors.textSecondary)
+
+            TextField("搜索壁纸...", text: $viewModel.searchQuery)
+                .textFieldStyle(.plain)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(LiquidGlassColors.textPrimary)
+                .onSubmit {
+                    Task { await viewModel.applyFilters() }
+                }
+
+            if !viewModel.searchQuery.isEmpty {
+                Button {
+                    viewModel.searchQuery = ""
+                    Task { await viewModel.applyFilters() }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(LiquidGlassColors.textSecondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 18)
+        .frame(height: 44)
+        .background {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(LiquidGlassColors.surfaceBackground.opacity(0.6))
+                .background(.ultraThinMaterial)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(LiquidGlassColors.glassBorder, lineWidth: 0.5)
+        }
+    }
+
+    // MARK: - 分类筛选
+    private var categoryFilters: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 16) {
+                ForEach(categories, id: \.value) { category in
+                    FilterChip(
+                        title: category.label,
+                        isSelected: viewModel.selectedCategory == category.value
+                    ) {
+                        withAnimation(.gallerySpring) {
+                            viewModel.selectedCategory = category.value
+                        }
+                        Task { await viewModel.applyFilters() }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - 纯度筛选
+    private var purityFilters: some View {
+        artisanFilterGroup(
+            title: "内容分级",
+            options: purityOptions,
+            selected: $viewModel.selectedPurity
+        )
+    }
+
+    // MARK: - 排序筛选
+    private var sortingFilters: some View {
+        artisanFilterGroup(
+            title: "排序方式",
+            options: sortingOptions,
+            selected: $viewModel.selectedSorting
+        )
+    }
+
+    // MARK: - 高级筛选按钮
+    private var advancedFiltersButton: some View {
+        Button {
+            withAnimation(.gallerySpring) {
+                showFilters.toggle()
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 12, weight: .bold))
+                Text("高级筛选")
+                    .font(.system(size: 13, weight: .bold))
+                Image(systemName: showFilters ? "chevron.up" : "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+            }
+            .foregroundStyle(LiquidGlassColors.textSecondary)
+            .padding(.horizontal, 16)
+            .frame(height: 32)
+            .background {
+                Capsule()
+                    .fill(Color.white.opacity(0.03))
+                    .overlay(Capsule().stroke(LiquidGlassColors.glassBorder, lineWidth: 0.5))
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - 高级筛选区域
+    private var advancedFiltersSection: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            // 分辨率筛选
+            filterSection(title: "分辨率", options: resolutionOptions) { resolution in
+                if viewModel.selectedResolutions.contains(resolution.value) {
+                    viewModel.selectedResolutions.removeAll { $0 == resolution.value }
+                } else {
+                    viewModel.selectedResolutions.append(resolution.value)
+                }
+                Task { await viewModel.applyFilters() }
+            }
+
+            // 比例筛选
+            filterSection(title: "画面比例", options: ratioOptions) { ratio in
+                if viewModel.selectedRatios.contains(ratio.value) {
+                    viewModel.selectedRatios.removeAll { $0 == ratio.value }
+                } else {
+                    viewModel.selectedRatios.append(ratio.value)
+                }
+                Task { await viewModel.applyFilters() }
+            }
+
+            // 颜色筛选
+            colorFilterSection
+        }
+        .padding(24)
+        .background {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(LiquidGlassColors.surfaceBackground.opacity(0.4))
+                .background(.ultraThinMaterial)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(LiquidGlassColors.glassBorder, lineWidth: 0.5)
+        }
+    }
+
+    // MARK: - 颜色筛选
+    private var colorFilterSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("主色调")
+                .font(.system(size: 11, weight: .black))
+                .kerning(1.5)
+                .foregroundStyle(LiquidGlassColors.textQuaternary)
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 40), spacing: 12)], spacing: 12) {
+                ForEach(colorOptions, id: \.value) { color in
+                    colorChip(color: color)
+                }
+            }
+        }
+    }
+
+    // MARK: - 瀑布流网格
+    private var wallpaperGrid: some View {
+        LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: 220, maximum: 280), spacing: 32)],
+            spacing: 32
+        ) {
+            ForEach(viewModel.wallpapers) { wallpaper in
+                RemoteWallpaperCard(wallpaper: wallpaper) {
+                    detailWallpaper = wallpaper
+                }
+                .onAppear {
+                    // 无限滚动：检测到最后几个元素时加载更多
+                    if wallpaper.id == viewModel.wallpapers.last?.id {
+                        Task { await viewModel.loadMore() }
+                    }
+                }
+            }
+
+            // 加载指示器
+            if viewModel.isLoading {
+                artisanLoadingIndicator
+            }
+        }
+    }
+
+    // MARK: - 空状态
+    private var emptyStateView: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "photo.on.rectangle.angled")
+                .font(.system(size: 64, weight: .thin))
+                .foregroundStyle(LiquidGlassColors.textQuaternary)
+
+            VStack(spacing: 8) {
+                Text("未找到壁纸")
+                    .font(.custom("Georgia", size: 20).bold())
+                    .foregroundStyle(LiquidGlassColors.textPrimary)
+
+                Text("尝试调整筛选条件或搜索关键词")
+                    .font(.system(size: 13))
+                    .foregroundStyle(LiquidGlassColors.textSecondary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 100)
+    }
+
+    // MARK: - 错误横幅
+    private func errorBanner(_ message: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(LiquidGlassColors.warningOrange)
+
+            Text(message)
+                .font(.system(size: 13))
+                .foregroundStyle(LiquidGlassColors.textPrimary)
+
+            Spacer()
+
+            Button("重试") {
+                Task { await viewModel.refresh() }
+            }
+            .font(.system(size: 13, weight: .bold))
+            .foregroundStyle(LiquidGlassColors.primaryPink)
+            .buttonStyle(.plain)
+        }
+        .padding(16)
+        .background {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(LiquidGlassColors.warningOrange.opacity(0.1))
+                .background(.ultraThinMaterial)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(LiquidGlassColors.warningOrange.opacity(0.3), lineWidth: 0.5)
+        }
+    }
+
+    // MARK: - 加载指示器
+    private var artisanLoadingIndicator: some View {
+        VStack(spacing: 16) {
+            CustomProgressView(tint: LiquidGlassColors.primaryPink, scale: 1.2)
+            Text("Fetching inspirations...")
+                .font(.custom("Georgia", size: 12).italic())
+                .foregroundStyle(LiquidGlassColors.textQuaternary)
+        }
+        .padding(.vertical, 60)
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - 筛选组辅助函数
+    private func artisanFilterGroup(
+        title: String,
+        options: [(label: String, value: String)],
+        selected: Binding<String>
+    ) -> some View {
+        HStack(spacing: 14) {
+            Text(title)
+                .font(.system(size: 11, weight: .black))
+                .kerning(1.5)
+                .foregroundStyle(LiquidGlassColors.textQuaternary)
+
+            HStack(spacing: 8) {
+                ForEach(options, id: \.value) { option in
+                    FilterChip(
+                        title: option.label,
+                        isSelected: selected.wrappedValue == option.value
+                    ) {
+                        withAnimation(.gallerySpring) {
+                            selected.wrappedValue = option.value
+                        }
+                        Task { await viewModel.applyFilters() }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - 通用筛选区域
+    private func filterSection(
+        title: String,
+        options: [(label: String, value: String)],
+        action: @escaping ((label: String, value: String)) -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.system(size: 11, weight: .black))
+                .kerning(1.5)
+                .foregroundStyle(LiquidGlassColors.textQuaternary)
+
+            FlowLayout(spacing: 8) {
+                ForEach(options, id: \.value) { option in
+                    let isSelected = title == "分辨率"
+                        ? viewModel.selectedResolutions.contains(option.value)
+                        : viewModel.selectedRatios.contains(option.value)
+
+                    FilterChip(title: option.label, isSelected: isSelected) {
+                        action(option)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - 颜色芯片
+    private func colorChip(color: (label: String, value: String, hex: String)) -> some View {
+        let isSelected = viewModel.selectedColors.contains(color.value)
+
+        return Button {
+            if isSelected {
+                viewModel.selectedColors.removeAll { $0 == color.value }
+            } else {
+                viewModel.selectedColors.append(color.value)
+            }
+            Task { await viewModel.applyFilters() }
+        } label: {
+            VStack(spacing: 6) {
+                Circle()
+                    .fill(Color(hex: color.hex))
+                    .frame(width: 40, height: 40)
+                    .overlay {
+                        if isSelected {
+                            Circle()
+                                .stroke(Color.white, lineWidth: 2)
+                            Circle()
+                                .stroke(LiquidGlassColors.primaryPink, lineWidth: 3)
+                                .padding(-2)
                         }
                     }
-                }
-            }
-            HStack(spacing: 32) {
-                artisanFilterGroup(title: "内容分级", options: ["SFW", "Sketchy"], selected: $selectedPurity)
-                Rectangle().fill(LiquidGlassColors.glassBorder).frame(width: 1, height: 20)
-                artisanFilterGroup(title: "排序权重", options: ["最新", "热门", "收藏"], selected: $selectedSort)
-            }
-        }
-    }
-    
-    private func artisanFilterGroup(title: String, options: [String], selected: Binding<String>) -> some View {
-        HStack(spacing: 14) {
-            Text(title).font(.system(size: 11, weight: .black)).kerning(1.5).foregroundStyle(LiquidGlassColors.textQuaternary)
-            HStack(spacing: 8) {
-                ForEach(options, id: \.self) { opt in
-                    FilterChip(title: opt, isSelected: selected.wrappedValue == opt) {
-                        withAnimation(.gallerySpring) { selected.wrappedValue = opt; refreshData() }
-                    }
-                }
+
+                Text(color.label)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(
+                        isSelected
+                            ? LiquidGlassColors.primaryPink
+                            : LiquidGlassColors.textSecondary
+                    )
             }
         }
+        .buttonStyle(.plain)
     }
-    
-    private var artisanLoadingIndicator: some View {
-        VStack(spacing: 16) { CustomProgressView(tint: LiquidGlassColors.primaryPink, scale: 1.2); Text("Fetching inspirations...").font(.custom("Georgia", size: 12).italic()).foregroundStyle(LiquidGlassColors.textQuaternary) }
-            .padding(.vertical, 60).onAppear { loadMoreData() }.frame(maxWidth: .infinity)
-    }
+
+    // MARK: - 数据定义
+    private let categories: [(label: String, value: String)] = [
+        ("全部", "111"),
+        ("通用", "100"),
+        ("动漫", "010"),
+        ("人物", "001")
+    ]
+
+    private let purityOptions: [(label: String, value: String)] = [
+        ("SFW", "100"),
+        ("Sketchy", "010")
+    ]
+
+    private let sortingOptions: [(label: String, value: String)] = [
+        ("最新", "date_added"),
+        ("热门", "views"),
+        ("收藏", "favorites"),
+        ("随机", "random")
+    ]
+
+    private let resolutionOptions: [(label: String, value: String)] = [
+        ("1920x1080", "1920x1080"),
+        ("2560x1440", "2560x1440"),
+        ("3840x2160", "3840x2160"),
+        ("5120x2880", "5120x2880")
+    ]
+
+    private let ratioOptions: [(label: String, value: String)] = [
+        ("16:9", "16x9"),
+        ("16:10", "16x10"),
+        ("21:9", "21x9"),
+        ("32:9", "32x9"),
+        ("9:16", "9x16")
+    ]
+
+    private let colorOptions: [(label: String, value: String, hex: String)] = [
+        ("红", "660000", "CC0000"),
+        ("橙", "cc6600", "FF8800"),
+        ("黄", "ffcc00", "FFDD00"),
+        ("绿", "009900", "00CC00"),
+        ("青", "00cccc", "00DDDD"),
+        ("蓝", "0066cc", "0088FF"),
+        ("紫", "9900cc", "BB00FF"),
+        ("粉", "ff66cc", "FF88DD"),
+        ("黑", "000000", "222222"),
+        ("白", "ffffff", "EEEEEE"),
+        ("灰", "999999", "999999"),
+        ("棕", "996633", "AA7744")
+    ]
 }

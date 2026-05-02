@@ -2,7 +2,7 @@
 import Foundation
 import simd
 
-struct ParticleEmitterConfig {
+struct ParticleEmitterEngineConfig {
     var position: SIMD2<Float>
     var emissionRate: Float
     var lifetime: Float
@@ -25,11 +25,11 @@ struct Particle {
 
 final class ParticleEmitter {
     let id: UUID
-    var config: ParticleEmitterConfig
+    var config: ParticleEmitterEngineConfig
     var enabled: Bool
     private var accumulator: Float = 0
 
-    init(id: UUID = UUID(), config: ParticleEmitterConfig) {
+    init(id: UUID = UUID(), config: ParticleEmitterEngineConfig) {
         self.id = id
         self.config = config
         self.enabled = true

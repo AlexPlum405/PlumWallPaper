@@ -5,6 +5,7 @@ import AppKit
 struct ContentView: View {
     @State private var selectedTab: MainTab = .home
     @State private var selectedWallpaper: Wallpaper?
+    @State private var hasInitialized = false
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -16,7 +17,11 @@ struct ContentView: View {
             Group {
                 switch selectedTab {
                 case .home:
-                    HomeView(selectedWallpaper: $selectedWallpaper)
+                    HomeView(
+                        selectedWallpaper: $selectedWallpaper,
+                        onSwitchToWallpaperTab: { selectedTab = .wallpaper },
+                        onSwitchToMediaTab: { selectedTab = .media }
+                    )
                 case .wallpaper:
                     WallpaperExploreView()
                 case .media:
@@ -46,5 +51,11 @@ struct ContentView: View {
         }
         .frame(minWidth: 1200, minHeight: 800)
         .preferredColorScheme(.dark)
+        .onAppear {
+            // 确保只初始化一次
+            guard !hasInitialized else { return }
+            hasInitialized = true
+            NSLog("[ContentView] 应用启动，准备初始化数据")
+        }
     }
 }

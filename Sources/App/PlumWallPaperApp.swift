@@ -6,6 +6,9 @@ import AppKit
 @main
 struct PlumWallPaperApp {
     static func main() {
+        // 初始化视频缓存管理器
+        _ = VideoCacheManager.shared
+
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate

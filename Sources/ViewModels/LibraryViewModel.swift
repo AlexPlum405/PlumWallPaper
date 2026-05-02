@@ -7,7 +7,20 @@ import Observation
 @MainActor
 final class LibraryViewModel {
 
-    // MARK: - SubTabs
+    // MARK: - Filter Enums
+    enum WallpaperTypeFilter: String, CaseIterable {
+        case all = "全部"
+        case image = "静态"
+        case video = "动态"
+    }
+
+    enum WallpaperSourceFilter: String, CaseIterable {
+        case favorites = "收藏"
+        case downloaded = "下载"
+        case imported = "导入"
+    }
+
+    // MARK: - SubTabs (Deprecated - kept for compatibility)
     enum LibraryTab: String, CaseIterable {
         case favorites = "收藏"
         case downloads = "下载"
@@ -17,6 +30,8 @@ final class LibraryViewModel {
     // MARK: - State
 
     var selectedTab: LibraryTab = .favorites
+    var typeFilter: WallpaperTypeFilter = .all
+    var sourceFilter: WallpaperSourceFilter = .favorites
     var wallpapers: [Wallpaper] = []
     var selectedWallpaper: Wallpaper?
     var searchText: String = ""
@@ -30,20 +45,13 @@ final class LibraryViewModel {
     // MARK: - Init
 
     init() {
-        // 初始 Mock 数据，确保符合 Wallpaper 初始化规范 (必需 filePath)
-        self.wallpapers = [
-            Wallpaper(name: "霓虹雨夜", filePath: "", type: .video, resolution: "4K", thumbnailPath: "", isFavorite: true),
-            Wallpaper(name: "赛博之城", filePath: "", type: .image, resolution: "8K", thumbnailPath: "", isFavorite: true),
-            Wallpaper(name: "寂静森林", filePath: "", type: .video, resolution: "4K", thumbnailPath: "", isFavorite: false),
-            Wallpaper(name: "极光边缘", filePath: "", type: .heic, resolution: "5K", thumbnailPath: "", isFavorite: true),
-            Wallpaper(name: "数字海洋", filePath: "", type: .video, resolution: "4K", thumbnailPath: "", isFavorite: false),
-            Wallpaper(name: "量子脉冲", filePath: "", type: .image, resolution: "4K", thumbnailPath: "", isFavorite: true)
-        ]
+        // 初始化为空数组，等待从数据库加载
+        self.wallpapers = []
     }
 
     func configure(modelContext: ModelContext) {
         self.store = WallpaperStore(modelContext: modelContext)
-        // loadWallpapers() // 先保留 Mock，不覆盖
+        loadWallpapers() // 从数据库加载真实数据
     }
 
     // MARK: - Actions
@@ -89,8 +97,34 @@ final class LibraryViewModel {
     }
 
     var filteredWallpapers: [Wallpaper] {
-        guard !searchText.isEmpty else { return wallpapers }
-        return wallpapers.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        var result = wallpapers
+
+        // 1. Apply type filter
+        switch typeFilter {
+        case .all:
+            break
+        case .image:
+            result = result.filter { $0.type == .image || $0.type == .heic }
+        case .video:
+            result = result.filter { $0.type == .video }
+        }
+
+        // 2. Apply source filter
+        switch sourceFilter {
+        case .favorites:
+            result = result.filter { $0.isFavorite }
+        case .downloaded:
+            result = result.filter { $0.source == .downloaded }
+        case .imported:
+            result = result.filter { $0.source == .imported }
+        }
+
+        // 3. Apply search filter
+        if !searchText.isEmpty {
+            result = result.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        }
+
+        return result
     }
 
     // MARK: - Batch Operations

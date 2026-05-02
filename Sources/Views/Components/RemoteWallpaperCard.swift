@@ -1,12 +1,10 @@
 import SwiftUI
 
-// MARK: - Artisan Wallpaper Card (Scheme C: Artisan Gallery)
-// 这不仅仅是一个卡片，它是数字画廊中的一个精致展位。
-
-struct WallpaperCard: View {
-    let wallpaper: Wallpaper
+// MARK: - Remote Wallpaper Card (Artisan Gallery)
+struct RemoteWallpaperCard: View {
+    let wallpaper: RemoteWallpaper
     let onTap: () -> Void
-    
+
     @State private var isHovered = false
     private let cardCornerRadius: CGFloat = 24
 
@@ -16,8 +14,7 @@ struct WallpaperCard: View {
                 imageSection
                 infoSection
             }
-            // 严格遵循 LAYOUT ORDER RULE
-            .frame(width: 220) // 方案 C 增加呼吸感
+            .frame(width: 220)
             .background {
                 RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
                     .fill(LiquidGlassColors.surfaceBackground.opacity(0.6))
@@ -45,43 +42,34 @@ struct WallpaperCard: View {
         .animation(.gallerySpring, value: isHovered)
         .onHover { isHovered = $0 }
     }
-    
-    // MARK: - 图片区域 (Gallery Canvas)
+
+    // MARK: - 图片区域
     private var imageSection: some View {
         ZStack(alignment: .topLeading) {
-            // 壁纸渲染核心 (遵守 ASYNC IMAGE STANDARDS)
-            // 只显示缩略图，不显示视频预览
-            Group {
-                if let thumbPath = wallpaper.thumbnailPath, !thumbPath.isEmpty,
-                   let thumbURL = URL(string: thumbPath) {
-                    artisanAsyncImage(url: thumbURL)
-                } else if let fileURL = URL(string: wallpaper.filePath) {
-                    artisanAsyncImage(url: fileURL)
-                } else {
-                    fallbackPlaceholder
-                }
+            // 壁纸渲染核心
+            if let thumbURL = wallpaper.thumbURL {
+                artisanAsyncImage(url: thumbURL)
+            } else {
+                fallbackPlaceholder
             }
-            .frame(width: 220, height: 140)
-            .clipped()
 
-            // 艺术标签 (悬浮在画面之上)
+            // 艺术标签
             HStack(spacing: 8) {
-                if wallpaper.type == .video, let duration = wallpaper.duration {
-                    artisanChip(text: formatDuration(duration), icon: "play.fill", color: LiquidGlassColors.accentGold)
-                }
-                
-                // 默认 SFW 标签，使用鼠尾草绿
-                artisanChip(text: "SFW", icon: "shield.check.fill", color: LiquidGlassColors.onlineGreen)
+                artisanChip(
+                    text: wallpaper.purity.uppercased(),
+                    icon: "shield.check.fill",
+                    color: wallpaper.purity == "sfw" ? LiquidGlassColors.onlineGreen : LiquidGlassColors.warningOrange
+                )
             }
             .padding(12)
             .opacity(isHovered ? 1.0 : 0.6)
-            
-            // 分辨率指示器 (极简，悬停可见)
+
+            // 分辨率指示器
             VStack {
                 Spacer()
                 HStack {
                     Spacer()
-                    Text(wallpaper.resolution ?? "N/A")
+                    Text(wallpaper.resolution)
                         .font(.system(size: 9, weight: .black, design: .monospaced))
                         .foregroundStyle(Color.white.opacity(0.4))
                         .padding(.horizontal, 8)
@@ -93,21 +81,23 @@ struct WallpaperCard: View {
             }
             .opacity(isHovered ? 1.0 : 0)
         }
+        .frame(width: 220, height: 140)
+        .clipped()
     }
-    
-    // MARK: - 信息区域 (Gallery Tag)
+
+    // MARK: - 信息区域
     private var infoSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            // 衬线体标题
-            Text(wallpaper.name.isEmpty ? "Untitled Art" : wallpaper.name)
+            // 标题
+            Text(wallpaper.tags?.first?.name ?? "Wallpaper \(wallpaper.id)")
                 .font(.custom("Georgia", size: 15).bold())
                 .foregroundStyle(isHovered ? LiquidGlassColors.primaryPink : LiquidGlassColors.textPrimary)
                 .lineLimit(1)
                 .kerning(0.5)
 
             HStack(spacing: 12) {
-                Label("1.2k", systemImage: "eye")
-                Label("456", systemImage: "heart")
+                Label("\(formatNumber(wallpaper.views))", systemImage: "eye")
+                Label("\(formatNumber(wallpaper.favorites))", systemImage: "heart")
                 Spacer()
                 if isHovered {
                     Image(systemName: "arrow.up.right")
@@ -123,7 +113,6 @@ struct WallpaperCard: View {
     }
 
     // MARK: - 辅助子视图
-    
     private func artisanAsyncImage(url: URL) -> some View {
         AsyncImage(url: url) { phase in
             switch phase {
@@ -170,12 +159,11 @@ struct WallpaperCard: View {
         .clipShape(Capsule())
         .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
     }
-    
-    private func formatDuration(_ seconds: Double) -> String {
-        let formatter = DateComponentsFormatter()
-        formatter.allowedUnits = [.minute, .second]
-        formatter.unitsStyle = .positional
-        formatter.zeroFormattingBehavior = .pad
-        return formatter.string(from: seconds) ?? "0:00"
+
+    private func formatNumber(_ number: Int) -> String {
+        if number >= 1000 {
+            return String(format: "%.1fk", Double(number) / 1000.0)
+        }
+        return "\(number)"
     }
 }
