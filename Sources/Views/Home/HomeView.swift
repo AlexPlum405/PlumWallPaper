@@ -100,6 +100,12 @@ struct HomeView: View {
                     let newWallpaper = getNavigateWallpaper(direction: 1)
                     detailWallpaper = newWallpaper
                     callback(newWallpaper)
+                },
+                onFavorite: { updatedWallpaper in
+                    NSLog("[HomeView] 收藏状态变更: \(updatedWallpaper.name) -> \(updatedWallpaper.isFavorite)")
+                },
+                onDownload: { downloadedWallpaper in
+                    NSLog("[HomeView] 壁纸已下载: \(downloadedWallpaper.name)")
                 }
             )
         }
