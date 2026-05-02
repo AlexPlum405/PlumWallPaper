@@ -458,7 +458,7 @@ struct HomeView: View {
         }
 
         if let current = detailWallpaper,
-           let currentIndex = allWallpapers.firstIndex(where: { $0.id == current.id }) {
+           let currentIndex = allWallpapers.firstIndex(where: { $0.remoteId == current.remoteId }) {
             let newIndex = (currentIndex + direction + allWallpapers.count) % allWallpapers.count
             return allWallpapers[newIndex]
         }
@@ -470,7 +470,7 @@ struct HomeView: View {
         let allMediaItems = viewModel.popularMotions
 
         guard !allMediaItems.isEmpty else {
-            return detailMediaItem ?? allMediaItems.first ?? MediaItem(
+            return detailMediaItem ?? MediaItem(
                 slug: "unknown",
                 title: "Unknown",
                 pageURL: URL(string: "https://example.com")!,
@@ -496,7 +496,7 @@ struct HomeView: View {
             return allMediaItems[newIndex]
         }
 
-        return allMediaItems.first ?? allMediaItems[0]
+        return allMediaItems[0]
     }
 
     // MARK: - Hero 壁纸设置
