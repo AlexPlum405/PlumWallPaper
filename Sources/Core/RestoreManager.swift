@@ -30,31 +30,21 @@ final class RestoreManager {
         return mapping
     }
 
-    /// 恢复上次会话
-    func restoreSession(
-        context: ModelContext,
-        displayManager: DisplayManager,
-        wallpaperEngine: WallpaperEngine
-    ) async {
+    /// 恢复上次会话 — 使用 RenderPipeline 设置壁纸
+    func restoreSession(context: ModelContext, displayManager: DisplayManager) async {
         let mapping = loadSession()
         guard !mapping.isEmpty else { return }
 
-        // 恢复前同步渲染配置和音频配置
+        // 恢复前同步渲染配置
         let preferencesStore = PreferencesStore(modelContext: context)
         let settings = (try? preferencesStore.fetchSettings()) ?? Settings()
-        wallpaperEngine.updateRenderingConfig(colorSpace: settings.colorSpace, performanceMode: settings.vSyncEnabled)
-        wallpaperEngine.updateAudioConfig(
-            volume: settings.globalVolume ?? 50,
-            muted: settings.defaultMuted ?? false,
-            previewOnly: settings.previewOnlyAudio ?? false,
-            rate: settings.playbackRate ?? 1.0
-        )
-        if let opacity = settings.wallpaperOpacity {
-            wallpaperEngine.updateWallpaperOpacity(opacity)
-        }
+
+        // 应用 FPS 限制
         if let fpsLimit = settings.fpsLimit {
-            wallpaperEngine.updateFPSLimit(fpsLimit)
+            RenderPipeline.shared.updateFPSLimit(fpsLimit)
         }
+        // 应用壁纸透明度
+        RenderPipeline.shared.updateWallpaperOpacity(settings.wallpaperOpacity)
 
         for screen in displayManager.availableScreens {
             guard let wallpaperID = mapping[screen.id] else { continue }
@@ -63,7 +53,8 @@ final class RestoreManager {
             )
             do {
                 if let wallpaper = try context.fetch(descriptor).first {
-                    wallpaperEngine.setWallpaper(wallpaper, for: screen)
+                    let url = URL(fileURLWithPath: wallpaper.filePath)
+                    try await RenderPipeline.shared.setWallpaper(url: url, screenId: screen.id)
                 }
             } catch {
                 continue

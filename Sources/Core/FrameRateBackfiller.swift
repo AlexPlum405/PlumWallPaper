@@ -34,7 +34,7 @@ final class FrameRateBackfiller {
                 }
 
                 await MainActor.run {
-                    wallpaper.frameRate = frameRate
+                    wallpaper.frameRate = Double(frameRate)
                 }
             }
 

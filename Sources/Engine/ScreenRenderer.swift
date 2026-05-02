@@ -17,8 +17,19 @@ final class ScreenRenderer: NSObject, MTKViewDelegate {
     private var renderPipelineState: MTLRenderPipelineState?
     private var isPaused = false
 
-    init(screen: NSScreen, device: MTLDevice) throws {
-        self.screenId = screen.localizedName
+    /// 当前壁纸 ID (用于 RestoreManager / SlideshowScheduler)
+    private(set) var currentWallpaperId: UUID?
+    /// 静音状态
+    private(set) var isMuted: Bool = false
+
+    // MARK: - FPS 测量
+    private var frameCount: Int = 0
+    private var lastFPSSampleTime: CFTimeInterval = 0
+    /// 实测渲染帧率
+    private(set) var measuredFPS: Double = 0
+
+    init(screen: NSScreen, screenId: String, device: MTLDevice) throws {
+        self.screenId = screenId
         self.device = device
         guard let queue = device.makeCommandQueue() else {
             throw RendererError.noCommandQueue
@@ -35,6 +46,7 @@ final class ScreenRenderer: NSObject, MTKViewDelegate {
         self.shaderGraph = try ShaderGraph(device: device)
         try buildRenderPipeline()
         desktopWindow.mtkView.delegate = self
+        lastFPSSampleTime = CACurrentMediaTime()
     }
 
     private func buildRenderPipeline() throws {
@@ -50,10 +62,11 @@ final class ScreenRenderer: NSObject, MTKViewDelegate {
         renderPipelineState = try device.makeRenderPipelineState(descriptor: desc)
     }
 
-    func setWallpaper(url: URL) async throws {
+    func setWallpaper(url: URL, wallpaperId: UUID? = nil) async throws {
         let decoder = VideoDecoder()
         try await decoder.load(url: url)
         self.videoDecoder = decoder
+        self.currentWallpaperId = wallpaperId
         desktopWindow.mtkView.isPaused = false
         desktopWindow.mtkView.preferredFramesPerSecond = Int(decoder.nominalFrameRate)
         desktopWindow.show()
@@ -69,6 +82,29 @@ final class ScreenRenderer: NSObject, MTKViewDelegate {
         desktopWindow.mtkView.isPaused = false
     }
 
+    // MARK: - Audio
+
+    func setMuted(_ muted: Bool) {
+        isMuted = muted
+        videoDecoder?.setMuted(muted)
+    }
+
+    // MARK: - FPS / Opacity
+
+    func setFPSLimit(_ limit: Int) {
+        if limit > 0 {
+            desktopWindow.mtkView.preferredFramesPerSecond = limit
+        } else if let decoder = videoDecoder {
+            desktopWindow.mtkView.preferredFramesPerSecond = Int(decoder.nominalFrameRate)
+        }
+    }
+
+    func setOpacity(_ alpha: CGFloat) {
+        desktopWindow.alphaValue = alpha
+    }
+
+    // MARK: - MTKViewDelegate
+
     nonisolated func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
 
     nonisolated func draw(in view: MTKView) {
@@ -79,6 +115,16 @@ final class ScreenRenderer: NSObject, MTKViewDelegate {
                   let commandBuffer = commandQueue.makeCommandBuffer(),
                   let drawable = view.currentDrawable,
                   let renderPipeline = renderPipelineState else { return }
+
+            // FPS 测量
+            frameCount += 1
+            let now = CACurrentMediaTime()
+            let elapsed = now - lastFPSSampleTime
+            if elapsed >= 1.0 {
+                measuredFPS = Double(frameCount) / elapsed
+                frameCount = 0
+                lastFPSSampleTime = now
+            }
 
             let width = CVPixelBufferGetWidth(pixelBuffer)
             let height = CVPixelBufferGetHeight(pixelBuffer)

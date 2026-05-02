@@ -85,6 +85,12 @@ final class VideoDecoder {
     func resume() { isPaused = false }
     func setLooping(_ loop: Bool) { isLooping = loop }
     func setRate(_ rate: Float) { playbackRate = rate }
+    func setMuted(_ muted: Bool) {
+        // 当前使用 AVAssetReader 解码，音频由 ScreenRenderer 控制
+        // 此标志供上层查询用
+        isMuted = muted
+    }
+    private(set) var isMuted: Bool = false
 
     func seek(to fraction: Double) {
         // TODO: 精确 seek 需要重建 reader 并指定 timeRange

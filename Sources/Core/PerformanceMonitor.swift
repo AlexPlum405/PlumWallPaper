@@ -31,7 +31,9 @@ final class PerformanceMonitor {
     }
 
     private func sample() {
-        currentFPS = 60
+        // 从 RenderPipeline 读取实际 Metal 帧率
+        let metalFPS = RenderPipeline.shared.currentFPS
+        currentFPS = metalFPS > 0 ? Int(metalFPS.rounded()) : 0
         currentGPULoad = readGPUUtilization()
         currentMemoryMB = getMemoryUsage()
     }

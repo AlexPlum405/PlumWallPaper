@@ -1,5 +1,6 @@
 // Sources/ViewModels/MenuBarViewModel.swift
 import Foundation
+import AppKit
 import Observation
 
 @Observable
@@ -30,27 +31,29 @@ final class MenuBarViewModel {
         isWallpaperActive = true
         isPaused = false
         pauseReason = nil
-        // TODO: call WallpaperEngine to resume
+        RenderPipeline.shared.resumeAll()
     }
 
     func stopWallpaper() {
         isWallpaperActive = false
         isPaused = false
         currentWallpaperName = nil
-        // TODO: call WallpaperEngine to stop
+        RenderPipeline.shared.pauseAll()
     }
 
     func temporaryResume() {
         isPaused = false
         pauseReason = nil
-        // TODO: call PauseStrategyManager.shared.temporaryResume()
+        PauseStrategyManager.shared.resumeTemporarily()
     }
 
     func openMainWindow() {
-        // TODO: bring main window to front
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.windows.first?.makeKeyAndOrderFront(nil)
     }
 
     func quit() {
-        // TODO: cleanup + NSApp.terminate
+        RenderPipeline.shared.cleanup()
+        NSApp.terminate(nil)
     }
 }

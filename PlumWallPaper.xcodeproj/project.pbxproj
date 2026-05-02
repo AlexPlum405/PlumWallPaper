@@ -74,6 +74,17 @@
 		F07D392C4096EED8FD00FD7F /* ImportWallpaperSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6B491F4CA5A8D7216D2D6F8 /* ImportWallpaperSheet.swift */; };
 		F43406CEAE07A793A61705C9 /* LiquidGlassDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B737F68063AC67E3CDEE620 /* LiquidGlassDesignSystem.swift */; };
 		F43FDE1B9A058397730912A9 /* PreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C772358D777023DF5DDA0881 /* PreferencesStore.swift */; };
+		E8969AD8F9E2437B9B3B6A80 /* SlideshowScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97A34568A610498CB082B4B7 /* SlideshowScheduler.swift */; };
+		D0C2153192AA4B8B9D815891 /* ShaderPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B36E4CDC64094A60AFF6D9A1 /* ShaderPreviewView.swift */; };
+		B16A8DE1CF4341AE9F38776B /* PauseStrategyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13E177ADB2034054B19D7E80 /* PauseStrategyManager.swift */; };
+		FCF101505C134A37A453A0A1 /* PerformanceMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC4C8E7F1BBF4472B9205DC2 /* PerformanceMonitor.swift */; };
+		81EB521360BD468A8E74F17F /* RestoreManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE5ABA2F7B7C47B68991FE7D /* RestoreManager.swift */; };
+		1857916F98C24C8B99991828 /* AudioDuckingMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9595352FC048C7973989F4 /* AudioDuckingMonitor.swift */; };
+		2679552FA35B4944BFD910B3 /* GlobalShortcutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B70CDFA62E554168BEEC71F1 /* GlobalShortcutManager.swift */; };
+		F9A27657CAF94AADA27553BD /* LaunchAtLoginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C97639F6967640D5BC197B86 /* LaunchAtLoginManager.swift */; };
+		A49AF907638A4F148FAC0F2F /* FrameRateBackfiller.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEDF52D884244E64882E615E /* FrameRateBackfiller.swift */; };
+		D6F00346BA47468EA280F4C4 /* DisplayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28E2CE68DD96424289E0BA8D /* DisplayManager.swift */; };
+		7D443E86F017429CA59F45C6 /* ScreenInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06FA6C24BB54446BA681CFB8 /* ScreenInfo.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -145,6 +156,17 @@
 		E6BF610ED27253866D5CBDBB /* WallpaperDetailView+Logic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WallpaperDetailView+Logic.swift"; sourceTree = "<group>"; };
 		F6B491F4CA5A8D7216D2D6F8 /* ImportWallpaperSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportWallpaperSheet.swift; sourceTree = "<group>"; };
 		FDA23CF3F13A10057ACF6366 /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
+		97A34568A610498CB082B4B7 /* SlideshowScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideshowScheduler.swift; sourceTree = "<group>"; };
+		B36E4CDC64094A60AFF6D9A1 /* ShaderPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShaderPreviewView.swift; sourceTree = "<group>"; };
+		13E177ADB2034054B19D7E80 /* PauseStrategyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PauseStrategyManager.swift; sourceTree = "<group>"; };
+		EC4C8E7F1BBF4472B9205DC2 /* PerformanceMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMonitor.swift; sourceTree = "<group>"; };
+		BE5ABA2F7B7C47B68991FE7D /* RestoreManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestoreManager.swift; sourceTree = "<group>"; };
+		1D9595352FC048C7973989F4 /* AudioDuckingMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioDuckingMonitor.swift; sourceTree = "<group>"; };
+		B70CDFA62E554168BEEC71F1 /* GlobalShortcutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalShortcutManager.swift; sourceTree = "<group>"; };
+		C97639F6967640D5BC197B86 /* LaunchAtLoginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManager.swift; sourceTree = "<group>"; };
+		EEDF52D884244E64882E615E /* FrameRateBackfiller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameRateBackfiller.swift; sourceTree = "<group>"; };
+		28E2CE68DD96424289E0BA8D /* DisplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayManager.swift; sourceTree = "<group>"; };
+		06FA6C24BB54446BA681CFB8 /* ScreenInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenInfo.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -219,7 +241,17 @@
 		350B3A361D4B60897435CC32 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				97A34568A610498CB082B4B7 /* SlideshowScheduler.swift */,
 				B0823F5D57978191B355D159 /* FileImporter.swift */,
+				06FA6C24BB54446BA681CFB8 /* ScreenInfo.swift */,
+				28E2CE68DD96424289E0BA8D /* DisplayManager.swift */,
+				EEDF52D884244E64882E615E /* FrameRateBackfiller.swift */,
+				C97639F6967640D5BC197B86 /* LaunchAtLoginManager.swift */,
+				B70CDFA62E554168BEEC71F1 /* GlobalShortcutManager.swift */,
+				1D9595352FC048C7973989F4 /* AudioDuckingMonitor.swift */,
+				BE5ABA2F7B7C47B68991FE7D /* RestoreManager.swift */,
+				EC4C8E7F1BBF4472B9205DC2 /* PerformanceMonitor.swift */,
+				13E177ADB2034054B19D7E80 /* PauseStrategyManager.swift */,
 				BBE5FA06BA9E7ED726E742D2 /* ThumbnailGenerator.swift */,
 			);
 			path = Core;
@@ -266,6 +298,7 @@
 		BAA083EB5A3DE529B7AD32C4 /* ShaderEditor */ = {
 			isa = PBXGroup;
 			children = (
+				B36E4CDC64094A60AFF6D9A1 /* ShaderPreviewView.swift */,
 				A84C72E2C004C250F55CDDAD /* ParticleSystemPanel.swift */,
 				8EAB7C9D232F47A25332DB7F /* ParticleSystemPanel+Logic.swift */,
 				1C7BCE0F2040978FF2489324 /* ShaderEditorView.swift */,
@@ -516,6 +549,17 @@
 				57407784ADD7C2D72970B8D0 /* WallpaperExploreView.swift in Sources */,
 				71FBC63BEA5F27C41E73CB10 /* WallpaperStore.swift in Sources */,
 				520967807CC3596759A27B9C /* WindowAccessor.swift in Sources */,
+				E8969AD8F9E2437B9B3B6A80 /* SlideshowScheduler.swift in Sources */,
+				D0C2153192AA4B8B9D815891 /* ShaderPreviewView.swift in Sources */,
+				B16A8DE1CF4341AE9F38776B /* PauseStrategyManager.swift in Sources */,
+				FCF101505C134A37A453A0A1 /* PerformanceMonitor.swift in Sources */,
+				81EB521360BD468A8E74F17F /* RestoreManager.swift in Sources */,
+				1857916F98C24C8B99991828 /* AudioDuckingMonitor.swift in Sources */,
+				2679552FA35B4944BFD910B3 /* GlobalShortcutManager.swift in Sources */,
+				F9A27657CAF94AADA27553BD /* LaunchAtLoginManager.swift in Sources */,
+				A49AF907638A4F148FAC0F2F /* FrameRateBackfiller.swift in Sources */,
+				D6F00346BA47468EA280F4C4 /* DisplayManager.swift in Sources */,
+				7D443E86F017429CA59F45C6 /* ScreenInfo.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

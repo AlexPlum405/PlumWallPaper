@@ -23,7 +23,6 @@ final class PreviewViewModel {
         self.currentTime = 0
         self.duration = wallpaper.duration ?? 0
         self.isPlaying = false
-        // TODO: connect to WallpaperEngine for real playback
     }
 
     func play() {
@@ -51,6 +50,16 @@ final class PreviewViewModel {
     }
 
     func setAsWallpaper() {
-        // TODO: call WallpaperEngine.setWallpaper + RestoreManager.saveSession
+        guard let wallpaper else { return }
+        let url = URL(fileURLWithPath: wallpaper.filePath)
+        Task {
+            try? await RenderPipeline.shared.setWallpaper(url: url)
+            // 将当前映射写入 RestoreManager（默认对所有屏幕）
+            var mapping: [String: UUID] = [:]
+            for screen in DisplayManager.shared.availableScreens {
+                mapping[screen.id] = wallpaper.id
+            }
+            RestoreManager.shared.saveSession(mapping: mapping)
+        }
     }
 }

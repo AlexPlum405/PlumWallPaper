@@ -16,6 +16,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         Task {
             try? RenderPipeline.shared.setupRenderers()
+            let context = PlumWallPaperApp.sharedModelContainer.mainContext
+            await RestoreManager.shared.restoreSession(
+                context: context,
+                displayManager: DisplayManager.shared
+            )
         }
     }
 

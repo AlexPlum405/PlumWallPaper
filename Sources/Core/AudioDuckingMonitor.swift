@@ -56,17 +56,17 @@ final class AudioDuckingMonitor {
 
     private func muteAudio() {
         preDuckingMuteStates.removeAll()
-        WallpaperEngine.shared.enumerateAudioRenderer { id, renderer in
-            preDuckingMuteStates[id] = renderer.isMuted
-            renderer.setMuted(true)
+        // 通过 RenderPipeline 获取各屏幕渲染器的静音状态并静音
+        for (id, isMuted) in RenderPipeline.shared.getAudioMuteStates() {
+            preDuckingMuteStates[id] = isMuted
         }
+        RenderPipeline.shared.setMuted(true)
     }
 
     private func restoreAudio() {
-        WallpaperEngine.shared.enumerateAudioRenderer { id, renderer in
-            if let wasMuted = preDuckingMuteStates[id] {
-                renderer.setMuted(wasMuted)
-            }
+        // 恢复每个屏幕渲染器的原始静音状态
+        for (id, wasMuted) in preDuckingMuteStates {
+            RenderPipeline.shared.setMuted(wasMuted, screenId: id)
         }
         preDuckingMuteStates.removeAll()
     }
