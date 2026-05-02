@@ -92,6 +92,22 @@ struct WallpaperCard: View {
                 .padding(10)
             }
             .opacity(isHovered ? 1.0 : 0)
+
+            // 收藏指示器 (右下角)
+            if wallpaper.isFavorite {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(LiquidGlassColors.primaryPink)
+                            .padding(6)
+                            .background(Circle().fill(.ultraThinMaterial))
+                    }
+                }
+                .padding(10)
+            }
         }
     }
     
