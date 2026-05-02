@@ -29,6 +29,8 @@ struct HomeView: View {
                             loadingView(size: windowGeo.size)
                         } else if let errorMessage = viewModel.errorMessage, viewModel.latestStills.isEmpty {
                             errorView(message: errorMessage, size: windowGeo.size)
+                        } else if viewModel.heroItems.isEmpty && viewModel.latestStills.isEmpty && viewModel.popularMotions.isEmpty {
+                            emptyStateView(size: windowGeo.size)
                         } else {
                             // Hero 轮播（如果有数据）
                             if !viewModel.heroItems.isEmpty {
@@ -155,6 +157,32 @@ struct HomeView: View {
                     .padding(.horizontal, 40)
                 Button("Retry") {
                     Task { await viewModel.loadInitialData() }
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 32)
+                .frame(height: 44)
+                .background(Capsule().fill(LiquidGlassColors.primaryPink))
+                .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.3), radius: 15)
+            }
+        }
+        .frame(height: size.height)
+    }
+
+    private func emptyStateView(size: CGSize) -> some View {
+        ZStack {
+            LiquidGlassColors.deepBackground
+            VStack(spacing: 24) {
+                Image(systemName: "photo.on.rectangle.angled")
+                    .font(.system(size: 48))
+                    .foregroundStyle(LiquidGlassColors.textQuaternary)
+                Text("暂无内容")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(LiquidGlassColors.textSecondary)
+                Text("下拉刷新试试")
+                    .font(.system(size: 13))
+                    .foregroundStyle(LiquidGlassColors.textQuaternary)
+                Button("刷新") {
+                    Task { await viewModel.refresh() }
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal, 32)
