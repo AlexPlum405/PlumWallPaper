@@ -1,44 +1,46 @@
 // Sources/Engine/RenderPipeline.swift
 import Foundation
 import AppKit
-import Metal
 
 @MainActor
 final class RenderPipeline {
     static let shared = RenderPipeline()
 
-    private let device: MTLDevice
     private var renderers: [String: ScreenRenderer] = [:]
 
     /// 当前全局静音状态（muteAudio 默认语义）
     private(set) var isMuted: Bool = false
-    /// 当前 FPS 上限（0 = 不限制）
-    private(set) var fpsLimit: Int = 0
     /// 壁纸透明度（0-100）
     private(set) var wallpaperOpacity: Int = 100
 
-    private init() {
-        guard let device = MTLCreateSystemDefaultDevice() else {
-            fatalError("Metal not supported")
-        }
-        self.device = device
-    }
+    private init() {}
 
-    func setupRenderers() throws {
+    func setupRenderers() {
+        NSLog("[RenderPipeline] setupRenderers 开始，屏幕数量: \(NSScreen.screens.count)")
         for screen in NSScreen.screens {
             let description = screen.deviceDescription
             let screenNumber = description[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
             let screenId = screenNumber?.stringValue ?? screen.localizedName
-            let renderer = try ScreenRenderer(screen: screen, screenId: screenId, device: device)
+            let renderer = ScreenRenderer(screen: screen, screenId: screenId)
             renderers[screenId] = renderer
+            NSLog("[RenderPipeline] ✅ 屏幕 \(screenId) 渲染器创建成功")
         }
+        NSLog("[RenderPipeline] setupRenderers 完成，渲染器数量: \(renderers.count)")
     }
 
     func setWallpaper(url: URL, screenId: String? = nil) async throws {
+        NSLog("[RenderPipeline] setWallpaper: \(url.lastPathComponent), 渲染器数量: \(renderers.count)")
+        if renderers.isEmpty {
+            NSLog("[RenderPipeline] ⚠️ 无可用渲染器，尝试重新初始化...")
+            setupRenderers()
+        }
         if let screenId = screenId, let renderer = renderers[screenId] {
+            NSLog("[RenderPipeline] 设置屏幕 \(screenId) 壁纸")
             try await renderer.setWallpaper(url: url)
         } else {
-            for renderer in renderers.values {
+            NSLog("[RenderPipeline] 设置所有屏幕壁纸，共 \(renderers.count) 个")
+            for (id, renderer) in renderers {
+                NSLog("[RenderPipeline] -> 屏幕 \(id)")
                 try await renderer.setWallpaper(url: url)
             }
         }
@@ -78,12 +80,7 @@ final class RenderPipeline {
         }
     }
 
-    // MARK: - FPS / 透明度
-
-    func updateFPSLimit(_ limit: Int) {
-        fpsLimit = limit
-        renderers.values.forEach { $0.setFPSLimit(limit) }
-    }
+    // MARK: - 透明度
 
     func updateWallpaperOpacity(_ opacity: Int) {
         wallpaperOpacity = opacity
@@ -92,13 +89,6 @@ final class RenderPipeline {
     }
 
     // MARK: - 性能监控
-
-    /// 所有屏幕的实测 FPS 平均值
-    var currentFPS: Double {
-        let values = renderers.values.map { $0.measuredFPS }
-        guard !values.isEmpty else { return 0 }
-        return values.reduce(0, +) / Double(values.count)
-    }
 
     /// 当前活动壁纸 ID 集合
     var activeWallpaperIds: Set<UUID> {

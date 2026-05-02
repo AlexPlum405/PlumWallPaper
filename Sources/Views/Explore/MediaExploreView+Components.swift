@@ -74,6 +74,20 @@ extension MediaExploreView {
         )
     }
 
+    // MARK: - 音轨筛选
+    var audioTrackFilters: some View {
+        artisanFilterGroup(
+            title: "音轨",
+            options: audioTrackOptions,
+            selected: Binding(
+                get: { viewModel.selectedAudioTrack.displayName },
+                set: { value in
+                    viewModel.selectedAudioTrack = MediaExploreViewModel.AudioTrackFilter(rawValue: value) ?? .all
+                }
+            )
+        )
+    }
+
     // MARK: - 排序筛选
     var sortingFilters: some View {
         artisanFilterGroup(
@@ -120,6 +134,7 @@ extension MediaExploreView {
             
             HStack(spacing: 32) {
                 resolutionFilters
+                audioTrackFilters
                 Spacer()
             }
         }
@@ -134,7 +149,12 @@ extension MediaExploreView {
         ) {
             ForEach(viewModel.mediaItems) { item in
                 MediaCard(mediaItem: item) {
-                    detailMedia = item
+                    detailWallpaper = Wallpaper.from(media: item)
+                }
+                .onAppear {
+                    if let videoURL = item.previewVideoURL ?? item.fullVideoURL {
+                        VideoPreloader.shared.preload(url: videoURL)
+                    }
                 }
             }
             
@@ -249,6 +269,10 @@ extension MediaExploreView {
     // MARK: - Filter Options Data
     var resolutionOptions: [String] {
         ["全部", "4K", "2K", "1080P"]
+    }
+
+    var audioTrackOptions: [String] {
+        MediaExploreViewModel.AudioTrackFilter.allCases.map(\.displayName)
     }
 
     var sortingOptions: [String] {

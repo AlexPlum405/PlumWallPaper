@@ -4,6 +4,7 @@ import AppKit
 // MARK: - Artisan Studio View (Scheme C: Pure Edition with Two-Layer Filtering)
 struct MyLibraryView: View {
     @State var viewModel = LibraryViewModel()
+    @Environment(\.modelContext) private var modelContext
     @State var isEditMode = false
     @State var selectedIDs = Set<UUID>()
     @State var toast: ToastConfig?
@@ -45,6 +46,9 @@ struct MyLibraryView: View {
             .padding(.horizontal, mainPadding).padding(.bottom, 100)
         }
         .background(LiquidGlassColors.deepBackground)
+        .onAppear {
+            viewModel.configure(modelContext: modelContext)
+        }
         .sheet(isPresented: $showImportSheet) { ImportWallpaperSheet(viewModel: viewModel, toast: $toast) }
         .sheet(item: $detailWallpaper) { wallpaper in
             WallpaperDetailView(wallpaper: wallpaper)

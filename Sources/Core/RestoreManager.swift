@@ -39,10 +39,6 @@ final class RestoreManager {
         let preferencesStore = PreferencesStore(modelContext: context)
         let settings = (try? preferencesStore.fetchSettings()) ?? Settings()
 
-        // 应用 FPS 限制
-        if let fpsLimit = settings.fpsLimit {
-            RenderPipeline.shared.updateFPSLimit(fpsLimit)
-        }
         // 应用壁纸透明度
         RenderPipeline.shared.updateWallpaperOpacity(settings.wallpaperOpacity)
 

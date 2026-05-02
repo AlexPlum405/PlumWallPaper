@@ -20,6 +20,7 @@ struct MediaItem: Codable, Identifiable, Hashable {
     let downloadOptions: [MediaDownloadOption]
     let sourceName: String      // "MotionBG", "Steam Workshop"
     let isAnimatedImage: Bool?
+    let hasAudioTrack: Bool?
 
     // Workshop-specific metadata (optional)
     let subscriptionCount: Int?
@@ -48,6 +49,7 @@ struct MediaItem: Codable, Identifiable, Hashable {
         downloadOptions: [MediaDownloadOption] = [],
         sourceName: String = "MotionBG",
         isAnimatedImage: Bool? = nil,
+        hasAudioTrack: Bool? = nil,
         subscriptionCount: Int? = nil,
         favoriteCount: Int? = nil,
         viewCount: Int? = nil,
@@ -74,6 +76,7 @@ struct MediaItem: Codable, Identifiable, Hashable {
         self.downloadOptions = downloadOptions
         self.sourceName = sourceName
         self.isAnimatedImage = isAnimatedImage
+        self.hasAudioTrack = hasAudioTrack
         self.subscriptionCount = subscriptionCount
         self.favoriteCount = favoriteCount
         self.viewCount = viewCount
@@ -111,6 +114,36 @@ struct MediaItem: Codable, Identifiable, Hashable {
         let minutes = totalSeconds / 60
         let seconds = totalSeconds % 60
         return String(format: "%02d:%02d", minutes, seconds)
+    }
+
+    func withAudioTrack(_ value: Bool?) -> MediaItem {
+        MediaItem(
+            slug: slug,
+            title: title,
+            pageURL: pageURL,
+            thumbnailURL: thumbnailURL,
+            resolutionLabel: resolutionLabel,
+            collectionTitle: collectionTitle,
+            summary: summary,
+            previewVideoURL: previewVideoURL,
+            fullVideoURL: fullVideoURL,
+            posterURL: posterURL,
+            tags: tags,
+            exactResolution: exactResolution,
+            durationSeconds: durationSeconds,
+            downloadOptions: downloadOptions,
+            sourceName: sourceName,
+            isAnimatedImage: isAnimatedImage,
+            hasAudioTrack: value,
+            subscriptionCount: subscriptionCount,
+            favoriteCount: favoriteCount,
+            viewCount: viewCount,
+            ratingScore: ratingScore,
+            authorName: authorName,
+            fileSize: fileSize,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
     }
 }
 

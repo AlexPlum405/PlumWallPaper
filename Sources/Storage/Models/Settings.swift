@@ -4,42 +4,42 @@ import SwiftData
 
 @Model
 final class Settings {
-    var slideshowEnabled: Bool
-    var slideshowInterval: Double
-    var slideshowOrder: SlideshowOrder
-    var slideshowSource: SlideshowSource
+    var slideshowEnabled: Bool = false
+    var slideshowInterval: Double = 1800
+    var slideshowOrder: SlideshowOrder = SlideshowOrder.sequential
+    var slideshowSource: SlideshowSource = SlideshowSource.all
     var slideshowTagId: String?
-    var transitionEffect: TransitionEffect
-    var loopMode: LoopMode
-    var playbackRate: Double
-    var randomStartPosition: Bool
-    var globalVolume: Int
-    var defaultMuted: Bool
-    var previewOnlyAudio: Bool
-    var audioDuckingEnabled: Bool
+    var transitionEffect: TransitionEffect = TransitionEffect.fade
+    var loopMode: LoopMode = LoopMode.loop
+    var playbackRate: Double = 1.0
+    var randomStartPosition: Bool = false
+    var globalVolume: Int = 100
+    var defaultMuted: Bool = false
+    var previewOnlyAudio: Bool = false
+    var audioDuckingEnabled: Bool = true
     var audioScreenId: String?
     var fpsLimit: Int?
-    var vSyncEnabled: Bool
-    var pauseOnBattery: Bool
-    var pauseOnFullscreen: Bool
-    var pauseOnLowBattery: Bool
-    var lowBatteryThreshold: Int
-    var pauseOnScreenSharing: Bool
-    var pauseOnHighLoad: Bool
-    var pauseOnLostFocus: Bool
-    var pauseOnLidClosed: Bool
-    var pauseBeforeSleep: Bool
-    var pauseOnOcclusion: Bool
-    var displayTopology: DisplayTopology
-    var colorSpace: ColorSpaceOption
+    var vSyncEnabled: Bool = true
+    var pauseOnBattery: Bool = true
+    var pauseOnFullscreen: Bool = true
+    var pauseOnLowBattery: Bool = true
+    var lowBatteryThreshold: Int = 20
+    var pauseOnScreenSharing: Bool = false
+    var pauseOnHighLoad: Bool = true
+    var pauseOnLostFocus: Bool = false
+    var pauseOnLidClosed: Bool = true
+    var pauseBeforeSleep: Bool = true
+    var pauseOnOcclusion: Bool = false
+    var displayTopology: DisplayTopology = DisplayTopology.independent
+    var colorSpace: ColorSpaceOption = ColorSpaceOption.p3
     var screenOrder: [String]?
-    var themeMode: ThemeMode
-    var thumbnailSize: ThumbnailSize
-    var animationsEnabled: Bool
-    var launchAtLogin: Bool
-    var menuBarEnabled: Bool
-    var libraryPath: String
-    var wallpaperOpacity: Int
+    var themeMode: ThemeMode = ThemeMode.auto
+    var thumbnailSize: ThumbnailSize = ThumbnailSize.medium
+    var animationsEnabled: Bool = true
+    var launchAtLogin: Bool = false
+    var menuBarEnabled: Bool = true
+    var libraryPath: String = NSHomeDirectory() + "/Pictures/PlumWallPaper"
+    var wallpaperOpacity: Int = 100
     var appRulesJSON: String?
 
     init() {

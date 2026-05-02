@@ -73,3 +73,62 @@ struct RemoteMetadata: Codable {
     var uploadDate: Date?
     var originalURL: String?
 }
+
+// MARK: - Conversions from Online Models
+extension Wallpaper {
+    /// Convert RemoteWallpaper to temporary Wallpaper for display
+    static func from(remote: RemoteWallpaper) -> Wallpaper {
+        return Wallpaper(
+            name: remote.id,
+            filePath: remote.fullImageURL?.absoluteString ?? "",
+            type: .image,
+            resolution: remote.resolution,
+            fileSize: remote.fileSize,
+            thumbnailPath: remote.thumbURL?.absoluteString,
+            source: .downloaded,
+            remoteId: remote.id,
+            remoteSource: .wallhaven,
+            remoteMetadata: RemoteMetadata(
+                author: nil,
+                views: remote.views,
+                favorites: remote.favorites,
+                uploadDate: remote.uploadedAt,
+                originalURL: remote.url
+            )
+        )
+    }
+
+    /// Convert MediaItem to temporary Wallpaper for display
+    static func from(media: MediaItem) -> Wallpaper {
+        let remoteSource: RemoteSourceType = {
+            switch media.sourceName.lowercased() {
+            case "motionbg": return .motionBG
+            case "steam workshop": return .steamWorkshop
+            default: return .motionBG
+            }
+        }()
+
+        return Wallpaper(
+            name: media.title,
+            filePath: media.hasAudioTrack == true
+                ? (media.fullVideoURL?.absoluteString ?? media.previewVideoURL?.absoluteString ?? "")
+                : (media.previewVideoURL?.absoluteString ?? media.fullVideoURL?.absoluteString ?? ""),
+            type: .video,
+            resolution: media.exactResolution ?? media.resolutionLabel,
+            fileSize: media.fileSize ?? 0,
+            duration: media.durationSeconds,
+            thumbnailPath: media.thumbnailURL.absoluteString,
+            source: .downloaded,
+            remoteId: media.id,
+            remoteSource: remoteSource,
+            downloadQuality: media.fullVideoURL?.absoluteString,
+            remoteMetadata: RemoteMetadata(
+                author: media.authorName,
+                views: media.viewCount,
+                favorites: media.favoriteCount,
+                uploadDate: media.createdAt,
+                originalURL: media.pageURL.absoluteString
+            )
+        )
+    }
+}

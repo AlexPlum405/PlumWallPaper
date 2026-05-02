@@ -31,9 +31,9 @@ final class PerformanceMonitor {
     }
 
     private func sample() {
-        // 从 RenderPipeline 读取实际 Metal 帧率
-        let metalFPS = RenderPipeline.shared.currentFPS
-        currentFPS = metalFPS > 0 ? Int(metalFPS.rounded()) : 0
+        // AVPlayer 不提供实时 FPS，使用屏幕刷新率作为参考
+        let maxRate = NSScreen.main?.maximumFramesPerSecond ?? 60
+        currentFPS = maxRate
         currentGPULoad = readGPUUtilization()
         currentMemoryMB = getMemoryUsage()
     }

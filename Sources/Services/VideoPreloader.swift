@@ -12,6 +12,13 @@ class VideoPreloader {
 
     private init() {}
 
+    /// 批量预加载视频，保留前几个最可能马上被用户看到的项目。
+    func preload(urls: [URL], limit: Int = 6) {
+        for url in Array(urls.prefix(limit)) {
+            preload(url: url)
+        }
+    }
+
     /// 预加载视频
     func preload(url: URL) {
         queue.async { [weak self] in
@@ -26,7 +33,14 @@ class VideoPreloader {
             NSLog("[VideoPreloader] 开始预加载: \(url.lastPathComponent)")
 
             let task = Task {
-                let asset = AVURLAsset(url: url)
+                let asset = AVURLAsset(
+                    url: url,
+                    options: [
+                        "AVURLAssetHTTPHeaderFieldsKey": [
+                            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+                        ]
+                    ]
+                )
 
                 // 预加载视频元数据和部分内容
                 do {
@@ -37,14 +51,18 @@ class VideoPreloader {
 
                         // 创建 player 并预加载
                         let playerItem = AVPlayerItem(asset: asset)
+                        playerItem.preferredForwardBufferDuration = 5
+                        playerItem.canUseNetworkResourcesForLiveStreamingWhilePaused = true
+
                         let player = AVPlayer(playerItem: playerItem)
+                        player.isMuted = true
+                        player.automaticallyWaitsToMinimizeStalling = false
 
-                        // 等待 player 准备好
-                        try await Task.sleep(nanoseconds: 100_000_000) // 100ms
+                        self.queue.async {
+                            self.preloadedPlayers[url] = player
+                        }
 
-                        // 检查 player 状态
-                        if player.status == .readyToPlay {
-                            // 预加载第一帧
+                        if await self.waitUntilReady(playerItem) {
                             await withCheckedContinuation { continuation in
                                 player.preroll(atRate: 1.0) { success in
                                     if success {
@@ -54,11 +72,10 @@ class VideoPreloader {
                                 }
                             }
                         } else {
-                            NSLog("[VideoPreloader] ⚠️ Player 未准备好，跳过 preroll: \(url.lastPathComponent)")
+                            NSLog("[VideoPreloader] ⚠️ PlayerItem 未准备好，保留已创建播放器: \(url.lastPathComponent)")
                         }
 
                         self.queue.async {
-                            self.preloadedPlayers[url] = player
                             self.preloadTasks[url] = nil
                         }
                     }
@@ -74,11 +91,31 @@ class VideoPreloader {
         }
     }
 
+    private func waitUntilReady(_ item: AVPlayerItem, timeoutNanoseconds: UInt64 = 4_000_000_000) async -> Bool {
+        let interval: UInt64 = 100_000_000
+        let attempts = max(1, Int(timeoutNanoseconds / interval))
+
+        for _ in 0..<attempts {
+            if Task.isCancelled { return false }
+            switch item.status {
+            case .readyToPlay:
+                return true
+            case .failed:
+                return false
+            default:
+                try? await Task.sleep(nanoseconds: interval)
+            }
+        }
+
+        return item.status == .readyToPlay
+    }
+
     /// 获取预加载的播放器
     func getPreloadedPlayer(url: URL) -> AVPlayer? {
         var player: AVPlayer?
         queue.sync {
             player = preloadedPlayers[url]
+            preloadedPlayers[url] = nil
         }
         return player
     }

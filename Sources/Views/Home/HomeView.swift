@@ -12,11 +12,8 @@ struct HomeView: View {
     @State private var isApplying = false
     @State var currentDetailIndex: Int = 0
     @State var detailWallpaper: Wallpaper?
-    @State var detailMediaItem: MediaItem?  // 用于显示在线媒体详情
     @State private var isHeroLeftHovered = false
     @State private var isHeroRightHovered = false
-    @State private var showVideoAlert = false
-    @State private var videoAlertMessage = ""
 
     private let mainPadding: CGFloat = 88
 
@@ -62,7 +59,17 @@ struct HomeView: View {
             Task {
                 NSLog("[HomeView] 开始加载初始数据")
                 await viewModel.loadInitialData()
+                preheatHomeVideos()
             }
+        }
+        .onChange(of: viewModel.heroItems) { _, _ in
+            preheatHomeVideos()
+        }
+        .onChange(of: viewModel.popularMotions) { _, _ in
+            preheatHomeVideos()
+        }
+        .onChange(of: currentHeroIndex) { _, _ in
+            preheatHeroVideos()
         }
         .onReceive(timer) { _ in
             if !isApplying && !viewModel.heroItems.isEmpty {
@@ -85,22 +92,15 @@ struct HomeView: View {
             }
             return .handled
         }
-        .alert("提示", isPresented: $showVideoAlert) {
-            Button("确定", role: .cancel) { }
-        } message: {
-            Text(videoAlertMessage)
-        }
         .sheet(item: $detailWallpaper) { wallpaper in
             WallpaperDetailView(
                 wallpaper: wallpaper,
-                onPrevious: { callback in
-                    let newWallpaper = getNavigateWallpaper(direction: -1)
-                    detailWallpaper = newWallpaper
+                onPrevious: { current, callback in
+                    let newWallpaper = getNavigateWallpaper(current: current, direction: -1)
                     callback(newWallpaper)
                 },
-                onNext: { callback in
-                    let newWallpaper = getNavigateWallpaper(direction: 1)
-                    detailWallpaper = newWallpaper
+                onNext: { current, callback in
+                    let newWallpaper = getNavigateWallpaper(current: current, direction: 1)
                     callback(newWallpaper)
                 },
                 onFavorite: { updatedWallpaper in
@@ -111,21 +111,33 @@ struct HomeView: View {
                 }
             )
         }
-        .sheet(item: $detailMediaItem) { mediaItem in
-            MediaDetailView(
-                mediaItem: mediaItem,
-                onPrevious: { callback in
-                    let newMediaItem = getNavigateMediaItem(direction: -1)
-                    detailMediaItem = newMediaItem
-                    callback(newMediaItem)
-                },
-                onNext: { callback in
-                    let newMediaItem = getNavigateMediaItem(direction: 1)
-                    detailMediaItem = newMediaItem
-                    callback(newMediaItem)
-                }
-            )
-        }
+    }
+
+    private func preheatHomeVideos() {
+        preheatHeroVideos()
+        let motionURLs = viewModel.popularMotions.compactMap(primaryVideoURL(for:))
+        VideoPreloader.shared.preload(urls: motionURLs, limit: 6)
+    }
+
+    private func preheatHeroVideos() {
+        guard !viewModel.heroItems.isEmpty else { return }
+
+        let count = viewModel.heroItems.count
+        let indexes = [
+            currentHeroIndex,
+            (currentHeroIndex + 1) % count,
+            (currentHeroIndex - 1 + count) % count
+        ]
+
+        let urls = indexes
+            .map { viewModel.heroItems[$0] }
+            .compactMap(primaryVideoURL(for:))
+
+        VideoPreloader.shared.preload(urls: urls, limit: 3)
+    }
+
+    private func primaryVideoURL(for item: MediaItem) -> URL? {
+        item.previewVideoURL ?? item.fullVideoURL
     }
 
     // MARK: - Loading & Error States
@@ -284,34 +296,22 @@ struct HomeView: View {
             // 视频层 - 只预加载当前和前后各1个视频
             ZStack {
                 if !viewModel.heroItems.isEmpty {
-                    let itemsArray = Array(viewModel.heroItems.enumerated())
-                    ForEach(itemsArray, id: \.element.id) { index, item in
-                        // 只渲染当前视频和前后各1个视频
-                        let shouldRender = abs(index - currentHeroIndex) <= 1 ||
-                                         (currentHeroIndex == 0 && index == viewModel.heroItems.count - 1) ||
-                                         (currentHeroIndex == viewModel.heroItems.count - 1 && index == 0)
+                    let item = viewModel.heroItems[currentHeroIndex]
 
-                        if shouldRender {
-                            // 使用 2K 视频（previewVideoURL 1920x1080），回退到 4K，最后回退到图片
-                            if let videoURL = item.previewVideoURL ?? item.fullVideoURL {
-                                VideoPlayer(
-                                    url: videoURL,
-                                    posterURL: item.thumbnailURL,
-                                    isActive: index == currentHeroIndex
-                                )
-                                .opacity(index == currentHeroIndex ? 1 : 0)
-                                .zIndex(index == currentHeroIndex ? 1 : 0)
-                                .allowsHitTesting(index == currentHeroIndex)
-                            } else {
-                                AsyncImage(url: item.thumbnailURL) { phase in
-                                    if let image = phase.image {
-                                        image.resizable().aspectRatio(contentMode: .fill)
-                                    } else { Color.black }
-                                }
-                                .opacity(index == currentHeroIndex ? 1 : 0)
-                                .zIndex(index == currentHeroIndex ? 1 : 0)
-                            }
+                    // 只渲染当前视频。前后项通过 VideoPreloader 预热，避免 AppKit 视频层透出旧画面。
+                    if let videoURL = item.previewVideoURL ?? item.fullVideoURL {
+                        HeroVideoPlayer(url: videoURL, isActive: true)
+                        .id(videoURL.absoluteString)
+                        .frame(width: size.width, height: size.height)
+                        .clipped()
+                    } else {
+                        AsyncImage(url: item.thumbnailURL) { phase in
+                            if let image = phase.image {
+                                image.resizable().aspectRatio(contentMode: .fill)
+                            } else { Color.black }
                         }
+                        .frame(width: size.width, height: size.height)
+                        .clipped()
                     }
                 }
             }
@@ -435,7 +435,7 @@ struct HomeView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 32) {
                     ForEach(viewModel.latestStills) { remoteWallpaper in
-                        let wallpaper = convertToWallpaper(remoteWallpaper)
+                        let wallpaper = Wallpaper.from(remote: remoteWallpaper)
                         WallpaperCard(wallpaper: wallpaper, onTap: {
                             detailWallpaper = wallpaper
                         }, onDownload: {
@@ -446,7 +446,7 @@ struct HomeView: View {
                         .onHover { hovering in
                             if hovering {
                                 // hover 时预加载图片
-                                let wallpaper = convertToWallpaper(remoteWallpaper)
+                                let wallpaper = Wallpaper.from(remote: remoteWallpaper)
                                 if let url = URL(string: wallpaper.filePath) {
                                     // 预加载图片到缓存
                                     URLSession.shared.dataTask(with: url).resume()
@@ -490,9 +490,9 @@ struct HomeView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 32) {
                     ForEach(viewModel.popularMotions) { mediaItem in
-                        let wallpaper = convertToWallpaper(mediaItem)
+                        let wallpaper = Wallpaper.from(media: mediaItem)
                         WallpaperCard(wallpaper: wallpaper, onTap: {
-                            detailMediaItem = mediaItem  // 使用 MediaDetailView
+                            detailWallpaper = wallpaper
                         }, onDownload: {
                             Task {
                                 await downloadFromCard(wallpaper)
@@ -514,110 +514,34 @@ struct HomeView: View {
 
     // MARK: - Data Conversion Helpers
 
-    /// Convert RemoteWallpaper to temporary Wallpaper for display
-    private func convertToWallpaper(_ remote: RemoteWallpaper) -> Wallpaper {
-        let wallpaper = Wallpaper(
-            name: remote.id,
-            filePath: remote.fullImageURL?.absoluteString ?? "",
-            type: .image,
-            resolution: remote.resolution,
-            fileSize: remote.fileSize,
-            thumbnailPath: remote.thumbURL?.absoluteString,
-            source: .downloaded,
-            remoteId: remote.id,
-            remoteSource: .wallhaven,
-            remoteMetadata: RemoteMetadata(
-                author: nil,
-                views: remote.views,
-                favorites: remote.favorites,
-                uploadDate: remote.uploadedAt,
-                originalURL: remote.url
-            )
-        )
-        return wallpaper
-    }
-
-    /// Convert MediaItem to temporary Wallpaper for display
-    private func convertToWallpaper(_ media: MediaItem) -> Wallpaper {
-        let remoteSource: RemoteSourceType = {
-            switch media.sourceName.lowercased() {
-            case "motionbg": return .motionBG
-            case "steam workshop": return .steamWorkshop
-            default: return .motionBG
-            }
-        }()
-
-        let wallpaper = Wallpaper(
-            name: media.title,
-            filePath: media.fullVideoURL?.absoluteString ?? media.previewVideoURL?.absoluteString ?? "",
-            type: .video,
-            resolution: media.exactResolution ?? media.resolutionLabel,
-            fileSize: media.fileSize ?? 0,
-            duration: media.durationSeconds,
-            thumbnailPath: media.thumbnailURL.absoluteString,
-            source: .downloaded,
-            remoteId: media.id,
-            remoteSource: remoteSource,
-            remoteMetadata: RemoteMetadata(
-                author: media.authorName,
-                views: media.viewCount,
-                favorites: media.favoriteCount,
-                uploadDate: media.createdAt,
-                originalURL: media.pageURL.absoluteString
-            )
-        )
-        return wallpaper
-    }
+    // Conversions moved to Wallpaper+Conversions.swift
 
     /// Navigate to previous/next wallpaper in detail view
-    private func getNavigateWallpaper(direction: Int) -> Wallpaper {
-        // Combine all items for navigation
-        let allWallpapers: [Wallpaper] = viewModel.latestStills.map(convertToWallpaper)
-
-        guard !allWallpapers.isEmpty else {
-            return detailWallpaper ?? Wallpaper(name: "Unknown", filePath: "", type: .image)
+    private func getNavigateWallpaper(current: Wallpaper? = nil, direction: Int) -> Wallpaper {
+        let stillsWallpapers = viewModel.latestStills.map(Wallpaper.from)
+        let motionsWallpapers = viewModel.popularMotions.map(Wallpaper.from)
+        let activeWallpaper = current ?? detailWallpaper
+        
+        let allWallpapers: [Wallpaper]
+        
+        if let activeWallpaper,
+           motionsWallpapers.contains(where: { $0.remoteId == activeWallpaper.remoteId || $0.name == activeWallpaper.name }) {
+            allWallpapers = motionsWallpapers
+        } else {
+            allWallpapers = stillsWallpapers
         }
 
-        if let current = detailWallpaper,
-           let currentIndex = allWallpapers.firstIndex(where: { $0.remoteId == current.remoteId }) {
+        guard !allWallpapers.isEmpty else {
+            return activeWallpaper ?? Wallpaper(name: "Unknown", filePath: "", type: .image)
+        }
+
+        if let activeWallpaper,
+           let currentIndex = allWallpapers.firstIndex(where: { $0.remoteId == activeWallpaper.remoteId || $0.name == activeWallpaper.name }) {
             let newIndex = (currentIndex + direction + allWallpapers.count) % allWallpapers.count
             return allWallpapers[newIndex]
         }
 
         return allWallpapers.first ?? Wallpaper(name: "Unknown", filePath: "", type: .image)
-    }
-
-    private func getNavigateMediaItem(direction: Int) -> MediaItem {
-        let allMediaItems = viewModel.popularMotions
-
-        guard !allMediaItems.isEmpty else {
-            return detailMediaItem ?? MediaItem(
-                slug: "unknown",
-                title: "Unknown",
-                pageURL: URL(string: "https://example.com")!,
-                thumbnailURL: URL(string: "https://example.com")!,
-                resolutionLabel: "Unknown",
-                collectionTitle: nil,
-                summary: nil,
-                previewVideoURL: nil,
-                fullVideoURL: nil,
-                posterURL: nil,
-                tags: [],
-                exactResolution: nil,
-                durationSeconds: nil,
-                downloadOptions: [],
-                sourceName: "Unknown",
-                isAnimatedImage: false
-            )
-        }
-
-        if let current = detailMediaItem,
-           let currentIndex = allMediaItems.firstIndex(where: { $0.id == current.id }) {
-            let newIndex = (currentIndex + direction + allMediaItems.count) % allMediaItems.count
-            return allMediaItems[newIndex]
-        }
-
-        return allMediaItems[0]
     }
 
     // MARK: - 快捷下载
@@ -654,52 +578,48 @@ struct HomeView: View {
 
         let currentItem = viewModel.heroItems[currentHeroIndex]
 
-        // 视频壁纸暂不支持设为 macOS 桌面
-        if currentItem.fullVideoURL != nil || currentItem.previewVideoURL != nil {
-            if currentItem.posterURL == nil {
-                videoAlertMessage = "此为视频壁纸，暂不支持设为 macOS 桌面。未来版本将支持视频壁纸。"
-                showVideoAlert = true
-                return
-            }
-        }
-
         isApplying = true
         defer { isApplying = false }
 
         do {
             NSLog("[HomeView] 开始设置壁纸: \(currentItem.title)")
 
-            // 1. 下载图片（优先使用 posterURL 高清静态帧）
-            let imageURL = currentItem.posterURL ?? currentItem.thumbnailURL
-            let tempDir = FileManager.default.temporaryDirectory
-            let filename = "\(currentItem.slug).jpg"
-            let localURL = tempDir.appendingPathComponent(filename)
+            if let videoURL = currentItem.fullVideoURL ?? currentItem.previewVideoURL {
+                // 视频壁纸：通过 RenderPipeline 渲染到桌面
+                let tempDir = FileManager.default.temporaryDirectory
+                let filename = "\(currentItem.slug).mp4"
+                let localURL = tempDir.appendingPathComponent(filename)
 
-            // 检查是否已下载
-            if !FileManager.default.fileExists(atPath: localURL.path) {
-                NSLog("[HomeView] 下载图片: \(imageURL.absoluteString)")
+                if !FileManager.default.fileExists(atPath: localURL.path) {
+                    NSLog("[HomeView] 下载视频: \(videoURL.absoluteString)")
+                    let (data, _) = try await URLSession.shared.data(from: videoURL)
+                    try data.write(to: localURL)
+                    NSLog("[HomeView] ✅ 视频下载完成: \(localURL.path)")
+                }
 
-                let (data, _) = try await URLSession.shared.data(from: imageURL)
-                try data.write(to: localURL)
-
-                NSLog("[HomeView] ✅ 下载完成: \(localURL.path)")
+                try await RenderPipeline.shared.setWallpaper(url: localURL)
+                NSLog("[HomeView] ✅ 动态壁纸设置成功")
             } else {
-                NSLog("[HomeView] 使用缓存文件: \(localURL.path)")
+                // 静态壁纸：使用 posterURL 高清图
+                let imageURL = currentItem.posterURL ?? currentItem.thumbnailURL
+                let tempDir = FileManager.default.temporaryDirectory
+                let filename = "\(currentItem.slug).jpg"
+                let localURL = tempDir.appendingPathComponent(filename)
+
+                if !FileManager.default.fileExists(atPath: localURL.path) {
+                    NSLog("[HomeView] 下载图片: \(imageURL.absoluteString)")
+                    let (data, _) = try await URLSession.shared.data(from: imageURL)
+                    try data.write(to: localURL)
+                    NSLog("[HomeView] ✅ 下载完成: \(localURL.path)")
+                }
+
+                try await MainActor.run {
+                    try WallpaperSetter.shared.setWallpaper(imageURL: localURL)
+                }
+                NSLog("[HomeView] ✅ 壁纸设置成功")
             }
-
-            // 2. 设置为壁纸
-            try await MainActor.run {
-                try WallpaperSetter.shared.setWallpaper(imageURL: localURL)
-            }
-
-            NSLog("[HomeView] ✅ 壁纸设置成功")
-
-            // 3. 显示成功提示（可选）
-            // TODO: 添加 Toast 通知
-
         } catch {
             NSLog("[HomeView] ❌ 设置壁纸失败: \(error.localizedDescription)")
-            // TODO: 显示错误提示
         }
     }
 }
@@ -733,4 +653,3 @@ private extension View {
         modifier(ShimmerModifier())
     }
 }
-

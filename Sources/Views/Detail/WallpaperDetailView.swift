@@ -1,16 +1,19 @@
 import SwiftUI
+import AppKit
+import AVFoundation
 
 // MARK: - Artisan Exhibition Hall (Scheme C: Artisan Gallery)
 // 沉浸式壁纸鉴赏厅，UI 仅在鼠标触碰功能区时如雾般浮现。
 
 struct WallpaperDetailView: View {
     @State var wallpaper: Wallpaper // 改为 @State 以支持内部平滑更新
-    var onPrevious: ((@escaping (Wallpaper) -> Void) -> Void)? = nil
-    var onNext: ((@escaping (Wallpaper) -> Void) -> Void)? = nil
+    var onPrevious: ((Wallpaper, @escaping (Wallpaper) -> Void) -> Void)? = nil
+    var onNext: ((Wallpaper, @escaping (Wallpaper) -> Void) -> Void)? = nil
     var onFavorite: ((Wallpaper) -> Void)? = nil
     var onDownload: ((Wallpaper) -> Void)? = nil
     
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     
     // 状态驱动
     @State internal var isStudioActive = false      // 实验室面板是否展开
@@ -19,6 +22,7 @@ struct WallpaperDetailView: View {
     @State private var isDownloading = false
     @State private var toastMessage: String?
     @State private var showToast = false
+    @State private var isNavigatingWallpaper = false
 
     // 侧翼导航悬停
     @State internal var isLeftEdgeHovered = false
@@ -48,12 +52,45 @@ struct WallpaperDetailView: View {
     @State var isShowingShaderEditor = false
     
     var body: some View {
+        Group {
+            if wallpaper.type == .video, let videoURL = wallpaperContentURL {
+                DetailVideoLayerContainer(url: videoURL) {
+                    detailChrome(includeStaticCanvas: false)
+                }
+                .id(videoURL.absoluteString)
+            } else {
+                detailChrome(includeStaticCanvas: true)
+            }
+        }
+        .sheet(isPresented: $isShowingShaderEditor) {
+            ShaderEditorView()
+        }
+        .frame(minWidth: 1200, minHeight: 800)
+        .preferredColorScheme(.dark)
+        .onAppear {
+            if wallpaper.type == .video, let videoURL = wallpaperContentURL {
+                VideoPreloader.shared.preload(url: videoURL)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func detailChrome(includeStaticCanvas: Bool) -> some View {
         ZStack {
             // 1. 底层：纯净画布（100% 视野）
-            fullscreenCanvas
+            if includeStaticCanvas {
+                fullscreenCanvas
+                    .allowsHitTesting(false)
+                    .zIndex(-100)
+            } else {
+                RadialGradient(colors: [.clear, .black.opacity(0.3)], center: .center, startRadius: 300, endRadius: 1000)
+                    .allowsHitTesting(false)
+                    .zIndex(-100)
+            }
 
             // 2. 交互辅助层：透明拖拽与背景点击
             Color.clear.contentShape(Rectangle()).windowDragGesture()
+                .zIndex(0)
 
             // 3. 侧翼导航（左右两侧边缘感应）
             sideNavigationArrows
@@ -103,110 +140,170 @@ struct WallpaperDetailView: View {
 
             // 6. 关闭按钮（右上角）
             closeButtonHUD
+                .zIndex(1000)
         }
-        .sheet(isPresented: $isShowingShaderEditor) {
-            ShaderEditorView()
-        }
-        .frame(minWidth: 1200, minHeight: 800)
-        .preferredColorScheme(.dark)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
     // MARK: - A. 视觉子层级 (Artisan Horizon HUD)
     
     private var fullscreenCanvas: some View {
         ZStack {
-            if let url = URL(string: wallpaper.filePath) {
+            if wallpaper.type == .video, let videoURL = wallpaperContentURL {
+                VideoPlayer(url: videoURL, posterURL: wallpaperPosterURL)
+                    .id(videoURL.absoluteString)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+            } else if let url = wallpaperContentURL {
                 AsyncImage(url: url) { phase in
                     if let image = phase.image {
-                        image.resizable().aspectRatio(contentMode: .fit) // .fit 确保不裁切
-                    } else { Color.black }
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        fallbackPoster
+                    }
                 }
-            } else { Color.black }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+            } else {
+                fallbackPoster
+            }
             // 径向暗角
             RadialGradient(colors: [.clear, .black.opacity(0.3)], center: .center, startRadius: 300, endRadius: 1000)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black)
         .ignoresSafeArea()
+        .onAppear {
+            if wallpaper.type == .video, let videoURL = wallpaperContentURL {
+                VideoPreloader.shared.preload(url: videoURL)
+            }
+        }
+    }
+
+    private var fallbackPoster: some View {
+        ZStack {
+            Color.black
+            if let posterURL = wallpaperPosterURL {
+                AsyncImage(url: posterURL) { phase in
+                    if let image = phase.image {
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .blur(radius: 16)
+                            .opacity(0.45)
+                    } else {
+                        Color.black
+                    }
+                }
+            }
+        }
+    }
+
+    private var wallpaperContentURL: URL? {
+        url(from: wallpaper.filePath)
+    }
+
+    private var wallpaperPosterURL: URL? {
+        guard let thumbnailPath = wallpaper.thumbnailPath else { return nil }
+        return url(from: thumbnailPath)
+    }
+
+    private func url(from path: String) -> URL? {
+        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        if let url = URL(string: trimmed), url.scheme != nil {
+            return url
+        }
+
+        return URL(fileURLWithPath: trimmed)
     }
 
     private var sideNavigationArrows: some View {
-        ZStack {
-            // 左侧感应区：晶莹圆润箭头
-            Color.clear
-                .frame(width: 80)
-                .contentShape(Rectangle())
-                .onHover { hovering in withAnimation(.galleryEase) { isLeftEdgeHovered = hovering } }
-                .onTapGesture { 
-                    onPrevious? { newWallpaper in
-                        withAnimation(.galleryEase) {
-                            self.wallpaper = newWallpaper
-                        }
-                    }
-                }
-                .overlay(
-                    ZStack {
-                        // 1. 底层：弥散柔光
-                        RoundedChevron()
-                            .stroke(LiquidGlassColors.primaryPink.opacity(0.3), style: StrokeStyle(lineWidth: 12, lineCap: .round, lineJoin: .round))
-                            .blur(radius: 8)
-                        
-                        // 2. 中层：实体厚度 (白瓷质感)
-                        RoundedChevron()
-                            .stroke(.white.opacity(0.6), style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round))
-                            .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
-                        
-                        // 3. 顶层：棱镜高光
-                        RoundedChevron()
-                            .stroke(
-                                LinearGradient(colors: [.white, .white.opacity(0.2)], startPoint: .top, endPoint: .bottom),
-                                style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
-                            )
-                    }
-                    .frame(width: 14, height: 44)
-                    .rotationEffect(.degrees(180))
-                    .opacity(isLeftEdgeHovered ? 1 : 0)
-                    .offset(x: isLeftEdgeHovered ? 40 : 10),
-                    alignment: .leading
-                )
-                .frame(maxWidth: .infinity, alignment: .leading)
+        HStack(spacing: 0) {
+            navigationEdgeButton(direction: -1, isHovered: $isLeftEdgeHovered)
 
-            // 右侧感应区：晶莹圆润箭头
-            Color.clear
-                .frame(width: 80)
-                .contentShape(Rectangle())
-                .onHover { hovering in withAnimation(.galleryEase) { isRightEdgeHovered = hovering } }
-                .onTapGesture { 
-                    onNext? { newWallpaper in
-                        withAnimation(.galleryEase) {
-                            self.wallpaper = newWallpaper
-                        }
-                    }
-                }
-                .overlay(
-                    ZStack {
-                        // 1. 底层：弥散柔光
-                        RoundedChevron()
-                            .stroke(LiquidGlassColors.primaryPink.opacity(0.3), style: StrokeStyle(lineWidth: 12, lineCap: .round, lineJoin: .round))
-                            .blur(radius: 8)
-                        
-                        // 2. 中层：实体厚度
-                        RoundedChevron()
-                            .stroke(.white.opacity(0.6), style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round))
-                            .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
-                        
-                        // 3. 顶层：棱镜高光
-                        RoundedChevron()
-                            .stroke(
-                                LinearGradient(colors: [.white, .white.opacity(0.2)], startPoint: .top, endPoint: .bottom),
-                                style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
-                            )
-                    }
+            Spacer(minLength: 0)
+
+            navigationEdgeButton(direction: 1, isHovered: $isRightEdgeHovered)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func navigationEdgeButton(direction: Int, isHovered: Binding<Bool>) -> some View {
+        Button {
+            navigateWallpaper(direction: direction)
+        } label: {
+            ZStack {
+                Color.black.opacity(0.001)
+
+                navigationChevron(isPrevious: direction < 0)
                     .frame(width: 14, height: 44)
-                    .opacity(isRightEdgeHovered ? 1 : 0)
-                    .offset(x: isRightEdgeHovered ? -40 : -10),
-                    alignment: .trailing
+                    .opacity(isHovered.wrappedValue ? 1 : 0.72)
+                    .offset(x: direction < 0 ? 28 : -28)
+            }
+            .frame(width: 160)
+            .frame(maxHeight: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(isNavigatingWallpaper)
+        .onHover { hovering in
+            withAnimation(.galleryEase) {
+                isHovered.wrappedValue = hovering
+            }
+        }
+    }
+
+    private func navigationChevron(isPrevious: Bool) -> some View {
+        ZStack {
+            RoundedChevron()
+                .stroke(LiquidGlassColors.primaryPink.opacity(0.3), style: StrokeStyle(lineWidth: 12, lineCap: .round, lineJoin: .round))
+                .blur(radius: 8)
+
+            RoundedChevron()
+                .stroke(.white.opacity(0.6), style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round))
+                .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+
+            RoundedChevron()
+                .stroke(
+                    LinearGradient(colors: [.white, .white.opacity(0.2)], startPoint: .top, endPoint: .bottom),
+                    style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
                 )
-                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .rotationEffect(.degrees(isPrevious ? 180 : 0))
+    }
+
+    private func navigateWallpaper(direction: Int) {
+        guard !isNavigatingWallpaper else { return }
+        isNavigatingWallpaper = true
+
+        let finish: (Wallpaper) -> Void = { newWallpaper in
+            withAnimation(.galleryEase) {
+                self.wallpaper = newWallpaper
+            }
+
+            if newWallpaper.type == .video, let videoURL = url(from: newWallpaper.filePath) {
+                VideoPreloader.shared.preload(url: videoURL)
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                isNavigatingWallpaper = false
+            }
+        }
+
+        if direction < 0 {
+            if let onPrevious {
+                onPrevious(wallpaper, finish)
+            } else {
+                isNavigatingWallpaper = false
+            }
+        } else {
+            if let onNext {
+                onNext(wallpaper, finish)
+            } else {
+                isNavigatingWallpaper = false
+            }
         }
     }
 
@@ -256,7 +353,31 @@ struct WallpaperDetailView: View {
                 color: wallpaper.isFavorite ? LiquidGlassColors.primaryPink : .white.opacity(0.6)
             ) {
                 wallpaper.isFavorite.toggle()
-                onFavorite?(wallpaper)
+                
+                do {
+                    var targetToSave = wallpaper
+                    
+                    // 如果它已经在数据库里（本地库里的壁纸），直接保存
+                    if wallpaper.modelContext != nil {
+                        try modelContext.save()
+                    } else {
+                        // 如果它是临时的包装对象（在线预览），去数据库里找找看是不是已经存在了
+                        if let remoteId = wallpaper.remoteId,
+                           let existing = DownloadManager.shared.isAlreadyDownloaded(remoteId: remoteId, context: modelContext) {
+                            existing.isFavorite = wallpaper.isFavorite
+                            targetToSave = existing
+                            try modelContext.save()
+                        } else {
+                            // 既不在数据库，也是首次收藏的在线壁纸
+                            modelContext.insert(wallpaper)
+                            try modelContext.save()
+                        }
+                    }
+                    
+                    onFavorite?(targetToSave)
+                } catch {
+                    NSLog("[WallpaperDetailView] 保存收藏状态失败: \(error)")
+                }
             }
 
             // 2. 应用壁纸（主按钮，粉色胶囊）
@@ -475,37 +596,71 @@ struct WallpaperDetailView: View {
         isApplying = true
         defer { isApplying = false }
 
+        NSLog("[WallpaperDetailView] applyWallpaper type=\(wallpaper.type) filePath=\(wallpaper.filePath)")
+
         do {
-            if let remoteURL = URL(string: wallpaper.filePath), remoteURL.scheme?.hasPrefix("http") == true {
-                let imageURL: URL
-                if let thumbPath = wallpaper.thumbnailPath, let thumbURL = URL(string: thumbPath) {
-                    imageURL = thumbURL
+            if wallpaper.type == .video {
+                // 视频壁纸：通过 RenderPipeline 渲染到桌面
+                let videoURL: URL
+                let wallpaperVideoPath = highQualityVideoPathForApply ?? wallpaper.filePath
+                if let remoteURL = URL(string: wallpaperVideoPath), remoteURL.scheme?.hasPrefix("http") == true {
+                    // 远程视频：先下载到临时目录
+                    let tempDir = FileManager.default.temporaryDirectory
+                    let ext = "mp4"
+                    let filename = "\(wallpaper.id.uuidString).\(ext)"
+                    let localURL = tempDir.appendingPathComponent(filename)
+
+                    if !FileManager.default.fileExists(atPath: localURL.path) {
+                        NSLog("[WallpaperDetailView] 下载远程视频...")
+                        let (data, _) = try await URLSession.shared.data(from: remoteURL)
+                        try data.write(to: localURL)
+                        NSLog("[WallpaperDetailView] ✅ 视频下载完成 \(data.count) bytes -> \(localURL.path)")
+                    }
+                    videoURL = localURL
                 } else {
-                    imageURL = remoteURL
+                    // 本地文件路径
+                    videoURL = URL(fileURLWithPath: wallpaperVideoPath)
                 }
 
-                let tempDir = FileManager.default.temporaryDirectory
-                let filename = "\(wallpaper.id.uuidString).jpg"
-                let localURL = tempDir.appendingPathComponent(filename)
+                try await RenderPipeline.shared.setWallpaper(url: videoURL)
+                showToastMessage("动态壁纸设置成功")
+            } else {
+                // 静态壁纸：通过 WallpaperSetter 设置系统壁纸
+                if let remoteURL = URL(string: wallpaper.filePath), remoteURL.scheme?.hasPrefix("http") == true {
+                    let imageURL = remoteURL
+                    let tempDir = FileManager.default.temporaryDirectory
+                    let filename = "\(wallpaper.id.uuidString).jpg"
+                    let localURL = tempDir.appendingPathComponent(filename)
 
-                if !FileManager.default.fileExists(atPath: localURL.path) {
-                    let (data, _) = try await URLSession.shared.data(from: imageURL)
-                    try data.write(to: localURL)
+                    if !FileManager.default.fileExists(atPath: localURL.path) {
+                        let (data, _) = try await URLSession.shared.data(from: imageURL)
+                        try data.write(to: localURL)
+                    }
+
+                    try await MainActor.run {
+                        try WallpaperSetter.shared.setWallpaper(imageURL: localURL)
+                    }
+                } else {
+                    let localURL = URL(fileURLWithPath: wallpaper.filePath)
+                    try await MainActor.run {
+                        try WallpaperSetter.shared.setWallpaper(imageURL: localURL)
+                    }
                 }
 
-                try await MainActor.run {
-                    try WallpaperSetter.shared.setWallpaper(imageURL: localURL)
-                }
-            } else if let localURL = URL(string: wallpaper.filePath) {
-                try await MainActor.run {
-                    try WallpaperSetter.shared.setWallpaper(imageURL: localURL)
-                }
+                showToastMessage("壁纸设置成功")
             }
-
-            showToastMessage("壁纸设置成功")
         } catch {
             showToastMessage("设置失败: \(error.localizedDescription)")
         }
+    }
+
+    private var highQualityVideoPathForApply: String? {
+        guard let value = wallpaper.downloadQuality,
+              let url = URL(string: value),
+              url.scheme?.hasPrefix("http") == true else {
+            return nil
+        }
+        return value
     }
 
     private func downloadWallpaper() async {
@@ -514,11 +669,19 @@ struct WallpaperDetailView: View {
             return
         }
 
+        // 检查是否已下载
+        if let remoteId = wallpaper.remoteId,
+           DownloadManager.shared.isAlreadyDownloaded(remoteId: remoteId, context: modelContext) != nil {
+            showToastMessage("已下载过此壁纸")
+            return
+        }
+
         isDownloading = true
         defer { isDownloading = false }
 
         do {
-            let imageURL = URL(string: wallpaper.thumbnailPath ?? wallpaper.filePath) ?? remoteURL
+            // 优先使用原图下载，而非缩略图
+            let imageURL = remoteURL
             let downloadsDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
                 .appendingPathComponent("PlumWallPaper/Downloads", isDirectory: true)
             try FileManager.default.createDirectory(at: downloadsDir, withIntermediateDirectories: true)
@@ -530,6 +693,22 @@ struct WallpaperDetailView: View {
 
             let (data, _) = try await URLSession.shared.data(from: imageURL)
             try data.write(to: localURL)
+
+            // 持久化到 SwiftData
+            let newWallpaper = Wallpaper(
+                name: wallpaper.name,
+                filePath: localURL.path,
+                type: wallpaper.type,
+                resolution: wallpaper.resolution,
+                fileSize: Int64(data.count),
+                thumbnailPath: wallpaper.thumbnailPath,
+                source: .downloaded,
+                remoteId: wallpaper.remoteId,
+                remoteSource: wallpaper.remoteSource,
+                remoteMetadata: wallpaper.remoteMetadata
+            )
+            modelContext.insert(newWallpaper)
+            try modelContext.save()
 
             wallpaper.filePath = localURL.path
             wallpaper.source = .downloaded
@@ -551,6 +730,121 @@ struct WallpaperDetailView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
             withAnimation { showToast = false }
         }
+    }
+}
+
+private struct DetailVideoLayerContainer<Overlay: View>: NSViewRepresentable {
+    let url: URL
+    @ViewBuilder var overlay: () -> Overlay
+
+    func makeNSView(context: Context) -> DetailVideoLayerView<Overlay> {
+        let view = DetailVideoLayerView(rootView: overlay())
+        view.configure(url: url)
+        return view
+    }
+
+    func updateNSView(_ nsView: DetailVideoLayerView<Overlay>, context: Context) {
+        nsView.hostingView.rootView = overlay()
+        nsView.configure(url: url)
+    }
+
+    static func dismantleNSView(_ nsView: DetailVideoLayerView<Overlay>, coordinator: ()) {
+        nsView.stop()
+    }
+}
+
+private final class DetailVideoLayerView<Overlay: View>: NSView {
+    private let playerLayer = AVPlayerLayer()
+    private var player: AVPlayer?
+    private var currentURL: URL?
+    private var endObserver: NSObjectProtocol?
+    let hostingView: NSHostingView<Overlay>
+
+    init(rootView: Overlay) {
+        hostingView = NSHostingView(rootView: rootView)
+        super.init(frame: .zero)
+        setup()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    private func setup() {
+        wantsLayer = true
+        let rootLayer = CALayer()
+        rootLayer.backgroundColor = NSColor.black.cgColor
+        rootLayer.masksToBounds = true
+        layer = rootLayer
+
+        playerLayer.videoGravity = .resizeAspectFill
+        playerLayer.needsDisplayOnBoundsChange = true
+        rootLayer.addSublayer(playerLayer)
+
+        hostingView.translatesAutoresizingMaskIntoConstraints = false
+        hostingView.wantsLayer = true
+        hostingView.layer?.backgroundColor = NSColor.clear.cgColor
+        addSubview(hostingView)
+
+        NSLayoutConstraint.activate([
+            hostingView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            hostingView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            hostingView.topAnchor.constraint(equalTo: topAnchor),
+            hostingView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
+    }
+
+    func configure(url: URL) {
+        guard currentURL != url else { return }
+        currentURL = url
+
+        if let endObserver {
+            NotificationCenter.default.removeObserver(endObserver)
+            self.endObserver = nil
+        }
+
+        player?.pause()
+        let playerItem = AVPlayerItem(url: url)
+        playerItem.preferredForwardBufferDuration = 3
+        playerItem.canUseNetworkResourcesForLiveStreamingWhilePaused = true
+
+        let nextPlayer = AVPlayer(playerItem: playerItem)
+        nextPlayer.isMuted = false
+        nextPlayer.volume = 1.0
+        nextPlayer.automaticallyWaitsToMinimizeStalling = false
+
+        player = nextPlayer
+        playerLayer.player = nextPlayer
+        nextPlayer.play()
+
+        endObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: playerItem,
+            queue: .main
+        ) { [weak self] _ in
+            guard self?.currentURL == url else { return }
+            nextPlayer.seek(to: .zero)
+            nextPlayer.play()
+        }
+    }
+
+    func stop() {
+        if let endObserver {
+            NotificationCenter.default.removeObserver(endObserver)
+            self.endObserver = nil
+        }
+        player?.pause()
+        playerLayer.player = nil
+        player = nil
+        currentURL = nil
+    }
+
+    override func layout() {
+        super.layout()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        playerLayer.frame = bounds
+        CATransaction.commit()
     }
 }
 
@@ -689,4 +983,3 @@ enum BuiltInPreset: String, CaseIterable, Identifiable {
         }
     }
 }
-

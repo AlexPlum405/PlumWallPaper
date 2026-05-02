@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Artisan Media Explore (Scheme C: Pure Edition)
 struct MediaExploreView: View {
     @StateObject var viewModel = MediaExploreViewModel()
-    @State var detailMedia: MediaItem?
+    @State var detailWallpaper: Wallpaper?
     @State var showFilters = false
     @State private var scrollOffset: CGFloat = 0
 
@@ -32,8 +32,18 @@ struct MediaExploreView: View {
             .padding(.bottom, 100)
         }
         .background(LiquidGlassColors.deepBackground)
-        .sheet(item: $detailMedia) { media in
-            MediaDetailView(mediaItem: media)
+        .sheet(item: $detailWallpaper) { wallpaper in
+            WallpaperDetailView(
+                wallpaper: wallpaper,
+                onPrevious: { current, callback in
+                    let newWallpaper = getNavigateWallpaper(current: current, direction: -1)
+                    callback(newWallpaper)
+                },
+                onNext: { current, callback in
+                    let newWallpaper = getNavigateWallpaper(current: current, direction: 1)
+                    callback(newWallpaper)
+                }
+            )
         }
         .onAppear {
             NSLog("[MediaExploreView] .onAppear 被调用")
@@ -41,9 +51,38 @@ struct MediaExploreView: View {
                 Task {
                     NSLog("[MediaExploreView] 开始加载初始数据")
                     await viewModel.loadInitialData()
+                    preheatVisibleMediaVideos()
                 }
+            } else {
+                preheatVisibleMediaVideos()
             }
         }
+        .onChange(of: viewModel.mediaItems) { _, _ in
+            preheatVisibleMediaVideos()
+        }
+    }
+
+    private func preheatVisibleMediaVideos() {
+        let urls = viewModel.mediaItems.compactMap { $0.previewVideoURL ?? $0.fullVideoURL }
+        VideoPreloader.shared.preload(urls: urls, limit: 8)
+    }
+
+    // MARK: - Navigation Logic
+    private func getNavigateWallpaper(current: Wallpaper? = nil, direction: Int) -> Wallpaper {
+        let allWallpapers = viewModel.mediaItems.map(Wallpaper.from)
+        let activeWallpaper = current ?? detailWallpaper
+
+        guard !allWallpapers.isEmpty else {
+            return activeWallpaper ?? Wallpaper(name: "Unknown", filePath: "", type: .video)
+        }
+
+        if let activeWallpaper,
+           let currentIndex = allWallpapers.firstIndex(where: { $0.remoteId == activeWallpaper.remoteId || $0.name == activeWallpaper.name }) {
+            let newIndex = (currentIndex + direction + allWallpapers.count) % allWallpapers.count
+            return allWallpapers[newIndex]
+        }
+
+        return allWallpapers.first ?? Wallpaper(name: "Unknown", filePath: "", type: .video)
     }
 
     // MARK: - 筛选区域
@@ -69,4 +108,3 @@ struct MediaExploreView: View {
         }
     }
 }
-

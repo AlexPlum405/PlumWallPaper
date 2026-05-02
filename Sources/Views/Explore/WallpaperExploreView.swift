@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Artisan Wallpaper Explore (Scheme C: Pure Edition)
 struct WallpaperExploreView: View {
     @StateObject private var viewModel = WallpaperExploreViewModel()
-    @State private var detailWallpaper: RemoteWallpaper?
+    @State private var detailWallpaper: Wallpaper?
     @State private var showFilters = false
 
     let mainPadding: CGFloat = 88
@@ -32,7 +32,17 @@ struct WallpaperExploreView: View {
         }
         .background(LiquidGlassColors.deepBackground)
         .sheet(item: $detailWallpaper) { wallpaper in
-            RemoteWallpaperDetailView(wallpaper: wallpaper)
+            WallpaperDetailView(
+                wallpaper: wallpaper,
+                onPrevious: { current, callback in
+                    let newWallpaper = getNavigateWallpaper(current: current, direction: -1)
+                    callback(newWallpaper)
+                },
+                onNext: { current, callback in
+                    let newWallpaper = getNavigateWallpaper(current: current, direction: 1)
+                    callback(newWallpaper)
+                }
+            )
         }
         .onAppear {
             NSLog("[WallpaperExploreView] .onAppear 被调用")
@@ -43,6 +53,24 @@ struct WallpaperExploreView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Navigation Logic
+    private func getNavigateWallpaper(current: Wallpaper? = nil, direction: Int) -> Wallpaper {
+        let allWallpapers = viewModel.wallpapers.map(Wallpaper.from)
+        let activeWallpaper = current ?? detailWallpaper
+
+        guard !allWallpapers.isEmpty else {
+            return activeWallpaper ?? Wallpaper(name: "Unknown", filePath: "", type: .image)
+        }
+
+        if let activeWallpaper,
+           let currentIndex = allWallpapers.firstIndex(where: { $0.remoteId == activeWallpaper.remoteId || $0.name == activeWallpaper.name }) {
+            let newIndex = (currentIndex + direction + allWallpapers.count) % allWallpapers.count
+            return allWallpapers[newIndex]
+        }
+
+        return allWallpapers.first ?? Wallpaper(name: "Unknown", filePath: "", type: .image)
     }
 
     // MARK: - 筛选区域
@@ -236,7 +264,7 @@ struct WallpaperExploreView: View {
         ) {
             ForEach(viewModel.wallpapers) { wallpaper in
                 RemoteWallpaperCard(wallpaper: wallpaper) {
-                    detailWallpaper = wallpaper
+                    detailWallpaper = Wallpaper.from(remote: wallpaper)
                 }
                 .onAppear {
                     // 无限滚动：检测到最后几个元素时加载更多
