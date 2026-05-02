@@ -6,6 +6,7 @@ import SwiftUI
 struct WallpaperCard: View {
     let wallpaper: Wallpaper
     let onTap: () -> Void
+    var onDownload: (() -> Void)? = nil
     
     @State private var isHovered = false
     private let cardCornerRadius: CGFloat = 24
@@ -108,6 +109,24 @@ struct WallpaperCard: View {
                 }
                 .padding(10)
             }
+
+            // 下载快捷按钮 (悬浮时显示)
+            VStack {
+                Spacer()
+                HStack {
+                    Button(action: { onDownload?() }) {
+                        Image(systemName: "arrow.down.to.line.compact")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(6)
+                            .background(Circle().fill(.ultraThinMaterial))
+                    }
+                    .buttonStyle(.plain)
+                    Spacer()
+                }
+            }
+            .padding(10)
+            .opacity(isHovered ? 1 : 0)
         }
     }
     

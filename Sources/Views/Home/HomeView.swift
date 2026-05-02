@@ -435,9 +435,14 @@ struct HomeView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 32) {
                     ForEach(viewModel.latestStills) { remoteWallpaper in
-                        WallpaperCard(wallpaper: convertToWallpaper(remoteWallpaper)) {
-                            detailWallpaper = convertToWallpaper(remoteWallpaper)
-                        }
+                        let wallpaper = convertToWallpaper(remoteWallpaper)
+                        WallpaperCard(wallpaper: wallpaper, onTap: {
+                            detailWallpaper = wallpaper
+                        }, onDownload: {
+                            Task {
+                                await downloadFromCard(wallpaper)
+                            }
+                        })
                         .onHover { hovering in
                             if hovering {
                                 // hover 时预加载图片
@@ -485,9 +490,14 @@ struct HomeView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 32) {
                     ForEach(viewModel.popularMotions) { mediaItem in
-                        WallpaperCard(wallpaper: convertToWallpaper(mediaItem)) {
+                        let wallpaper = convertToWallpaper(mediaItem)
+                        WallpaperCard(wallpaper: wallpaper, onTap: {
                             detailMediaItem = mediaItem  // 使用 MediaDetailView
-                        }
+                        }, onDownload: {
+                            Task {
+                                await downloadFromCard(wallpaper)
+                            }
+                        })
                         .onHover { hovering in
                             if hovering {
                                 // hover 时预加载视频
@@ -608,6 +618,33 @@ struct HomeView: View {
         }
 
         return allMediaItems[0]
+    }
+
+    // MARK: - 快捷下载
+
+    private func downloadFromCard(_ wallpaper: Wallpaper) async {
+        guard let remoteURL = URL(string: wallpaper.filePath), remoteURL.scheme?.hasPrefix("http") == true else {
+            return
+        }
+
+        do {
+            let imageURL = URL(string: wallpaper.thumbnailPath ?? wallpaper.filePath) ?? remoteURL
+            let downloadsDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+                .appendingPathComponent("PlumWallPaper/Downloads", isDirectory: true)
+            try FileManager.default.createDirectory(at: downloadsDir, withIntermediateDirectories: true)
+
+            let ext = wallpaper.type == .video ? "mp4" : "jpg"
+            let sanitizedName = wallpaper.name.replacingOccurrences(of: "[^a-zA-Z0-9]", with: "_", options: .regularExpression).prefix(50)
+            let filename = "\(sanitizedName)_\(wallpaper.id.uuidString.prefix(8)).\(ext)"
+            let localURL = downloadsDir.appendingPathComponent(filename)
+
+            let (data, _) = try await URLSession.shared.data(from: imageURL)
+            try data.write(to: localURL)
+
+            NSLog("[HomeView] ✅ 快捷下载完成: \(localURL.path)")
+        } catch {
+            NSLog("[HomeView] ❌ 快捷下载失败: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Hero 壁纸设置
