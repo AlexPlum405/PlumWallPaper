@@ -131,16 +131,99 @@ struct HomeView: View {
     // MARK: - Loading & Error States
 
     private func loadingView(size: CGSize) -> some View {
-        ZStack {
-            LiquidGlassColors.deepBackground
-            VStack(spacing: 24) {
-                CustomProgressView(tint: LiquidGlassColors.primaryPink, scale: 1.2)
-                Text("Loading Gallery...")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(LiquidGlassColors.textSecondary)
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
+                // Hero skeleton
+                Rectangle()
+                    .fill(LiquidGlassColors.surfaceBackground)
+                    .frame(width: size.width, height: size.height)
+                    .overlay(
+                        VStack(spacing: 16) {
+                            skeletonShimmer(width: 200, height: 20)
+                            skeletonShimmer(width: 300, height: 32)
+                            skeletonShimmer(width: 120, height: 44, cornerRadius: 22)
+                        }
+                    )
+
+                // Stills section skeleton
+                VStack(alignment: .leading, spacing: 32) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        skeletonShimmer(width: 120, height: 10)
+                        HStack(alignment: .firstTextBaseline) {
+                            skeletonShimmer(width: 100, height: 28)
+                            Spacer()
+                        }
+                    }.padding(.horizontal, mainPadding)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 32) {
+                            ForEach(0..<4, id: \.self) { _ in
+                                VStack(spacing: 0) {
+                                    skeletonShimmer(width: 220, height: 140, cornerRadius: 0)
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        skeletonShimmer(width: 160, height: 14)
+                                        skeletonShimmer(width: 80, height: 10)
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 14)
+                                }
+                                .frame(width: 220)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                        .fill(LiquidGlassColors.surfaceBackground.opacity(0.6))
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                            }
+                        }.padding(.horizontal, mainPadding)
+                    }
+                }
+                .padding(.top, 100)
+
+                // Motions section skeleton
+                VStack(alignment: .leading, spacing: 32) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        skeletonShimmer(width: 100, height: 10)
+                        HStack(alignment: .firstTextBaseline) {
+                            skeletonShimmer(width: 100, height: 28)
+                            Spacer()
+                        }
+                    }.padding(.horizontal, mainPadding)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 32) {
+                            ForEach(0..<4, id: \.self) { _ in
+                                VStack(spacing: 0) {
+                                    skeletonShimmer(width: 220, height: 140, cornerRadius: 0)
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        skeletonShimmer(width: 140, height: 14)
+                                        skeletonShimmer(width: 60, height: 10)
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 14)
+                                }
+                                .frame(width: 220)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                        .fill(LiquidGlassColors.surfaceBackground.opacity(0.6))
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                            }
+                        }.padding(.horizontal, mainPadding)
+                    }
+                }
+                .padding(.top, 100)
+                .padding(.bottom, 160)
             }
         }
-        .frame(height: size.height)
+        .background(LiquidGlassColors.deepBackground)
+    }
+
+    private func skeletonShimmer(width: CGFloat, height: CGFloat, cornerRadius: CGFloat = 8) -> some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(LiquidGlassColors.surfaceBackground)
+            .frame(width: width, height: height)
+            .opacity(0.6)
+            .shimmering()
     }
 
     private func errorView(message: String, size: CGSize) -> some View {
@@ -581,6 +664,36 @@ struct HomeView: View {
             NSLog("[HomeView] ❌ 设置壁纸失败: \(error.localizedDescription)")
             // TODO: 显示错误提示
         }
+    }
+}
+
+// MARK: - Shimmer Effect
+private struct ShimmerModifier: ViewModifier {
+    @State private var phase: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                LinearGradient(
+                    colors: [.clear, .white.opacity(0.08), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .rotationEffect(.degrees(30))
+                .offset(x: phase * 300)
+                .mask(content)
+            )
+            .onAppear {
+                withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+                    phase = 1
+                }
+            }
+    }
+}
+
+private extension View {
+    func shimmering() -> some View {
+        modifier(ShimmerModifier())
     }
 }
 
