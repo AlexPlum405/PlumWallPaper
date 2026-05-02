@@ -15,6 +15,8 @@ struct HomeView: View {
     @State var detailMediaItem: MediaItem?  // 用于显示在线媒体详情
     @State private var isHeroLeftHovered = false
     @State private var isHeroRightHovered = false
+    @State private var showVideoAlert = false
+    @State private var videoAlertMessage = ""
 
     private let mainPadding: CGFloat = 88
 
@@ -50,21 +52,6 @@ struct HomeView: View {
                 .refreshable {
                     await viewModel.refresh()
                 }
-
-                // DEBUG: 手动加载按钮 - 放在右上角
-                VStack {
-                    HStack {
-                        Spacer()
-                        Button("🔄") {
-                            Task {
-                                await viewModel.loadInitialData()
-                            }
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .padding()
-                    }
-                    Spacer()
-                }
             }
         }
         .onAppear {
@@ -95,6 +82,11 @@ struct HomeView: View {
                 currentHeroIndex = (currentHeroIndex + 1) % viewModel.heroItems.count
             }
             return .handled
+        }
+        .alert("提示", isPresented: $showVideoAlert) {
+            Button("确定", role: .cancel) { }
+        } message: {
+            Text(videoAlertMessage)
         }
         .sheet(item: $detailWallpaper) { wallpaper in
             WallpaperDetailView(
@@ -508,14 +500,23 @@ struct HomeView: View {
 
         let currentItem = viewModel.heroItems[currentHeroIndex]
 
+        // 视频壁纸暂不支持设为 macOS 桌面
+        if currentItem.fullVideoURL != nil || currentItem.previewVideoURL != nil {
+            if currentItem.posterURL == nil {
+                videoAlertMessage = "此为视频壁纸，暂不支持设为 macOS 桌面。未来版本将支持视频壁纸。"
+                showVideoAlert = true
+                return
+            }
+        }
+
         isApplying = true
         defer { isApplying = false }
 
         do {
             NSLog("[HomeView] 开始设置壁纸: \(currentItem.title)")
 
-            // 1. 下载图片（使用缩略图，因为是静态壁纸）
-            let imageURL = currentItem.thumbnailURL
+            // 1. 下载图片（优先使用 posterURL 高清静态帧）
+            let imageURL = currentItem.posterURL ?? currentItem.thumbnailURL
             let tempDir = FileManager.default.temporaryDirectory
             let filename = "\(currentItem.slug).jpg"
             let localURL = tempDir.appendingPathComponent(filename)
