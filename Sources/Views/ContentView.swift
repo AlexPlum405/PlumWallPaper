@@ -31,7 +31,6 @@ struct ContentView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .id(selectedTab) // 确保 Tab 切换时完全重置
         }
         .ignoresSafeArea() // 统一全屏处理
         // 3. 核心修复：使用 overlay 挂载导航栏，确保 100% 可点击
