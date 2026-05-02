@@ -1,11 +1,18 @@
 import SwiftUI
 import AppKit
 
+// MARK: - Explore Section Context
+enum ExploreSection {
+    case latestStills
+    case popularMotions
+}
+
 // MARK: - Artisan Gallery Container (Scheme C: Interactive Fix)
 struct ContentView: View {
     @State private var selectedTab: MainTab = .home
     @State private var selectedWallpaper: Wallpaper?
     @State private var hasInitialized = false
+    @State private var exploreSection: ExploreSection?
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -19,8 +26,14 @@ struct ContentView: View {
                 case .home:
                     HomeView(
                         selectedWallpaper: $selectedWallpaper,
-                        onSwitchToWallpaperTab: { selectedTab = .wallpaper },
-                        onSwitchToMediaTab: { selectedTab = .media }
+                        onSwitchToWallpaperTab: {
+                            exploreSection = .latestStills
+                            selectedTab = .wallpaper
+                        },
+                        onSwitchToMediaTab: {
+                            exploreSection = .popularMotions
+                            selectedTab = .media
+                        }
                     )
                 case .wallpaper:
                     WallpaperExploreView()
@@ -50,6 +63,11 @@ struct ContentView: View {
         }
         .frame(minWidth: 1200, minHeight: 800)
         .preferredColorScheme(.dark)
+        .onChange(of: selectedTab) { _, newValue in
+            if newValue == .home {
+                exploreSection = nil
+            }
+        }
         .onAppear {
             // 确保只初始化一次
             guard !hasInitialized else { return }
