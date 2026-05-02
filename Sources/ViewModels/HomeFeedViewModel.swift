@@ -29,34 +29,11 @@ final class HomeFeedViewModel: ObservableObject {
         do {
             NSLog("[HomeFeedViewModel] 加载 Hero 项目...")
             let hero = try await mediaRepo.fetchHeroItems()
-
-            // 添加测试视频（有音轨）到 Hero 的第一个位置
-            // 使用 Apple 官方示例视频
-            let testVideoWithAudio = MediaItem(
-                slug: "test-video-with-audio",
-                title: "测试视频（带音频）- Apple Sample",
-                pageURL: URL(string: "https://developer.apple.com/")!,
-                thumbnailURL: URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.jpg")!,
-                resolutionLabel: "1080p",
-                collectionTitle: "音频测试",
-                summary: "用于测试音频播放的视频",
-                previewVideoURL: URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8"),
-                fullVideoURL: URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8"),
-                posterURL: URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.jpg"),
-                tags: ["测试", "音频"],
-                exactResolution: "1920x1080",
-                durationSeconds: 30.0,
-                downloadOptions: [],
-                sourceName: "Apple 测试源",
-                isAnimatedImage: false
-            )
-
-            // 将测试视频插入到第一个位置
-            self.heroItems = [testVideoWithAudio] + hero
-            NSLog("[HomeFeedViewModel] ✅ Hero: \(self.heroItems.count) 项（包含测试视频）")
+            self.heroItems = hero
+            NSLog("[HomeFeedViewModel] ✅ Hero: \(self.heroItems.count) 项")
         } catch {
             NSLog("[HomeFeedViewModel] ❌ Hero 加载失败: \(error)")
-            NSLog("[HomeFeedViewModel] ❌ Hero 详细错误: \(String(describing: error))")
+            self.errorMessage = "Hero 加载失败: \(error.localizedDescription)"
         }
 
         do {
@@ -66,6 +43,9 @@ final class HomeFeedViewModel: ObservableObject {
             self.latestStills = latest
         } catch {
             NSLog("[HomeFeedViewModel] ❌ Latest 加载失败: \(error)")
+            if self.errorMessage == nil {
+                self.errorMessage = "最新壁纸加载失败: \(error.localizedDescription)"
+            }
         }
 
         do {
@@ -75,7 +55,9 @@ final class HomeFeedViewModel: ObservableObject {
             self.popularMotions = popular
         } catch {
             NSLog("[HomeFeedViewModel] ❌ Popular 加载失败: \(error)")
-            NSLog("[HomeFeedViewModel] ❌ Popular 详细错误: \(String(describing: error))")
+            if self.errorMessage == nil {
+                self.errorMessage = "热门动态加载失败: \(error.localizedDescription)"
+            }
         }
 
         isLoading = false
