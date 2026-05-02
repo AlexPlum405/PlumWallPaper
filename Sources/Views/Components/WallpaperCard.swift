@@ -106,8 +106,12 @@ struct WallpaperCard: View {
                 .kerning(0.5)
 
             HStack(spacing: 12) {
-                Label("1.2k", systemImage: "eye")
-                Label("456", systemImage: "heart")
+                if let views = wallpaper.remoteMetadata?.views {
+                    Label(formatCount(views), systemImage: "eye")
+                }
+                if let favorites = wallpaper.remoteMetadata?.favorites {
+                    Label(formatCount(favorites), systemImage: "heart")
+                }
                 Spacer()
                 if isHovered {
                     Image(systemName: "arrow.up.right")
@@ -171,6 +175,16 @@ struct WallpaperCard: View {
         .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
     }
     
+    private func formatCount(_ count: Int) -> String {
+        if count >= 1_000_000 {
+            return String(format: "%.1fM", Double(count) / 1_000_000)
+        }
+        if count >= 1_000 {
+            return String(format: "%.1fk", Double(count) / 1_000)
+        }
+        return "\(count)"
+    }
+
     private func formatDuration(_ seconds: Double) -> String {
         let formatter = DateComponentsFormatter()
         formatter.allowedUnits = [.minute, .second]
