@@ -30,6 +30,16 @@ final class DesktopWindow: NSWindow {
         self.contentView = mtkView
     }
 
+    override init(contentRect: NSRect, styleMask style: NSWindow.StyleMask, backing backingStoreType: NSWindow.BackingStoreType, defer flag: Bool) {
+        // 创建一个默认的 MTKView（如果通过这个初始化器调用）
+        self.mtkView = MTKView(frame: contentRect, device: MTLCreateSystemDefaultDevice())
+        super.init(contentRect: contentRect, styleMask: style, backing: backingStoreType, defer: flag)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
     func show() {
         orderFrontRegardless()
     }
@@ -38,3 +48,4 @@ final class DesktopWindow: NSWindow {
         orderOut(nil)
     }
 }
+
