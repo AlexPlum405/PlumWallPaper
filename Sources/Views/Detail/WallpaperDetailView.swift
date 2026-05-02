@@ -36,6 +36,15 @@ struct WallpaperDetailView: View {
     @State internal var invert: Double = 0
     @State internal var currentPresetName: String = "原图"
 
+    // 粒子系统状态
+    @State private var particleRate: Double = 60
+    @State private var particleLifetime: Double = 3
+    @State private var particleSize: Double = 4
+    @State private var particleGravity: Double = 9.8
+    @State private var particleTurbulence: Double = 2
+    @State private var particleColorStart = Color.white
+    @State private var particleColorEnd = LiquidGlassColors.primaryPink
+
     @State var isShowingShaderEditor = false
     
     var body: some View {
@@ -415,20 +424,20 @@ struct WallpaperDetailView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("色彩演化").font(.system(size: 8, weight: .bold)).opacity(0.3)
                 HStack(spacing: 12) {
-                    ColorPicker("", selection: .constant(Color.white)).labelsHidden()
+                    ColorPicker("", selection: $particleColorStart).labelsHidden()
                     Image(systemName: "arrow.right").font(.system(size: 8)).opacity(0.2)
-                    ColorPicker("", selection: .constant(LiquidGlassColors.primaryPink)).labelsHidden()
+                    ColorPicker("", selection: $particleColorEnd).labelsHidden()
                 }
             }
 
             Divider().frame(height: 60).opacity(0.1)
 
             // 粒子参数旋钮
-            ArtisanRulerDial(label: "速率", value: .constant(60), range: 1...300, unit: "p/s")
-            ArtisanRulerDial(label: "寿命", value: .constant(3), range: 0.1...10, unit: "s")
-            ArtisanRulerDial(label: "尺寸", value: .constant(4), range: 1...40, unit: "px")
-            ArtisanRulerDial(label: "重力", value: .constant(9.8), range: -20...20, unit: "m/s²")
-            ArtisanRulerDial(label: "扰动", value: .constant(2), range: 0...20, unit: "px")
+            ArtisanRulerDial(label: "速率", value: $particleRate, range: 1...300, unit: "p/s")
+            ArtisanRulerDial(label: "寿命", value: $particleLifetime, range: 0.1...10, unit: "s")
+            ArtisanRulerDial(label: "尺寸", value: $particleSize, range: 1...40, unit: "px")
+            ArtisanRulerDial(label: "重力", value: $particleGravity, range: -20...20, unit: "m/s²")
+            ArtisanRulerDial(label: "扰动", value: $particleTurbulence, range: 0...20, unit: "px")
         }
     }
     
