@@ -7,6 +7,8 @@ struct WallpaperDetailView: View {
     @State var wallpaper: Wallpaper // 改为 @State 以支持内部平滑更新
     var onPrevious: ((@escaping (Wallpaper) -> Void) -> Void)? = nil
     var onNext: ((@escaping (Wallpaper) -> Void) -> Void)? = nil
+    var onFavorite: ((Wallpaper) -> Void)? = nil
+    var onDownload: ((Wallpaper) -> Void)? = nil
     
     @Environment(\.dismiss) private var dismiss
     
@@ -14,6 +16,9 @@ struct WallpaperDetailView: View {
     @State internal var isStudioActive = false      // 实验室面板是否展开
     @State internal var studioTab = 0               // 0: 预设, 1: 光学, 2: 风格, 3: 粒子
     @State internal var isApplying = false           // 应用壁纸中
+    @State private var isDownloading = false
+    @State private var toastMessage: String?
+    @State private var showToast = false
 
     // 侧翼导航悬停
     @State internal var isLeftEdgeHovered = false
@@ -70,6 +75,22 @@ struct WallpaperDetailView: View {
             }
             .padding(.bottom, 40)
             .zIndex(100) // 整体地平线 HUD 拥有最高点击优先级
+
+            // 7. Toast 通知
+            if showToast, let message = toastMessage {
+                VStack {
+                    Spacer()
+                    Text(message)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(Capsule().fill(.ultraThinMaterial))
+                        .padding(.bottom, 120)
+                }
+                .transition(.opacity)
+                .zIndex(200)
+            }
 
             // 6. 关闭按钮（右上角）
             closeButtonHUD
@@ -224,12 +245,16 @@ struct WallpaperDetailView: View {
             actionCircleButton(
                 icon: wallpaper.isFavorite ? "heart.fill" : "heart",
                 color: wallpaper.isFavorite ? LiquidGlassColors.primaryPink : .white.opacity(0.6)
-            ) { /* 收藏逻辑 */ }
+            ) {
+                wallpaper.isFavorite.toggle()
+                onFavorite?(wallpaper)
+            }
 
             // 2. 应用壁纸（主按钮，粉色胶囊）
             Button(action: {
-                isApplying = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { isApplying = false }
+                Task {
+                    await applyWallpaper()
+                }
             }) {
                 HStack(spacing: 16) {
                     if isApplying { CustomProgressView(tint: .white, scale: 0.8) }
@@ -240,7 +265,9 @@ struct WallpaperDetailView: View {
                 .clipShape(Capsule())
                 .foregroundStyle(.black)
                 .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.3), radius: 20)
-            }.buttonStyle(.plain)
+            }
+            .buttonStyle(.plain)
+            .disabled(isApplying)
 
             // 3. 实验室按钮（圆形，toggle 控制 isStudioActive）
             Button(action: { withAnimation(.gallerySpring) { isStudioActive.toggle() } }) {
@@ -258,7 +285,12 @@ struct WallpaperDetailView: View {
             }.buttonStyle(.plain)
 
             // 4. 下载按钮（圆形）
-            actionCircleButton(icon: "arrow.down.to.line.compact", color: .white.opacity(0.6)) { }
+            actionCircleButton(icon: "arrow.down.to.line.compact", color: .white.opacity(0.6)) {
+                Task {
+                    await downloadWallpaper()
+                }
+            }
+            .disabled(isDownloading)
         }
         .padding(12)
         .background(.ultraThinMaterial, in: Capsule())
@@ -317,7 +349,7 @@ struct WallpaperDetailView: View {
                     }.foregroundStyle(.white.opacity(0.4))
                 }.buttonStyle(.plain)
 
-                Button(action: { /* 应用 */ }) {
+                Button(action: { applyCurrentPreset() }) {
                     VStack(spacing: 4) {
                         Image(systemName: "checkmark.circle.fill").font(.system(size: 20))
                         Text("应用").font(.system(size: 8, weight: .bold))
@@ -426,6 +458,90 @@ struct WallpaperDetailView: View {
                 .background(Circle().fill(Color.white.opacity(0.05)))
                 .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 1))
         }.buttonStyle(.plain)
+    }
+
+    // MARK: - Actions
+
+    private func applyWallpaper() async {
+        isApplying = true
+        defer { isApplying = false }
+
+        do {
+            if let remoteURL = URL(string: wallpaper.filePath), remoteURL.scheme?.hasPrefix("http") == true {
+                let imageURL: URL
+                if let thumbPath = wallpaper.thumbnailPath, let thumbURL = URL(string: thumbPath) {
+                    imageURL = thumbURL
+                } else {
+                    imageURL = remoteURL
+                }
+
+                let tempDir = FileManager.default.temporaryDirectory
+                let filename = "\(wallpaper.id.uuidString).jpg"
+                let localURL = tempDir.appendingPathComponent(filename)
+
+                if !FileManager.default.fileExists(atPath: localURL.path) {
+                    let (data, _) = try await URLSession.shared.data(from: imageURL)
+                    try data.write(to: localURL)
+                }
+
+                try await MainActor.run {
+                    try WallpaperSetter.shared.setWallpaper(imageURL: localURL)
+                }
+            } else if let localURL = URL(string: wallpaper.filePath) {
+                try await MainActor.run {
+                    try WallpaperSetter.shared.setWallpaper(imageURL: localURL)
+                }
+            }
+
+            showToastMessage("壁纸设置成功")
+        } catch {
+            showToastMessage("设置失败: \(error.localizedDescription)")
+        }
+    }
+
+    private func downloadWallpaper() async {
+        guard let remoteURL = URL(string: wallpaper.filePath), remoteURL.scheme?.hasPrefix("http") == true else {
+            showToastMessage("此壁纸已在本地")
+            return
+        }
+
+        isDownloading = true
+        defer { isDownloading = false }
+
+        do {
+            let imageURL = URL(string: wallpaper.thumbnailPath ?? wallpaper.filePath) ?? remoteURL
+            let downloadsDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+                .appendingPathComponent("PlumWallPaper/Downloads", isDirectory: true)
+            try FileManager.default.createDirectory(at: downloadsDir, withIntermediateDirectories: true)
+
+            let ext = wallpaper.type == .video ? "mp4" : "jpg"
+            let sanitizedName = wallpaper.name.replacingOccurrences(of: "[^a-zA-Z0-9]", with: "_", options: .regularExpression).prefix(50)
+            let filename = "\(sanitizedName)_\(wallpaper.id.uuidString.prefix(8)).\(ext)"
+            let localURL = downloadsDir.appendingPathComponent(filename)
+
+            let (data, _) = try await URLSession.shared.data(from: imageURL)
+            try data.write(to: localURL)
+
+            wallpaper.filePath = localURL.path
+            wallpaper.source = .downloaded
+
+            onDownload?(wallpaper)
+            showToastMessage("下载完成")
+        } catch {
+            showToastMessage("下载失败: \(error.localizedDescription)")
+        }
+    }
+
+    private func applyCurrentPreset() {
+        showToastMessage("滤镜已应用（渲染引擎待实现）")
+    }
+
+    private func showToastMessage(_ message: String) {
+        toastMessage = message
+        showToast = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            withAnimation { showToast = false }
+        }
     }
 }
 
