@@ -13,23 +13,23 @@ struct ArtisanRulerDial: View {
             // 数值指示器
             HStack(alignment: .firstTextBaseline) {
                 Text(label)
-                    .font(.system(size: 8, weight: .black))
-                    .kerning(1.2)
-                    .foregroundStyle(.white.opacity(0.3))
+                    .font(.system(size: 7, weight: .black))
+                    .kerning(1.5)
+                    .foregroundStyle(.white.opacity(0.2))
                 Spacer()
                 Text("\(Int(value))")
-                    .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.8))
+                    .font(.system(size: 12, weight: .regular, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.6))
                 Text(unit)
-                    .font(.system(size: 7, weight: .bold))
-                    .foregroundStyle(LiquidGlassColors.primaryPink.opacity(0.6))
+                    .font(.system(size: 6.5, weight: .bold))
+                    .foregroundStyle(LiquidGlassColors.primaryPink.opacity(0.4))
             }
             
             // 刻度尺区域
             ZStack {
                 // 背景发丝轨
                 Rectangle()
-                    .fill(Color.white.opacity(0.06))
+                    .fill(Color.white.opacity(0.04))
                     .frame(height: 1)
 
                 // 交互层与指针
@@ -38,22 +38,22 @@ struct ArtisanRulerDial: View {
                     let pointerX = min(max(0, percentage * geo.size.width), geo.size.width)
                     
                     ZStack(alignment: .leading) {
-                        // 虚像刻度 (仅在 Studio 风格显示)
+                        // 虚像刻度
                         HStack(spacing: geo.size.width / 10) {
                             ForEach(0..<11) { i in
                                 Rectangle()
-                                    .fill(Color.white.opacity(0.08))
-                                    .frame(width: 1, height: 4)
+                                    .fill(Color.white.opacity(0.05))
+                                    .frame(width: 1, height: 3)
                             }
                         }
                         
                         // 粉色指针
                         Circle()
                             .fill(LiquidGlassColors.primaryPink)
-                            .frame(width: 8, height: 8)
-                            .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
-                            .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.3), radius: 6)
-                            .offset(x: pointerX - 4)
+                            .frame(width: 6, height: 6)
+                            .overlay(Circle().stroke(Color.white.opacity(0.8), lineWidth: 1))
+                            .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.2), radius: 4)
+                            .offset(x: pointerX - 3)
                     }
                 }
 
@@ -61,9 +61,9 @@ struct ArtisanRulerDial: View {
                     .accentColor(.clear)
                     .opacity(0.1)
             }
-            .frame(height: 16)
+            .frame(height: 12)
         }
-        .frame(width: 160)
+        .frame(width: 150)
     }
 }
 
@@ -76,19 +76,19 @@ struct ArtisanHorizonTab: View {
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
+            VStack(spacing: 6) { // 减小间距以适应高度
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .light))
-                    .foregroundStyle(isSelected ? LiquidGlassColors.primaryPink : .white.opacity(0.2))
-                    .frame(width: 32, height: 32)
-                    .background(Circle().fill(isSelected ? .white.opacity(0.05) : .clear))
+                    .font(.system(size: 12, weight: .light))
+                    .foregroundStyle(isSelected ? LiquidGlassColors.primaryPink : .white.opacity(0.15))
+                    .frame(width: 28, height: 28) // 缩小图标
+                    .background(Circle().fill(isSelected ? .white.opacity(0.04) : .clear))
                 
                 Text(label)
-                    .font(.system(size: 9, weight: .black))
+                    .font(.system(size: 8, weight: .black))
                     .kerning(1.5)
-                    .foregroundStyle(isSelected ? LiquidGlassColors.primaryPink : .white.opacity(0.3))
+                    .foregroundStyle(isSelected ? LiquidGlassColors.primaryPink : .white.opacity(0.25))
             }
-            .frame(width: 64)
+            .frame(width: 72)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

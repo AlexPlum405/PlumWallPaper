@@ -60,24 +60,6 @@ struct WallpaperDetailView: View {
     
     var body: some View {
         detailChrome(includeStaticCanvas: true)
-            .overlay {
-                if isStudioActive && studioTab == 3 && particleRate > 0 {
-                    ParticleOverlay(
-                        style: particleStyle,
-                        rate: particleRate,
-                        lifetime: particleLifetime,
-                        size: particleSize,
-                        gravity: particleGravity,
-                        turbulence: particleTurbulence,
-                        spin: particleSpin,
-                        thrust: particleThrust,
-                        angle: particleAngle,
-                        spread: particleSpread,
-                        colorStart: particleColorStart,
-                        colorEnd: particleColorEnd
-                    )
-                }
-            }
             .sheet(isPresented: $isShowingShaderEditor) {
                 ShaderEditorView()
             }
@@ -191,11 +173,16 @@ struct WallpaperDetailView: View {
             // 粒子系统 (位于滤镜层之后)
             if isStudioActive && studioTab == 3 && particleRate > 0 {
                 ParticleOverlay(
+                    style: particleStyle,
                     rate: particleRate,
                     lifetime: particleLifetime,
                     size: particleSize,
                     gravity: particleGravity,
                     turbulence: particleTurbulence,
+                    spin: particleSpin,
+                    thrust: particleThrust,
+                    angle: particleAngle,
+                    spread: particleSpread,
                     colorStart: particleColorStart,
                     colorEnd: particleColorEnd
                 )
@@ -460,8 +447,8 @@ struct WallpaperDetailView: View {
 
     private var artisanStudioHUD: some View {
         HStack(spacing: 0) {
-            // === 1. 左侧：垂直导航 ===
-            VStack(spacing: 24) {
+            // === 1. 左侧：垂直导航 (精简间距防止溢出) ===
+            VStack(spacing: 12) {
                 ArtisanHorizonTab(icon: "grid", label: "预设", isSelected: studioTab == 0) {
                     withAnimation(.gallerySpring) { studioTab = 0 }
                 }
@@ -475,13 +462,12 @@ struct WallpaperDetailView: View {
                     withAnimation(.gallerySpring) { studioTab = 3 }
                 }
             }
-            .padding(.vertical, 16)
-            .frame(width: 100)
+            .frame(width: 84, height: 220)
             .background(Color.white.opacity(0.01))
 
-            Divider().frame(width: 1, height: 220).opacity(0.1)
+            Divider().frame(width: 1, height: 220).opacity(0.06)
 
-            // === 2. 中间：内容区域 (固定高度 + 垂直滚动) ===
+            // === 2. 中间：内容区域 (排版更细腻) ===
             VStack(alignment: .leading, spacing: 0) {
                 // 固定顶部行
                 HStack(spacing: 24) {
@@ -489,25 +475,25 @@ struct WallpaperDetailView: View {
                         // 粒子样式横廊
                         particleStyleRow
                     } else {
-                        // 普通状态头
+                        // 普通状态头 (精密排版升级)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("MODE: CURATED").font(.system(size: 7, weight: .black)).opacity(0.2).kerning(1)
-                            Text(currentTabLabel.uppercased()).font(.system(size: 11, weight: .bold)).kerning(2)
+                            Text("MODE: CURATED").font(.system(size: 6.5, weight: .black)).opacity(0.15).kerning(1.5)
+                            Text(currentTabLabel.uppercased()).font(.system(size: 10, weight: .medium)).kerning(2.5)
                         }
                         Spacer()
                     }
                     
-                    // 色彩演化 (仅粒子或支持颜色的 Tab)
+                    // 色彩演化
                     if studioTab == 3 {
-                        HStack(spacing: 12) {
+                        HStack(spacing: 16) {
                             colorPreview(label: "START", color: $particleColorStart)
                             colorPreview(label: "END", color: $particleColorEnd)
                         }
                     }
                 }
-                .padding(.horizontal, 40).padding(.top, 24).padding(.bottom, 16)
-                .frame(height: 70)
-                .border(width: 1, edges: [.bottom], color: .white.opacity(0.05))
+                .padding(.horizontal, 40).padding(.top, 24).padding(.bottom, 12)
+                .frame(height: 64)
+                .border(width: 0.5, edges: [.bottom], color: .white.opacity(0.04))
 
                 // 滚动参数区
                 ScrollView(.vertical, showsIndicators: false) {
@@ -517,52 +503,52 @@ struct WallpaperDetailView: View {
                         // 底部提示
                         if studioTab == 3 {
                             HStack(spacing: 8) {
-                                Circle().fill(.white.opacity(0.1)).frame(width: 3, height: 3)
-                                Text("SCROLL TO EXPLORE MORE").font(.system(size: 7, weight: .bold)).opacity(0.1).kerning(1)
-                                Circle().fill(.white.opacity(0.1)).frame(width: 3, height: 3)
+                                Circle().fill(.white.opacity(0.08)).frame(width: 2, height: 2)
+                                Text("SCROLL FOR MORE PARAMETERS").font(.system(size: 6.5, weight: .bold)).opacity(0.08).kerning(1.5)
+                                Circle().fill(.white.opacity(0.08)).frame(width: 2, height: 2)
                             }
                             .padding(.vertical, 20)
                         }
                     }
                 }
-                .frame(height: 150) // 严格限制高度，只显示一排多一点
+                .frame(height: 156) 
             }
-            .frame(width: 720, height: 220)
+            .frame(width: 740, height: 220)
 
-            Divider().frame(width: 1, height: 220).opacity(0.1)
+            Divider().frame(width: 1, height: 220).opacity(0.06)
 
             // === 3. 右侧：动作控制 ===
             VStack(spacing: 24) {
                 Button(action: { resetFilters() }) {
                     VStack(spacing: 4) {
-                        Text("↺").font(.system(size: 16))
-                        Text("RESET").font(.system(size: 7, weight: .black))
+                        Text("↺").font(.system(size: 14, weight: .light))
+                        Text("RESET").font(.system(size: 6.5, weight: .black)).kerning(1)
                     }
                     .foregroundStyle(.white.opacity(0.2))
-                    .frame(width: 48, height: 48)
-                    .background(Circle().fill(.white.opacity(0.03)))
+                    .frame(width: 44, height: 44)
+                    .background(Circle().fill(.white.opacity(0.02)))
                 }.buttonStyle(.plain)
 
                 Button(action: { applyCurrentPreset() }) {
                     VStack(spacing: 4) {
-                        Image(systemName: "checkmark").font(.system(size: 14, weight: .bold))
-                        Text("APPLY").font(.system(size: 7, weight: .black))
+                        Image(systemName: "checkmark").font(.system(size: 11, weight: .semibold))
+                        Text("APPLY").font(.system(size: 6.5, weight: .black)).kerning(1)
                     }
                     .foregroundStyle(.black)
-                    .frame(width: 48, height: 48)
+                    .frame(width: 44, height: 44)
                     .background(Circle().fill(LiquidGlassColors.primaryPink))
-                    .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.3), radius: 10)
+                    .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.15), radius: 8)
                 }.buttonStyle(.plain)
             }
-            .padding(.vertical, 16)
-            .frame(width: 100)
+            .padding(.vertical, 20)
+            .frame(width: 80)
             .background(Color.white.opacity(0.01))
         }
         .frame(height: 220)
-        .background(LiquidGlassColors.deepBackground.opacity(0.8))
+        .background(LiquidGlassColors.deepBackground.opacity(0.7))
         .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 32))
-        .overlay(RoundedRectangle(cornerRadius: 32).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 32, style: .continuous).stroke(Color.white.opacity(0.04), lineWidth: 0.5))
         .artisanShadow(color: .black.opacity(0.4), radius: 60)
     }
 
@@ -588,16 +574,22 @@ struct WallpaperDetailView: View {
 
     private var particleStyleRow: some View {
         HStack(spacing: 24) {
-            Text("STYLES").font(.system(size: 8, weight: .black)).opacity(0.2).kerning(1)
-            HStack(spacing: 20) {
-                ForEach(["circle.fill", "star.fill", "sparkles", "leaf.fill", "drop.fill"], id: \.self) { icon in
-                    Button(action: { withAnimation(.gallerySpring) { particleStyle = icon } }) {
-                        Image(systemName: icon)
-                            .font(.system(size: 16))
-                            .foregroundStyle(particleStyle == icon ? LiquidGlassColors.primaryPink : .white.opacity(0.2))
-                            .scaleEffect(particleStyle == icon ? 1.2 : 1.0)
-                    }.buttonStyle(.plain)
+            Text("STYLES").font(.system(size: 7, weight: .black)).opacity(0.15).kerning(1.2)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 24) {
+                    ForEach([
+                        "circle.fill", "star.fill", "sparkles", "leaf.fill", "drop.fill",
+                        "flower.fill", "heart.fill", "snowflake", "bolt.fill", "music.note", "cloud.fill"
+                    ], id: \.self) { icon in
+                        Button(action: { withAnimation(.gallerySpring) { particleStyle = icon } }) {
+                            Image(systemName: icon)
+                                .font(.system(size: 13, weight: .light))
+                                .foregroundStyle(particleStyle == icon ? LiquidGlassColors.primaryPink : .white.opacity(0.12))
+                                .scaleEffect(particleStyle == icon ? 1.15 : 1.0)
+                        }.buttonStyle(.plain)
+                    }
                 }
+                .padding(.horizontal, 4)
             }
             Spacer()
         }
@@ -606,19 +598,25 @@ struct WallpaperDetailView: View {
     @ViewBuilder
     private var parameterGrid: some View {
         if studioTab == 0 {
-            // 预设网格 (特殊的 4 列布局)
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+            // 预设网格 (去土味：由矩形改为精致胶囊)
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
                 ForEach(BuiltInPreset.allCases) { preset in
+                    let isActive = currentPresetName == preset.name
                     Button(action: { applyPreset(preset) }) {
-                        Text(preset.name).font(.system(size: 10, weight: .bold))
-                            .frame(maxWidth: .infinity).frame(height: 44)
-                            .background(currentPresetName == preset.name ? .white.opacity(0.1) : .white.opacity(0.03))
-                            .foregroundStyle(currentPresetName == preset.name ? LiquidGlassColors.primaryPink : .white.opacity(0.4))
-                            .border(width: 1, edges: [.bottom], color: currentPresetName == preset.name ? LiquidGlassColors.primaryPink : .clear)
+                        Text(preset.name).font(.system(size: 9.5, weight: .bold))
+                            .kerning(1)
+                            .frame(maxWidth: .infinity).frame(height: 40)
+                            .background(isActive ? LiquidGlassColors.primaryPink.opacity(0.12) : Color.white.opacity(0.02))
+                            .foregroundStyle(isActive ? LiquidGlassColors.primaryPink : .white.opacity(0.3))
+                            .clipShape(Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(isActive ? LiquidGlassColors.primaryPink.opacity(0.3) : Color.white.opacity(0.05), lineWidth: 0.5)
+                            )
                     }.buttonStyle(.plain)
                 }
             }
-            .padding(24)
+            .padding(32)
         } else if studioTab == 1 {
             // 光学网格
             VStack(spacing: 24) {
