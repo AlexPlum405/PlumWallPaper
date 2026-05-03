@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlumWallPaper Lab V15 - True Artisan Heritage</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #121214; color: white; font-family: -apple-system, "SF Pro Display", sans-serif; }
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 核心材质：Artisan Dark Glass (与 App 保持 100% 统一) */
+        .artisan-glass {
+            background: rgba(30, 30, 35, 0.72);
+            backdrop-filter: blur(50px) saturate(180%);
+            -webkit-backdrop-filter: blur(50px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 40px 100px rgba(0,0,0,0.5);
+        }
+
+        /* 垂直滚动网格 */
+        .parameter-scroll {
+            height: 140px; /* 严格限制高度，只显示 ~1.5 排 */
+            overflow-y: scroll;
+            scroll-behavior: smooth;
+            scroll-snap-type: y mandatory;
+        }
+        .parameter-row {
+            height: 120px;
+            scroll-snap-align: start;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+            align-items: center;
+        }
+
+        /* 精密滑块 (去土味：更细、更暗、更专业) */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: rgba(255,255,255,0.05); height: 1px; outline: none; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 12px; width: 12px; border-radius: 50%;
+            background: #FF7EB9; border: 2px solid white;
+            cursor: pointer; box-shadow: 0 0 10px rgba(255,126,185,0.5);
+            transition: transform 0.2s;
+        }
+        input[type=range]:active::-webkit-slider-thumb { transform: scale(1.3); }
+
+        .tab-active { color: #FF7EB9; opacity: 1 !important; }
+        .tab-active::after { content: ''; position: absolute; left: -10px; top: 25%; bottom: 25%; width: 3px; background: #FF7EB9; border-radius: 2px; }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const CONTENT = {
+            optics: [
+                { id: 1, controls: [{l:'曝光', u:'ev'}, {l:'对比度', u:'%'}, {l:'饱和度', u:'%'}] },
+                { id: 2, controls: [{l:'高光', u:'%'}, {l:'阴影', u:'%'}, {l:'色温', u:'k'}] }
+            ],
+            style: [
+                { id: 1, controls: [{l:'模糊', u:'px'}, {l:'暗角', u:'%'}, {l:'噪点', u:'%'}] },
+                { id: 2, controls: [{l:'黑白', u:'%'}, {l:'反相', u:'%'}, {l:'色散', u:'px'}] }
+            ],
+            particles: [
+                { id: 1, controls: [{l:'速率', u:'p/s'}, {l:'寿命', u:'s'}, {l:'尺寸', u:'px'}] },
+                { id: 2, controls: [{l:'自旋', u:'deg'}, {l:'扰动', u:'px'}, {l:'重力', u:'m/s²'}] },
+                { id: 3, controls: [{l:'推力', u:'pow'}, {l:'角度', u:'°'}, {l:'离散', u:'°'}] },
+                { id: 4, controls: [{l:'渐显', u:'%'}, {l:'渐隐', u:'%'}, {l:'混合', u:'mod'}] }
+            ]
+        };
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('particles');
+            const [particleStyle, setParticleStyle] = useState('●');
+
+            return (
+                <div className="w-full h-full flex flex-col items-center justify-end pb-12 relative overflow-hidden bg-[#1a1a1e]">
+                    
+                    {/* 背景底色模拟壁纸预览 */}
+                    <div className="absolute inset-0 z-0 bg-cover bg-center opacity-40" 
+                         style={{ backgroundImage: "url('https://upload.wikimedia.org/wikipedia/commons/b/b8/Porsche_911_RWB_Yellow_Track.jpg')" }}>
+                    </div>
+
+                    <div className="w-full max-w-[1200px] px-12 flex flex-col items-center gap-8 z-50 animate-in">
+                        
+                        {/* 实验室核心面板 */}
+                        <div className="w-full artisan-glass rounded-[40px] flex overflow-hidden">
+                            
+                            {/* 左侧垂直导航 */}
+                            <div className="w-32 flex flex-col items-center py-10 gap-10 border-r border-white/5">
+                                {[
+                                    {id:'presets', l:'预设', i:'fa-grid'},
+                                    {id:'optics', l:'光学', i:'fa-camera'},
+                                    {id:'style', l:'风格', i:'fa-wand-magic'},
+                                    {id:'particles', l:'粒子', i:'fa-sparkles'}
+                                ].map(t => (
+                                    <button 
+                                        key={t.id} 
+                                        onClick={() => setActiveTab(t.id)}
+                                        className={`relative flex flex-col items-center gap-2 text-[10px] font-black tracking-widest uppercase transition-all duration-300 ${activeTab === t.id ? 'tab-active' : 'opacity-20 hover:opacity-100'}`}
+                                    >
+                                        <span className="text-lg">#</span>
+                                        {t.l}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* 中间/右侧内容区 */}
+                            <div className="flex-1 p-10 flex flex-col gap-10">
+                                
+                                {/* 顶部固定行：组标题或样式选择 */}
+                                <div className="flex justify-between items-end border-b border-white/5 pb-6">
+                                    {activeTab === 'particles' ? (
+                                        <div className="flex items-center gap-10 animate-in">
+                                            <span className="text-[8px] font-black opacity-20 tracking-[0.3em] uppercase">样式选择</span>
+                                            <div className="flex gap-10">
+                                                {['●', '★', '✦', '❄', '🌿'].map(s => (
+                                                    <button 
+                                                        key={s} onClick={() => setParticleStyle(s)}
+                                                        className={`text-2xl transition-all ${particleStyle === s ? 'scale-125 text-[#FF7EB9]' : 'opacity-20 hover:opacity-50'}`}
+                                                    >
+                                                        {s}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-[8px] font-black opacity-20 tracking-[0.3em] uppercase">Mode: Curated</span>
+                                            <span className="text-xs font-bold tracking-widest">{activeTab.toUpperCase()} CONTROLS</span>
+                                        </div>
+                                    )}
+
+                                    <div className="flex items-center gap-6">
+                                        <div className="flex flex-col items-center gap-1.5 opacity-40">
+                                            <span className="text-[7px] font-black uppercase tracking-tighter">Color A</span>
+                                            <div className="w-3 h-3 rounded-full bg-white border border-white/20"></div>
+                                        </div>
+                                        <div className="flex flex-col items-center gap-1.5 opacity-40">
+                                            <span className="text-[7px] font-black uppercase tracking-tighter">Color B</span>
+                                            <div className="w-3 h-3 rounded-full bg-[#FF7EB9] border border-white/20"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 下方滚动行：滑块网格 (3x2) */}
+                                {activeTab !== 'presets' ? (
+                                    <div className="parameter-scroll no-scrollbar px-2">
+                                        {CONTENT[activeTab].map((row, rIdx) => (
+                                            <div key={rIdx} className="parameter-row">
+                                                {row.controls.map(c => (
+                                                    <div key={c.l} className="flex flex-col gap-3 group">
+                                                        <div className="flex justify-between items-baseline">
+                                                            <span className="text-[9px] font-black opacity-20 tracking-[0.2em] uppercase group-hover:opacity-60 transition-opacity">{c.l}</span>
+                                                            <span className="text-[10px] font-mono opacity-40">50{c.u}</span>
+                                                        </div>
+                                                        <div className="relative pt-2">
+                                                            <input type="range" />
+                                                            <div className="flex justify-between px-0.5 mt-2 opacity-10">
+                                                                {[...Array(6)].map((_,i)=><div key={i} className="w-[1px] h-1 bg-white"></div>)}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ))}
+                                        {/* 滚动提示 */}
+                                        <div className="flex justify-center pt-2 opacity-5">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="animate-bounce"><path d="M7 13l5 5 5-5M7 6l5 5 5-5"/></svg>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-4 gap-4 py-2">
+                                        {['原图', '鲜艳', '电影', '复古', '冷峻', '暖阳', '黑白', '深夜'].map(p => (
+                                            <button key={p} className="h-14 rounded-2xl bg-white/5 border border-white/5 text-[9px] font-black tracking-widest uppercase hover:bg-white/10 transition-all">{p}</button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 右侧动作区 */}
+                            <div className="w-24 flex flex-col justify-center items-center gap-10 border-l border-white/5 py-10">
+                                <button className="flex flex-col items-center gap-2 opacity-20 hover:opacity-100 transition-opacity">
+                                    <span className="text-xs">↺</span>
+                                    <span className="text-[8px] font-black uppercase">重置</span>
+                                </button>
+                                <button className="flex flex-col items-center gap-2">
+                                    <div className="w-12 h-12 rounded-full bg-[#FF7EB9] text-black flex items-center justify-center text-xs font-bold shadow-lg shadow-[#FF7EB9]/20 hover:scale-110 active:scale-95 transition-all">✓</div>
+                                    <span className="text-[8px] font-black uppercase text-[#FF7EB9]">应用</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* 底部 Dock (与 App 现状一致) */}
+                        <div className="px-12 py-6 rounded-full artisan-glass shadow-3xl flex items-center gap-14 border border-white/10">
+                            <span className="opacity-20 text-xl">❤️</span>
+                            <button className="px-20 py-4.5 bg-[#FF7EB9] rounded-full text-black font-black text-xs tracking-[0.3em] shadow-2xl">设为壁纸</button>
+                            <div className="flex flex-col items-center gap-1 text-[#FF7EB9]">
+                                <span className="text-2xl animate-spin-slow">⚛️</span>
+                                <span className="text-[8px] font-black uppercase">实验室</span>
+                            </div>
+                            <span className="opacity-20 text-xl">⬇️</span>
+                        </div>
+                    </div>
+
+                    <div className="absolute bottom-6 right-8 text-[9px] font-black tracking-[0.3em] opacity-10 uppercase">
+                        PlumWallPaper Artisan Lab v15 / Master Calibration
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

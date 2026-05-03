@@ -1,0 +1,418 @@
+  📋 PlumWallPaper 在线数据源集成 - 最终方案总结
+
+  一、整体架构
+
+  ┌─────────────────────────────────────────────────────────┐
+  │                    UI Layer (SwiftUI)                    │
+  │  HomeView / WallpaperExploreView / MediaExploreView     │
+  │  MyLibraryView                                           │
+  └────────────────────┬────────────────────────────────────┘
+                       │ WallpaperDisplayItem (enum wrapper)
+  ┌────────────────────▼────────────────────────────────────┐
+  │              ViewModel Layer                             │
+  │  HomeFeedViewModel / WallpaperViewModel / MediaViewModel│
+  └────────────────────┬────────────────────────────────────┘
+                       │
+  ┌────────────────────▼────────────────────────────────────┐
+  │           Repository Layer                               │
+  │  WallpaperRepository / MediaRepository                   │
+  └────────────────────┬────────────────────────────────────┘
+                       │
+          ┌────────────┴────────────┐
+          ▼                         ▼
+  ┌───────────────┐         ┌──────────────────┐
+  │ Online Sources│         │  Local SwiftData │
+  │ RemoteWallpaper│        │   Wallpaper      │
+  │ MediaItem     │         │   (扩展字段)      │
+  └───────────────┘         └──────────────────┘
+
+  ---
+  二、数据源清单
+
+  在线数据源（4 个）
+
+  1. Wallhaven - 静态壁纸主源
+  2. 4K Wallpapers - 静态壁纸备用源
+  3. MotionBG - 动态壁纸主源
+  4. Steam Workshop - 动态壁纸补充源
+
+  本地数据源
+
+  - SwiftData Wallpaper - 本地壁纸库（下载 + 导入）
+
+  ---
+  三、页面结构与功能
+
+  1. 精选页 (HomeView)
+
+  布局：
+  ├── Hero 轮播（8 条，只显示动态壁纸）
+  ├── 最新画作（8 条，在线静态壁纸）
+  └── 热门动态（8 条，在线动态壁纸）
+
+  Hero 算法（多维度加权）
+
+  数据源权重：
+  - MotionBG: 50%
+  - Steam Workshop: 50%
+
+  质量评分维度：
+  - 浏览量：30%
+  - 收藏数：30%
+  - 分辨率：25%
+  - 时效性：15%
+
+  候选池：
+  - MotionBG: Home Featured 8条 + Popular 6条 + Latest 6条
+  - Workshop: Ranked 10条 + Trend 6条 + Recent 4条
+
+  多样性规则：
+  - 同一作者最多 1 个
+  - 同一标签最多 2 个
+
+  缓存：6 小时
+
+  最新画作算法（最新 + 简化评分）
+
+  数据源：
+  - Wallhaven latest 前 20 条
+  - 4K Wallpapers recent 前 20 条
+
+  评分公式：
+  - 时效性：60%
+  - 浏览量：20%
+  - 分辨率：20%
+
+  取前 8 条
+
+  热门动态算法（热度 + 时效性）
+
+  数据源：
+  - MotionBG popular (1 week) 前 10 条
+  - Workshop trend (1 week) 前 10 条
+
+  评分公式：
+  - 浏览量：40%
+  - 收藏数：30%
+  - 时效性：20%
+  - 分辨率：10%
+
+  取前 8 条
+
+  ---
+  2. 静态 Tab (WallpaperExploreView)
+
+  功能清单（完整版）：
+  ✓ 分类筛选：general/anime/people + 4K 的 30 个分类
+  ✓ 纯度筛选：SFW / Sketchy / NSFW
+  ✓ 排序方式：最新/热门/收藏/随机
+  ✓ 分辨率筛选：全部/4K/2K/1080P
+  ✓ 比例筛选：16:9/21:9/32:9/...
+  ✓ 颜色筛选：红/蓝/绿/...
+  ✓ 搜索功能（独立搜索框）
+  ✓ 无限滚动（每页 24 条）
+
+  ---
+  3. 动态 Tab (MediaExploreView)
+
+  功能清单（完整版）：
+  ✓ 数据源切换：MotionBG / Steam Workshop
+  ✓ 分辨率筛选：全部/4K/2K/1080P
+  ✓ 排序方式：最新/热门/评价
+  ✓ 标签筛选
+  ✓ 内容分级筛选
+  ✓ 搜索功能（独立搜索框）
+  ✓ 无限滚动（每页 20 条）
+
+  ---
+  4. 本地 Tab (MyLibraryView)
+
+  双层结构：
+  ├── 类型切换（顶部 Segment）：全部 | 静态 | 动态
+  └── 来源切换（子 Tab）：收藏 | 下载 | 导入
+
+  功能：
+  ✓ 多选删除
+  ✓ 多选取消收藏
+  ✓ 搜索本地壁纸
+  ✓ 排序：导入时间/名称/大小
+
+  ---
+  四、数据模型设计
+
+  在线模型（不入 SwiftData）
+
+  // 静态壁纸
+  struct RemoteWallpaper: Codable, Identifiable {
+      let id: String
+      let url: String
+      let thumbURL: URL?
+      let fullImageURL: URL?
+      let resolution: String
+      let dimensionX: Int
+      let dimensionY: Int
+      let fileSize: Int64
+      let category: String
+      let purity: String
+      let views: Int
+      let favorites: Int
+      let uploadedAt: Date
+      let tags: [APITag]?
+      let colors: [String]?
+  }
+
+  // 动态媒体
+  struct MediaItem: Codable, Identifiable {
+      let id: String
+      let slug: String
+      let title: String
+      let author: String?
+      let coverImageURL: URL?
+      let previewVideoURL: URL?
+      let resolution: String
+      let views: Int
+      let favorites: Int
+      let publishDate: Date
+      let tags: [String]
+      let downloadOptions: [DownloadOption]
+      let sourceName: String
+  }
+
+  本地模型（SwiftData，扩展现有）
+
+  @Model
+  class Wallpaper {
+      // 现有字段...
+
+      // 新增字段
+      var source: WallpaperSource = .imported
+      var remoteId: String?
+      var remoteSource: RemoteSourceType?
+      var downloadQuality: String?
+      var remoteMetadata: RemoteMetadata?
+  }
+
+  enum WallpaperSource: String, Codable {
+      case downloaded
+      case imported
+  }
+
+  enum RemoteSourceType: String, Codable {
+      case wallhaven
+      case fourKWallpapers
+      case motionBG
+      case steamWorkshop
+  }
+
+  struct RemoteMetadata: Codable {
+      var author: String?
+      var views: Int?
+      var favorites: Int?
+      var uploadDate: Date?
+      var originalURL: String?
+  }
+
+  UI 统一模型
+
+  enum WallpaperDisplayItem: Identifiable {
+      case remote(RemoteWallpaper)
+      case media(MediaItem)
+      case local(Wallpaper)
+
+      var id: String { ... }
+      var title: String { ... }
+      var thumbnailURL: URL? { ... }
+      var resolution: String { ... }
+      var type: WallpaperType { ... }
+      var isLocal: Bool { ... }
+      var canApplyDirectly: Bool { ... }
+  }
+
+  ---
+  五、下载流程设计
+
+  用户选择质量方案
+
+  流程：
+  1. 用户点击"设为壁纸"
+  2. 检查是否已下载
+     ├─ 已下载 → 直接应用
+     └─ 未下载 → 弹出质量选择器
+  3. 质量选择器：
+     ┌─────────────────────┐
+     │ 选择下载质量        │
+     ├─────────────────────┤
+     │ ○ 4K (890 MB)       │
+     │ ● HD (320 MB) 推荐  │
+     │ ○ SD (120 MB)       │
+     ├─────────────────────┤
+     │ [取消]  [下载并应用] │
+     └─────────────────────┘
+  4. 下载到 ~/Library/Application Support/PlumWallPaper/Downloads/
+  5. 导入到 SwiftData (source = .downloaded)
+  6. 应用壁纸 + 保存会话
+
+  文件命名规则
+
+  格式：{source}_{id}_{quality}.{ext}
+  示例：motionbg_abc123_4k.mp4
+
+  重复下载检测
+
+  // 通过 remoteId 查询 SwiftData
+  let descriptor = FetchDescriptor<Wallpaper>(
+      predicate: #Predicate {
+          $0.source == .downloaded && $0.remoteId == remoteId
+      }
+  )
+
+  ---
+  六、需要从 WaifuX 移植的核心文件
+
+  必搬清单（15 个文件）
+
+  网络基础层
+
+  Services/NetworkService.swift
+  Services/NetworkMonitor.swift
+  Services/CacheService.swift
+
+  静态壁纸源
+
+  Services/WallpaperSourceManager.swift
+  Models/WallhavenAPI.swift
+  Services/FourKWallpapersService.swift
+  Services/FourKWallpapersParser.swift
+
+  动态媒体源
+
+  Services/MediaService.swift
+  Models/MediaItem.swift
+  Services/WorkshopSourceManager.swift
+  Services/WorkshopService.swift
+
+  本地库服务
+
+  Services/WallpaperLibraryService.swift
+  Services/MediaLibraryService.swift
+  Services/LocalWallpaperScanner.swift
+  Services/DownloadTaskService.swift
+
+  辅助组件（推荐）
+
+  Services/DownloadPathManager.swift
+  Services/HTMLParser.swift
+  Models/DownloadTask.swift
+  Models/NetworkError.swift
+
+  ---
+  七、实施阶段规划
+
+  Phase 1：基础在线浏览（2-3 周）
+
+  ✓ 移植网络层（NetworkService/CacheService）
+  ✓ 移植数据源管理（WallpaperSourceManager/WorkshopSourceManager）
+  ✓ 移植 API 服务（Wallhaven/4K/MotionBG/Workshop）
+  ✓ 实现在线模型（RemoteWallpaper/MediaItem）
+  ✓ 实现 UI 统一模型（WallpaperDisplayItem）
+  ✓ 实现精选页（Hero/最新/热门算法）
+  ✓ 实现静态 Tab（完整筛选功能）
+  ✓ 实现动态 Tab（完整筛选功能）
+  ✓ 缓存策略
+
+  Phase 2：下载与本地集成（1-2 周）
+
+  ✓ 扩展 Wallpaper 模型（新增 5 个字段）
+  ✓ 实现下载流程（质量选择器）
+  ✓ 实现 DownloadTaskService
+  ✓ 实现在线→本地转换
+  ✓ 实现本地 Tab（双层结构）
+  ✓ 实现多选删除/取消收藏
+  ✓ 重复下载检测
+
+  Phase 3：优化与扩展（1 周）
+
+  ✓ 下载进度显示
+  ✓ 下载失败重试
+  ✓ 磁盘空间检查
+  ✓ 用户偏好推荐（TODO）
+  ✓ 性能优化
+  ✓ 错误处理完善
+
+  ---
+  八、关键技术点
+
+  1. 模型命名冲突解决
+
+  - WaifuX Wallpaper → RemoteWallpaper
+  - WaifuX MediaItem → 保持不变
+  - PlumWallPaper Wallpaper → 保持不变
+
+  2. 数据源权重算法
+
+  func calculateScore(_ item: MediaItem, sourceWeight: Double) -> Double {
+      let normalizedViews = min(item.views / 100_000.0, 1.0)
+      let normalizedFavorites = min(item.favorites / 10_000.0, 1.0)
+      let resolutionScore = getResolutionScore(item.resolution)
+      let recencyScore = getRecencyScore(item.publishDate)
+
+      let qualityScore = (normalizedViews * 0.3)
+                       + (normalizedFavorites * 0.3)
+                       + (resolutionScore * 0.25)
+                       + (recencyScore * 0.15)
+
+      return qualityScore * sourceWeight
+  }
+
+  3. 多样性保证
+
+  func applyDiversityRules(_ candidates: [(MediaItem, Double)], count: Int) -> [MediaItem] {
+      var result: [MediaItem] = []
+      var usedAuthors = Set<String>()
+      var tagCounts: [String: Int] = [:]
+
+      for (item, _) in candidates {
+          guard result.count < count else { break }
+          if usedAuthors.contains(item.author) { continue }
+          if let tag = item.tags.first, tagCounts[tag, default: 0] >= 2 { continue }
+
+          result.append(item)
+          usedAuthors.insert(item.author)
+          if let tag = item.tags.first { tagCounts[tag, default: 0] += 1 }
+      }
+      return result
+  }
+
+  ---
+  九、待办事项（TODO）
+
+  // TODO: Phase 2 - 用户偏好推荐
+  // 基于用户浏览历史、收藏偏好、下载记录进行个性化推荐
+
+  // TODO: Phase 3 - 高级筛选
+  // 静态 Tab：比例筛选、颜色筛选
+  // 动态 Tab：标签筛选、内容分级
+
+  // TODO: Phase 3 - 智能下载
+  // 预览版本快速下载 + 后台高质量升级
+
+  // TODO: Phase 3 - 离线模式
+  // 缓存在线数据，支持离线浏览
+
+  ---
+  // 基于用户浏览历史、收藏偏好、下载记录进行个性化推荐
+
+  // TODO: Phase 3 - 高级筛选
+  // 静态 Tab：比例筛选、颜色筛选
+  // 动态 Tab：标签筛选、内容分级
+
+  // TODO: Phase 3 - 智能下载
+  // 预览版本快速下载 + 后台高质量升级
+
+  // TODO: Phase 3 - 离线模式
+  // 缓存在线数据，支持离线浏览
+
+  ---
+  这就是完整的方案！接下来我可以开始实施代码了。
+
+  你是否确认开始实施？还是需要再调整某些细节？

@@ -53,11 +53,20 @@ struct WallpaperCard: View {
             // 壁纸渲染核心 (遵守 ASYNC IMAGE STANDARDS)
             // 只显示缩略图，不显示视频预览
             Group {
-                if let thumbPath = wallpaper.thumbnailPath, !thumbPath.isEmpty,
-                   let thumbURL = URL(string: thumbPath) {
-                    artisanAsyncImage(url: thumbURL)
-                } else if let fileURL = URL(string: wallpaper.filePath) {
-                    artisanAsyncImage(url: fileURL)
+                if let thumbPath = wallpaper.thumbnailPath, !thumbPath.isEmpty {
+                    let thumbURL = thumbPath.hasPrefix("http") ? URL(string: thumbPath) : URL(fileURLWithPath: thumbPath)
+                    if let thumbURL = thumbURL {
+                        artisanAsyncImage(url: thumbURL)
+                    } else {
+                        fallbackPlaceholder
+                    }
+                } else if !wallpaper.filePath.isEmpty {
+                    let fileURL = wallpaper.filePath.hasPrefix("http") ? URL(string: wallpaper.filePath) : URL(fileURLWithPath: wallpaper.filePath)
+                    if let fileURL = fileURL {
+                        artisanAsyncImage(url: fileURL)
+                    } else {
+                        fallbackPlaceholder
+                    }
                 } else {
                     fallbackPlaceholder
                 }
@@ -163,18 +172,30 @@ struct WallpaperCard: View {
 
     // MARK: - 辅助子视图
     
+    @ViewBuilder
     private func artisanAsyncImage(url: URL) -> some View {
-        AsyncImage(url: url) { phase in
-            switch phase {
-            case .success(let image):
-                image.resizable().aspectRatio(contentMode: .fill)
+        if url.isFileURL {
+            if let nsImage = NSImage(contentsOf: url) {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
                     .transition(.opacity.combined(with: .scale(scale: 1.05)))
-            case .failure:
+            } else {
                 fallbackPlaceholder
-            case .empty:
-                loadingPlaceholder
-            @unknown default:
-                fallbackPlaceholder
+            }
+        } else {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().aspectRatio(contentMode: .fill)
+                        .transition(.opacity.combined(with: .scale(scale: 1.05)))
+                case .failure:
+                    fallbackPlaceholder
+                case .empty:
+                    loadingPlaceholder
+                @unknown default:
+                    fallbackPlaceholder
+                }
             }
         }
     }

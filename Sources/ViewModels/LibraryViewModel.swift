@@ -35,12 +35,13 @@ final class LibraryViewModel {
     var wallpapers: [Wallpaper] = []
     var selectedWallpaper: Wallpaper?
     var searchText: String = ""
+    var selectedTagFilter: String? = nil
     var isImporting: Bool = false
     var errorMessage: String?
 
     // MARK: - Dependencies
 
-    private var store: WallpaperStore?
+    internal var store: WallpaperStore?
 
     // MARK: - Init
 
@@ -122,6 +123,13 @@ final class LibraryViewModel {
         // 3. Apply search filter
         if !searchText.isEmpty {
             result = result.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        }
+
+        // 4. Apply tag filter
+        if let tagFilter = selectedTagFilter {
+            result = result.filter { wallpaper in
+                wallpaper.tags.contains { $0.name == tagFilter }
+            }
         }
 
         return result

@@ -1,10 +1,12 @@
 import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
+import SwiftData
 
 /// 导入壁纸 Sheet (Scheme C: Artisan Gallery)
 struct ImportWallpaperSheet: View {
     @Environment(\.dismiss) var dismiss
+    @Query private var existingTags: [Tag]
     var viewModel: LibraryViewModel
     @Binding var toast: ToastConfig?
 
@@ -15,12 +17,22 @@ struct ImportWallpaperSheet: View {
 
     // Step 2: 元数据
     @State var customName: String = ""
-    @State private var selectedTag: String = ""
-    @State private var customTag: String = ""
-    @State private var showCustomTagInput = false
+    @State var selectedTag: String = ""
+    @State var customTag: String = ""
+    @State var showCustomTagInput = false
     @State var isFavorite = false
 
-    private let tagOptions = ["4K UHD", "风景", "抽象", "动漫", "赛博朋克", "极简"]
+    private var combinedTagOptions: [String] {
+        let defaultTags = ["4K UHD", "风景", "抽象", "动漫", "赛博朋克", "极简"]
+        let dbTags = existingTags.map { $0.name }
+        var result = defaultTags
+        for tag in dbTags {
+            if !result.contains(tag) {
+                result.append(tag)
+            }
+        }
+        return result
+    }
 
     enum ImportStep {
         case selectFiles
@@ -188,9 +200,15 @@ struct ImportWallpaperSheet: View {
                 Text("策展索引").font(.system(size: 11, weight: .black)).kerning(2).foregroundStyle(LiquidGlassColors.textQuaternary)
 
                 FlowLayout(spacing: 10) {
-                    ForEach(tagOptions, id: \.self) { tag in
+                    ForEach(combinedTagOptions, id: \.self) { tag in
                         FilterChip(title: tag, isSelected: !showCustomTagInput && selectedTag == tag) {
-                            withAnimation(.gallerySpring) { selectedTag = tag; showCustomTagInput = false }
+                            withAnimation(.gallerySpring) { selectedTag = tag; showCustomTagInput = false; customTag = "" }
+                        }
+                    }
+                    
+                    if !customTag.isEmpty && !showCustomTagInput && !combinedTagOptions.contains(customTag) {
+                        FilterChip(title: customTag, isSelected: selectedTag == customTag) {
+                            withAnimation(.gallerySpring) { selectedTag = customTag }
                         }
                     }
 
@@ -213,7 +231,9 @@ struct ImportWallpaperSheet: View {
 
                             Button {
                                 if !customTag.isEmpty {
-                                    withAnimation(.gallerySpring) { selectedTag = customTag; showCustomTagInput = false; customTag = "" }
+                                    withAnimation(.gallerySpring) { selectedTag = customTag; showCustomTagInput = false }
+                                } else {
+                                    withAnimation(.gallerySpring) { showCustomTagInput = false }
                                 }
                             } label: {
                                 Image(systemName: "checkmark").font(.system(size: 12, weight: .bold))

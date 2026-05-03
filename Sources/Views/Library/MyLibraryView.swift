@@ -1,10 +1,12 @@
 import SwiftUI
 import AppKit
+import SwiftData
 
 // MARK: - Artisan Studio View (Scheme C: Pure Edition with Two-Layer Filtering)
 struct MyLibraryView: View {
     @State var viewModel = LibraryViewModel()
     @Environment(\.modelContext) private var modelContext
+    @Query private var existingTags: [Tag]
     @State var isEditMode = false
     @State var selectedIDs = Set<UUID>()
     @State var toast: ToastConfig?
@@ -184,6 +186,27 @@ struct MyLibraryView: View {
                         .buttonStyle(.plain)
                     }
                 }
+            }
+
+            // Layer 3: Tag Filter (Only show when there are tags and source is imported)
+            if !existingTags.isEmpty && viewModel.sourceFilter == .imported {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        FilterChip(title: "全部", isSelected: viewModel.selectedTagFilter == nil) {
+                            withAnimation(.gallerySpring) {
+                                viewModel.selectedTagFilter = nil
+                            }
+                        }
+                        ForEach(existingTags) { tag in
+                            FilterChip(title: tag.name, isSelected: viewModel.selectedTagFilter == tag.name) {
+                                withAnimation(.gallerySpring) {
+                                    viewModel.selectedTagFilter = tag.name
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.top, 4)
             }
         }
     }

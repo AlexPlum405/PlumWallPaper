@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
+import SwiftData
 
 extension ImportWallpaperSheet {
 
@@ -150,12 +151,29 @@ extension ImportWallpaperSheet {
                 // 设置收藏
                 wallpaper.isFavorite = isFavorite
 
-                // TODO: 添加标签（需要 Tag 关联逻辑）
+                // 添加标签（需要 Tag 关联逻辑）
+                if !selectedTag.isEmpty, let context = viewModel.store?.modelContext {
+                    let tagName = selectedTag
+                    let descriptor = FetchDescriptor<Tag>(predicate: #Predicate { $0.name == tagName })
+                    let tag: Tag
+                    if let existing = try? context.fetch(descriptor).first {
+                        tag = existing
+                    } else {
+                        tag = Tag(name: tagName)
+                        context.insert(tag)
+                    }
+                    wallpaper.tags.append(tag)
+                    tag.wallpapers.append(wallpaper)
+                }
 
-                viewModel.wallpapers.append(wallpaper)
+                if let store = viewModel.store {
+                    try? store.add(wallpaper)
+                } else {
+                    viewModel.wallpapers.append(wallpaper)
+                }
             }
 
-            viewModel.save()
+            viewModel.loadWallpapers()
             viewModel.isImporting = false
 
             toast = ToastConfig(message: "已导入 \(imported.count) 个壁纸", type: .success)

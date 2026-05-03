@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:PlumWallPaper}",
+            "name": "Debug PlumWallPaper",
+            "target": "PlumWallPaper",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug PlumWallPaper"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:PlumWallPaper}",
+            "name": "Release PlumWallPaper",
+            "target": "PlumWallPaper",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release PlumWallPaper"
+        }
+    ]
+}
