@@ -1,3 +1,20 @@
+## 常用命令模板 (Command Templates)
+
+### 1. 构建项目 (Build)
+```bash
+xcodebuild -project /Users/Alex/AI/project/PlumWallPaper/PlumWallPaper.xcodeproj -scheme PlumWallPaper -configuration Debug -derivedDataPath /Users/Alex/AI/project/PlumWallPaper/Build/DerivedData build
+```
+
+### 2. 重启应用 (Restart)
+```bash
+pkill -x PlumWallPaper 2>/dev/null || true
+sleep 0.8
+open -n /Users/Alex/AI/project/PlumWallPaper/Build/DerivedData/Build/Products/Debug/PlumWallPaper.app
+sleep 5
+osascript -e 'tell application "PlumWallPaper" to activate' 2>/dev/null || true
+pgrep -fl 'PlumWallPaper' || true
+```
+
 ## 严格代码安全原则
 - **核心原则**：“如果我没明确让你新增、修改、删除代码，你就不许修改任何代码。”
 - **询问 (Inquiries)**：当用户请求分析、研究或建议时，严禁使用任何修改工具（`write_file`, `replace`, `run_shell_command` 修改态等）。仅限读取代码并汇报发现。

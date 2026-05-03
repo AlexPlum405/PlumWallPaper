@@ -30,6 +30,7 @@ enum MainTab: Int, CaseIterable {
 // MARK: - 匠心导航栏 (Artisan Navigation - 精致圆角修复版)
 struct TopNavigationBar: View {
     @Binding var selectedTab: MainTab
+    let onSearch: () -> Void
     let onOpenSettings: () -> Void
     let onClose: () -> Void
     let onMinimize: () -> Void
@@ -52,7 +53,7 @@ struct TopNavigationBar: View {
 
             // 右侧功能区
             HStack(spacing: 12) {
-                TopBarCircleButton(icon: "magnifyingglass", size: controlHeight) { }
+                TopBarCircleButton(icon: "magnifyingglass", size: controlHeight) { onSearch() }
                 TopBarCircleButton(icon: "slider.horizontal.3", size: controlHeight) { onOpenSettings() }
             }
             .frame(width: 100, alignment: .trailing)

@@ -186,16 +186,27 @@ struct ParticleSystemPanel: View {
                     ArtisanSliderTiny(title: "END SIZE", value: Binding(get: { emitter.sizeEnd }, set: { setEmitterSizeEnd(emitter.id, $0) }), range: 0...50)
                 }
                 
-                // 纹理选择（更加艺术化）
-                HStack(spacing: 16) {
-                    ForEach(["circle.fill", "star.fill", "sparkles", "leaf.fill", "drop.fill"], id: \.self) { icon in
-                        Image(systemName: icon)
-                            .font(.system(size: 14))
-                            .foregroundStyle(emitter.texture == icon ? LiquidGlassColors.primaryPink : .white.opacity(0.3))
-                            .frame(width: 36, height: 36)
-                            .background(emitter.texture == icon ? Color.white.opacity(0.1) : Color.clear)
-                            .clipShape(Circle())
-                            .onTapGesture { setEmitterTexture(emitter.id, icon) }
+                // 粒子材质选择，避免把 SF Symbol 当作粒子贴图
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                    ForEach(ParticleMaterial.allCases) { material in
+                        let isActive = emitter.texture == material.rawValue
+                        Button {
+                            setEmitterTexture(emitter.id, material.rawValue)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(material.title)
+                                    .font(.system(size: 11, weight: .bold))
+                                Text(material.detail)
+                                    .font(.system(size: 9, weight: .medium))
+                                    .lineLimit(1)
+                            }
+                            .foregroundStyle(isActive ? LiquidGlassColors.primaryPink : .white.opacity(0.42))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 10)
+                            .frame(height: 46)
+                            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(isActive ? Color.white.opacity(0.08) : Color.white.opacity(0.025)))
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }

@@ -1,33 +1,34 @@
 import SwiftUI
 
 extension DisplayTab {
-    // MARK: - 业务逻辑（占位）
+    // MARK: - 业务逻辑
 
     func setDisplayTopology(_ topology: DisplayTopology) {
-        print("setDisplayTopology: \(topology)")
+        viewModel.setDisplayTopology(topology)
     }
 
     func setColorSpace(_ option: ColorSpaceOption) {
-        print("setColorSpace: \(option)")
+        viewModel.setColorSpace(option)
     }
 
     func setThemeMode(_ mode: ThemeMode) {
-        print("setThemeMode: \(mode)")
+        viewModel.setTheme(mode)
     }
 
     func setThumbnailSize(_ size: ThumbnailSize) {
-        print("setThumbnailSize: \(size)")
+        viewModel.setThumbnailSize(size)
     }
 
     func setAnimationsEnabled(_ enabled: Bool) {
-        print("setAnimationsEnabled: \(enabled)")
+        viewModel.setAnimationsEnabled(enabled)
     }
 
     func setWallpaperOpacity(_ opacity: Int) {
-        print("setWallpaperOpacity: \(opacity)")
+        viewModel.setWallpaperOpacity(opacity)
     }
 
     func setFilmGrainEnabled(_ enabled: Bool) {
-        print("setFilmGrainEnabled: \(enabled)")
+        viewModel.settings?.pauseOnOcclusion = enabled
+        viewModel.save()
     }
 }

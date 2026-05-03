@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlumWallPaper Laboratory · Realtime Director v2</title>
+  <style>
+    :root {
+      --plum-pink: #f4c2c2;
+      --plum-gold: #e5d1b0;
+      --plum-blue: #81a1c1;
+      --plum-green: #a8d5ba;
+      --bg: #101012;
+      --panel: rgba(26, 26, 30, 0.72);
+      --line: rgba(255, 255, 255, 0.12);
+      --muted: rgba(255, 255, 255, 0.42);
+      --soft: rgba(255, 255, 255, 0.08);
+      --intensity: 0.62;
+      --exposure: 1.02;
+      --contrast: 1.08;
+      --saturation: 0.92;
+      --blur: 0px;
+      --grain: 0.16;
+      --vignette: 0.42;
+      --weather: 0.48;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+      letter-spacing: 0;
+    }
+
+    button,
+    input { font: inherit; }
+
+    button {
+      color: inherit;
+      border: 0;
+      cursor: pointer;
+    }
+
+    .stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      min-width: 1100px;
+      min-height: 720px;
+      background: #151517;
+      isolation: isolate;
+    }
+
+    .wallpaper {
+      position: absolute;
+      inset: 22px;
+      border-radius: 30px;
+      overflow: hidden;
+      background: #070708;
+      box-shadow: 0 36px 120px rgba(0, 0, 0, 0.56);
+    }
+
+    .wallpaper::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: url("../../WaifuX/screenshots/wallpaper_detail.png");
+      background-size: cover;
+      background-position: center;
+      transform: scale(1.03);
+      filter:
+        brightness(var(--exposure))
+        contrast(var(--contrast))
+        saturate(var(--saturation))
+        blur(var(--blur));
+      transition: filter 220ms ease, transform 400ms ease;
+      z-index: 0;
+    }
+
+    .wallpaper::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(0,0,0,0.26), transparent 18%, transparent 82%, rgba(0,0,0,0.26)),
+        linear-gradient(180deg, rgba(0,0,0,0.26), transparent 24%, transparent 72%, rgba(0,0,0,0.44));
+      opacity: var(--vignette);
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .grain {
+      position: absolute;
+      inset: 0;
+      opacity: var(--grain);
+      mix-blend-mode: overlay;
+      z-index: 4;
+      pointer-events: none;
+      background-image:
+        repeating-radial-gradient(circle at 17% 31%, rgba(255,255,255,.2) 0 1px, transparent 1px 4px),
+        repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px);
+      background-size: 180px 180px, 5px 5px;
+    }
+
+    .particles {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 3;
+      opacity: calc(var(--weather) * var(--intensity));
+    }
+
+    .particles.layer-back { filter: blur(2.4px); opacity: calc(var(--weather) * var(--intensity) * .32); }
+    .particles.layer-mid { filter: blur(.7px); opacity: calc(var(--weather) * var(--intensity) * .62); z-index: 6; }
+    .particles.layer-front { filter: blur(0); opacity: calc(var(--weather) * var(--intensity) * .9); z-index: 9; }
+
+    .p {
+      position: absolute;
+      left: var(--x);
+      top: -12%;
+      width: var(--s);
+      height: var(--h);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .64);
+      transform: translate3d(0, 0, 0) rotate(var(--r));
+      animation: drift var(--d) linear infinite;
+      animation-delay: var(--delay);
+    }
+
+    .env-snow .p {
+      width: var(--s);
+      height: var(--s);
+      background: rgba(255,255,255,.78);
+      box-shadow: 0 0 10px rgba(255,255,255,.16);
+    }
+
+    .env-petals .p {
+      width: calc(var(--s) * 1.9);
+      height: var(--s);
+      background: color-mix(in srgb, var(--plum-pink) 68%, white);
+      border-radius: 80% 20% 70% 30%;
+      animation-name: petal;
+    }
+
+    .env-dust .p {
+      width: var(--s);
+      height: var(--s);
+      background: color-mix(in srgb, var(--plum-gold) 55%, white);
+      animation-name: dust;
+    }
+
+    .env-cyber .p {
+      width: 1px;
+      height: calc(var(--h) * 1.5);
+      background: color-mix(in srgb, var(--plum-blue) 72%, white);
+      box-shadow: 0 0 14px color-mix(in srgb, var(--plum-blue) 80%, transparent);
+    }
+
+    @keyframes drift {
+      from { transform: translate3d(calc(var(--wind) * -1), -18vh, 0) rotate(var(--r)); }
+      to { transform: translate3d(var(--wind), 120vh, 0) rotate(calc(var(--r) + 30deg)); }
+    }
+
+    @keyframes petal {
+      from { transform: translate3d(calc(var(--wind) * -1), -14vh, 0) rotate(var(--r)); }
+      50% { transform: translate3d(calc(var(--wind) * .45), 54vh, 0) rotate(calc(var(--r) + 150deg)); }
+      to { transform: translate3d(var(--wind), 116vh, 0) rotate(calc(var(--r) + 290deg)); }
+    }
+
+    @keyframes dust {
+      from { transform: translate3d(-4vw, 94vh, 0) scale(.6); opacity: .1; }
+      45% { opacity: .72; }
+      to { transform: translate3d(var(--wind), -12vh, 0) scale(1.15); opacity: 0; }
+    }
+
+    .topbar {
+      position: absolute;
+      top: 36px;
+      left: 44px;
+      right: 44px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .brief {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: rgba(255,255,255,.62);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .brief strong {
+      font-family: Georgia, serif;
+      font-size: 22px;
+      color: rgba(255,255,255,.9);
+      letter-spacing: .02em;
+      text-transform: none;
+    }
+
+    .variant-switcher {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px;
+      border-radius: 999px;
+      background: rgba(10,10,12,.45);
+      border: 1px solid rgba(255,255,255,.1);
+      backdrop-filter: blur(24px) saturate(160%);
+    }
+
+    .variant-switcher button {
+      width: 122px;
+      height: 30px;
+      border-radius: 999px;
+      background: transparent;
+      color: rgba(255,255,255,.42);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .08em;
+    }
+
+    .variant-switcher button.is-active {
+      background: rgba(255,255,255,.12);
+      color: white;
+    }
+
+    .dock {
+      display: none;
+      position: absolute;
+      left: 50%;
+      bottom: 32px;
+      transform: translateX(-50%);
+      height: 72px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 10px;
+      border-radius: 999px;
+      background: rgba(18,18,20,.58);
+      border: 1px solid rgba(255,255,255,.12);
+      backdrop-filter: blur(34px) saturate(170%);
+      box-shadow: 0 22px 70px rgba(0,0,0,.34);
+      z-index: 24;
+      transition: opacity 220ms ease, transform 220ms ease;
+    }
+
+    .round {
+      width: 52px;
+      height: 52px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.72);
+      font-size: 19px;
+    }
+
+    .set-wallpaper {
+      height: 52px;
+      padding: 0 46px;
+      border-radius: 999px;
+      background: var(--plum-pink);
+      color: #151114;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      box-shadow: 0 14px 34px rgba(244,194,194,.18);
+    }
+
+    .lab-button {
+      color: var(--plum-pink);
+      border: 1px solid rgba(244,194,194,.36);
+      background: rgba(244,194,194,.08);
+    }
+
+    .lab-entry {
+      position: absolute;
+      left: calc(50% + 54px);
+      top: 327px;
+      z-index: 28;
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      color: var(--plum-pink);
+      background: rgba(244,194,194,.1);
+      border: 1px solid rgba(244,194,194,.42);
+      backdrop-filter: blur(28px) saturate(170%);
+      box-shadow: 0 18px 50px rgba(0,0,0,.32), 0 0 24px rgba(244,194,194,.16);
+    }
+
+    .lab-entry::before {
+      content: "";
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      box-shadow: inset 0 0 0 5px rgba(244,194,194,.16);
+    }
+
+    .lab-entry::after {
+      content: "实验室";
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 4px 9px;
+      border-radius: 999px;
+      color: rgba(255,255,255,.78);
+      background: rgba(10,10,12,.58);
+      border: 1px solid rgba(255,255,255,.1);
+      white-space: nowrap;
+      font-size: 8px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      display: none;
+    }
+
+    body[data-layout="director"] .lab-entry {
+      left: calc(50% + 54px);
+    }
+
+    body[data-layout="side"] .lab-entry,
+    body[data-layout="lens"] .lab-entry {
+      left: calc(50% + 54px);
+    }
+
+    .lab {
+      position: absolute;
+      z-index: 30;
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,.13);
+      backdrop-filter: blur(42px) saturate(170%);
+      box-shadow: 0 34px 96px rgba(0,0,0,.48);
+      overflow: hidden;
+      transition: width 280ms cubic-bezier(.16,1,.3,1), height 280ms cubic-bezier(.16,1,.3,1), inset 280ms cubic-bezier(.16,1,.3,1), border-radius 280ms ease;
+    }
+
+    body[data-layout="director"] .lab {
+      left: 50%;
+      bottom: 116px;
+      width: 940px;
+      height: 174px;
+      transform: translateX(-50%);
+      border-radius: 30px;
+    }
+
+    body[data-layout="side"] .lab {
+      top: 104px;
+      right: 34px;
+      width: 318px;
+      height: 560px;
+      border-radius: 28px;
+    }
+
+    body[data-layout="lens"] .lab {
+      left: calc(50% + 155px);
+      bottom: 116px;
+      width: 386px;
+      height: 318px;
+      border-radius: 26px;
+    }
+
+    body[data-layout="director"] .dock { opacity: .96; }
+    body[data-layout="side"] .dock { opacity: .86; }
+    body[data-layout="lens"] .dock { opacity: .98; }
+
+    .lab-content {
+      height: 100%;
+      display: grid;
+      grid-template-columns: 160px 1fr 116px;
+    }
+
+    body[data-layout="side"] .lab-content,
+    body[data-layout="lens"] .lab-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .lab-rail {
+      padding: 18px 14px;
+      border-right: 1px solid rgba(255,255,255,.07);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    body[data-layout="side"] .lab-rail,
+    body[data-layout="lens"] .lab-rail {
+      min-height: 76px;
+      padding: 14px 16px;
+      border-right: 0;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      flex-direction: row;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .lab-title {
+      margin-bottom: 8px;
+      font-family: Georgia, serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: rgba(255,255,255,.86);
+    }
+
+    body[data-layout="side"] .lab-title,
+    body[data-layout="lens"] .lab-title {
+      margin: 0 auto 0 0;
+      font-size: 16px;
+      white-space: nowrap;
+    }
+
+    .rail-tab {
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: transparent;
+      color: rgba(255,255,255,.34);
+      text-align: left;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .12em;
+    }
+
+    body[data-layout="side"] .rail-tab,
+    body[data-layout="lens"] .rail-tab {
+      width: auto;
+      padding: 0 8px;
+      display: grid;
+      place-items: center;
+      font-size: 10px;
+      text-align: center;
+    }
+
+    .rail-tab.is-active {
+      background: rgba(244,194,194,.12);
+      color: var(--plum-pink);
+    }
+
+    .workspace {
+      min-width: 0;
+      padding: 18px 22px;
+      overflow: hidden;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    body[data-tab="smart"] .tab-panel[data-panel="smart"],
+    body[data-tab="color"] .tab-panel[data-panel="color"],
+    body[data-tab="effects"] .tab-panel[data-panel="effects"],
+    body[data-tab="weather"] .tab-panel[data-panel="weather"],
+    body[data-tab="particles"] .tab-panel[data-panel="particles"] {
+      display: block;
+    }
+
+    body[data-layout="side"] .workspace {
+      flex: 1;
+      min-height: 0;
+      padding: 18px 18px 0;
+      overflow-y: auto;
+    }
+
+    body[data-layout="lens"] .workspace {
+      flex: 1;
+      min-height: 0;
+      padding: 16px 18px;
+      overflow: hidden;
+    }
+
+    .section-kicker {
+      margin: 0 0 12px;
+      color: rgba(255,255,255,.28);
+      font-size: 8px;
+      font-weight: 950;
+      letter-spacing: .18em;
+    }
+
+    .control-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px 14px;
+    }
+
+    body[data-layout="side"] .control-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    body[data-layout="lens"] .control-grid {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .knob {
+      min-height: 58px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.042);
+      border: 1px solid rgba(255,255,255,.065);
+    }
+
+    .knob label {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
+      color: rgba(255,255,255,.62);
+      font-size: 10px;
+      font-weight: 850;
+    }
+
+    .knob label b {
+      color: rgba(255,255,255,.3);
+      font-size: 8px;
+      font-weight: 900;
+      letter-spacing: .08em;
+    }
+
+    .scene-row,
+    .weather-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    body[data-layout="side"] .scene-row,
+    body[data-layout="side"] .weather-row,
+    body[data-layout="lens"] .scene-row,
+    body[data-layout="lens"] .weather-row {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .scene-card,
+    .weather-card {
+      min-height: 64px;
+      padding: 12px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.045);
+      border: 1px solid rgba(255,255,255,.07);
+      text-align: left;
+    }
+
+    .scene-card.is-active,
+    .weather-card.is-active {
+      background: rgba(244,194,194,.11);
+      border-color: rgba(244,194,194,.32);
+    }
+
+    .scene-card span,
+    .weather-card span {
+      display: block;
+      color: rgba(255,255,255,.74);
+      font-size: 11px;
+      font-weight: 900;
+      margin-bottom: 5px;
+    }
+
+    .scene-card small,
+    .weather-card small {
+      color: rgba(255,255,255,.34);
+      font-size: 9px;
+      line-height: 1.45;
+    }
+
+    .look-row {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    body[data-layout="side"] .look-row {
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    body[data-layout="lens"] .look-row {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    body[data-layout="lens"] .look:nth-child(n+4) {
+      display: none;
+    }
+
+    .look {
+      height: 46px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.04);
+      color: rgba(255,255,255,.44);
+      border: 1px solid rgba(255,255,255,.06);
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .look.is-active {
+      color: var(--plum-pink);
+      border-color: rgba(244,194,194,.34);
+      background: rgba(244,194,194,.10);
+    }
+
+    .control-side {
+      padding: 18px 16px;
+      border-left: 1px solid rgba(255,255,255,.07);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    body[data-layout="side"] .control-side,
+    body[data-layout="lens"] .control-side {
+      padding: 0 18px 18px;
+      border-left: 0;
+    }
+
+    .meter-label {
+      display: flex;
+      justify-content: space-between;
+      color: rgba(255,255,255,.32);
+      font-size: 8px;
+      font-weight: 900;
+      letter-spacing: .14em;
+      margin-bottom: 10px;
+    }
+
+    .range {
+      width: 100%;
+      appearance: none;
+      height: 2px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.12);
+      outline: none;
+    }
+
+    .range::-webkit-slider-thumb {
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.92);
+      background: var(--plum-pink);
+      box-shadow: 0 0 16px rgba(244,194,194,.36);
+    }
+
+    .apply {
+      height: 38px;
+      border-radius: 999px;
+      background: var(--plum-pink);
+      color: #141114;
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: .16em;
+    }
+
+    .micro {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    body[data-layout="director"] .micro {
+      display: none;
+    }
+
+    .micro button {
+      height: 32px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.045);
+      color: rgba(255,255,255,.38);
+      font-size: 9px;
+      font-weight: 850;
+    }
+
+    .expert {
+      position: absolute;
+      right: 18px;
+      bottom: 18px;
+      width: 302px;
+      padding: 14px;
+      border-radius: 20px;
+      background: rgba(10,10,12,.76);
+      border: 1px solid rgba(255,255,255,.1);
+      backdrop-filter: blur(30px);
+      z-index: 34;
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: 180ms ease;
+    }
+
+    .expert.is-open {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .expert h3 {
+      margin: 0 0 12px;
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: .16em;
+      color: rgba(255,255,255,.55);
+    }
+
+    .expert-row {
+      display: grid;
+      grid-template-columns: 62px 1fr 42px;
+      gap: 10px;
+      align-items: center;
+      margin: 10px 0;
+      color: rgba(255,255,255,.42);
+      font-size: 9px;
+      font-weight: 800;
+    }
+
+    .recommendation {
+      position: absolute;
+      left: 48px;
+      bottom: 42px;
+      width: 302px;
+      padding: 16px;
+      border-radius: 24px;
+      background: rgba(14,14,16,.42);
+      border: 1px solid rgba(255,255,255,.10);
+      backdrop-filter: blur(28px) saturate(150%);
+      z-index: 22;
+      transition: opacity 220ms ease, transform 220ms ease;
+      display: none;
+    }
+
+    body[data-layout="director"] .recommendation { opacity: 0; transform: translateY(12px); pointer-events: none; }
+
+    .recommendation small {
+      display: block;
+      color: rgba(255,255,255,.32);
+      font-size: 8px;
+      font-weight: 950;
+      letter-spacing: .18em;
+      margin-bottom: 10px;
+    }
+
+    .recommendation h2 {
+      margin: 0 0 8px;
+      font-family: Georgia, serif;
+      font-size: 22px;
+      line-height: 1.08;
+    }
+
+    .recommendation p {
+      margin: 0;
+      color: rgba(255,255,255,.52);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .caption {
+      position: absolute;
+      right: 48px;
+      bottom: 42px;
+      z-index: 21;
+      max-width: 370px;
+      text-align: right;
+      color: rgba(255,255,255,.34);
+      font-size: 11px;
+      line-height: 1.7;
+      display: none;
+    }
+
+    @media (max-width: 1180px) {
+      .stage { min-width: 0; }
+      .brief strong { font-size: 18px; }
+      body[data-layout="director"] .lab { width: calc(100vw - 64px); }
+      .variant-switcher button { width: 96px; }
+      .caption { display: none; }
+    }
+  </style>
+</head>
+<body data-layout="director" data-tab="smart" class="env-dust">
+  <!--
+    Assumptions:
+    - 设计目标是替换当前过宽/参数化的实验室 HUD，而不是独立 ShaderEditor 大窗口。
+    - 生产落地应先改 WallpaperDetailView 的 artisanStudioHUD，不先动底层 Metal。
+    Reasoning:
+    - 第一层只保留总强度与风格预设，不显示伪分析摘要。
+    - 参数仍保留，但放进 Expert drawer，避免挡住预览反馈。
+    - 环境层需要 foreground/mid/background，真实感来自速度、尺寸、模糊和混合差异。
+  -->
+  <main class="stage">
+    <section class="wallpaper" aria-label="实时壁纸预览">
+      <div class="particles layer-back" id="particlesBack"></div>
+      <div class="particles layer-mid" id="particlesMid"></div>
+      <div class="particles layer-front" id="particlesFront"></div>
+      <div class="grain"></div>
+    </section>
+
+    <header class="topbar">
+      <div class="brief">
+        <strong>Plum Lab</strong>
+        <span>Realtime Wallpaper Director</span>
+      </div>
+      <nav class="variant-switcher" aria-label="设计方向">
+        <button class="is-active" data-layout="director">导演条</button>
+        <button data-layout="side">侧翼胶片盒</button>
+        <button data-layout="lens">镜头堆栈</button>
+      </nav>
+    </header>
+
+    <section class="lab" aria-label="实验室实时调校">
+      <div class="lab-content">
+        <nav class="lab-rail" aria-label="实验室分组">
+          <div class="lab-title">实验室</div>
+          <button class="rail-tab is-active" data-tab="smart">预设</button>
+          <button class="rail-tab" data-tab="color">色彩</button>
+          <button class="rail-tab" data-tab="effects">特效</button>
+          <button class="rail-tab" data-tab="weather">天气</button>
+          <button class="rail-tab" data-tab="particles">粒子</button>
+        </nav>
+
+        <div class="workspace">
+          <section class="tab-panel" data-panel="smart">
+            <p class="section-kicker">风格预设</p>
+            <div class="look-row" id="lookRow">
+              <button class="look is-active" data-look="film">轻胶片</button>
+              <button class="look" data-look="soft">柔光</button>
+              <button class="look" data-look="night">暗夜</button>
+              <button class="look" data-look="clear">清透</button>
+              <button class="look" data-look="mono">漫画灰</button>
+            </div>
+          </section>
+
+          <section class="tab-panel" data-panel="color">
+            <p class="section-kicker">COLOR TUNING</p>
+            <div class="control-grid">
+              <div class="knob"><label>曝光 <b>102</b></label><input class="range live" data-var="--exposure" data-min="0.84" data-max="1.18" type="range" min="84" max="118" value="102" /></div>
+              <div class="knob"><label>对比度 <b>108</b></label><input class="range live" data-var="--contrast" data-min="0.9" data-max="1.28" type="range" min="90" max="128" value="108" /></div>
+              <div class="knob"><label>饱和度 <b>92</b></label><input class="range live" data-var="--saturation" data-min="0.62" data-max="1.28" type="range" min="62" max="128" value="92" /></div>
+              <div class="knob"><label>高光 <b>柔和</b></label><input class="range" type="range" min="0" max="100" value="54" /></div>
+              <div class="knob"><label>阴影 <b>抬升</b></label><input class="range" type="range" min="0" max="100" value="58" /></div>
+              <div class="knob"><label>色温 <b>冷</b></label><input class="range" type="range" min="0" max="100" value="42" /></div>
+            </div>
+          </section>
+
+          <section class="tab-panel" data-panel="effects">
+            <p class="section-kicker">VISUAL EFFECTS</p>
+            <div class="control-grid">
+              <div class="knob"><label>模糊 <b>0px</b></label><input class="range live" data-var="--blur" data-min="0" data-max="1.2" data-px="1" type="range" min="0" max="120" value="0" /></div>
+              <div class="knob"><label>颗粒 <b>16</b></label><input class="range live" data-var="--grain" data-min="0" data-max="0.34" type="range" min="0" max="34" value="16" /></div>
+              <div class="knob"><label>暗角 <b>42</b></label><input class="range live" data-var="--vignette" data-min="0" data-max="0.74" type="range" min="0" max="74" value="42" /></div>
+              <div class="knob"><label>辉光 <b>低</b></label><input class="range" type="range" min="0" max="100" value="28" /></div>
+              <div class="knob"><label>色散 <b>关</b></label><input class="range" type="range" min="0" max="100" value="0" /></div>
+              <div class="knob"><label>胶片闪烁 <b>轻</b></label><input class="range" type="range" min="0" max="100" value="18" /></div>
+            </div>
+          </section>
+
+          <section class="tab-panel" data-panel="weather">
+            <p class="section-kicker">WEATHER LAYERS</p>
+            <div class="weather-row">
+              <button class="weather-card is-active" data-env="dust"><span>微尘</span><small>低速漂浮，适合漫画/插画</small></button>
+              <button class="weather-card" data-env="petals"><span>花瓣</span><small>前景大瓣 + 背景碎片</small></button>
+              <button class="weather-card" data-env="snow"><span>薄雪</span><small>三层景深，低透明混合</small></button>
+              <button class="weather-card" data-env="cyber"><span>霓光雨</span><small>斜向雨丝，响应风向</small></button>
+            </div>
+            <div class="control-grid" style="margin-top: 12px;">
+              <div class="knob"><label>天气强度 <b>48</b></label><input id="weatherRange" class="range" type="range" min="0" max="100" value="48" /></div>
+              <div class="knob"><label>风向 <b>右偏</b></label><input class="range" type="range" min="0" max="100" value="62" /></div>
+              <div class="knob"><label>景深融合 <b>自然</b></label><input class="range" type="range" min="0" max="100" value="70" /></div>
+            </div>
+          </section>
+
+          <section class="tab-panel" data-panel="particles">
+            <p class="section-kicker">PARTICLE SYSTEM</p>
+            <div class="scene-row">
+              <button class="scene-card is-active"><span>背景层</span><small>小、慢、模糊，负责空气感</small></button>
+              <button class="scene-card"><span>中景层</span><small>跟随画面色调，避免抢主体</small></button>
+              <button class="scene-card"><span>前景层</span><small>少量大颗粒，制造真实纵深</small></button>
+              <button class="scene-card"><span>融合规则</span><small>亮部降透明，暗部保留轨迹</small></button>
+            </div>
+          </section>
+        </div>
+
+        <div class="control-side">
+          <div>
+            <div class="meter-label">
+              <span>INTENSITY</span>
+              <span id="intensityLabel">62</span>
+            </div>
+            <input id="intensityRange" class="range" type="range" min="0" max="100" value="62" />
+          </div>
+          <button class="apply" id="expertButton">专家参数</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="expert" id="expertPanel" aria-label="专家参数">
+      <h3>EXPERT PARAMETERS</h3>
+      <div class="expert-row">
+        <span>曝光</span>
+        <input class="range" data-var="--exposure" data-min="0.84" data-max="1.18" data-unit="x" type="range" min="84" max="118" value="102" />
+        <b>1.02</b>
+      </div>
+      <div class="expert-row">
+        <span>反差</span>
+        <input class="range" data-var="--contrast" data-min="0.9" data-max="1.28" data-unit="x" type="range" min="90" max="128" value="108" />
+        <b>1.08</b>
+      </div>
+      <div class="expert-row">
+        <span>饱和</span>
+        <input class="range" data-var="--saturation" data-min="0.62" data-max="1.28" data-unit="x" type="range" min="62" max="128" value="92" />
+        <b>0.92</b>
+      </div>
+      <div class="expert-row">
+        <span>暗角</span>
+        <input class="range" data-var="--vignette" data-min="0" data-max="0.74" data-unit="" type="range" min="0" max="74" value="42" />
+        <b>0.42</b>
+      </div>
+    </section>
+
+    <button class="lab-entry" id="labEntry" aria-label="打开实验室"></button>
+
+    <p class="caption">推荐方向：先落地「侧翼胶片盒」或「镜头堆栈」。它们不遮挡人物主体，适合边看边调；「导演条」保留给宽屏和沉浸展示。</p>
+  </main>
+
+  <script>
+    const rootStyle = document.documentElement.style;
+    const body = document.body;
+    const intensityRange = document.getElementById("intensityRange");
+    const intensityLabel = document.getElementById("intensityLabel");
+    const expertButton = document.getElementById("expertButton");
+    const expertPanel = document.getElementById("expertPanel");
+    const labEntry = document.getElementById("labEntry");
+
+    const looks = {
+      film: { exposure: 1.02, contrast: 1.08, saturation: .92, grain: .16, vignette: .42, blur: "0px", env: "dust", weather: .48 },
+      soft: { exposure: 1.08, contrast: .96, saturation: 1.02, grain: .08, vignette: .24, blur: ".25px", env: "petals", weather: .34 },
+      night: { exposure: .9, contrast: 1.22, saturation: .84, grain: .18, vignette: .66, blur: "0px", env: "cyber", weather: .58 },
+      clear: { exposure: 1.06, contrast: 1.04, saturation: 1.08, grain: .04, vignette: .18, blur: "0px", env: "dust", weather: .22 },
+      mono: { exposure: 1.01, contrast: 1.18, saturation: .62, grain: .2, vignette: .38, blur: "0px", env: "snow", weather: .32 }
+    };
+
+    function setEnv(env) {
+      body.classList.remove("env-dust", "env-petals", "env-snow", "env-cyber");
+      body.classList.add(`env-${env}`);
+    }
+
+    function applyLook(name) {
+      const look = looks[name];
+      if (!look) return;
+      rootStyle.setProperty("--exposure", look.exposure);
+      rootStyle.setProperty("--contrast", look.contrast);
+      rootStyle.setProperty("--saturation", look.saturation);
+      rootStyle.setProperty("--grain", look.grain);
+      rootStyle.setProperty("--vignette", look.vignette);
+      rootStyle.setProperty("--blur", look.blur);
+      rootStyle.setProperty("--weather", look.weather);
+      setEnv(look.env);
+      document.querySelectorAll(".look").forEach(btn => btn.classList.toggle("is-active", btn.dataset.look === name));
+    }
+
+    function renderParticles(targetId, count, scale, speed) {
+      const target = document.getElementById(targetId);
+      const html = [];
+      for (let i = 0; i < count; i++) {
+        const x = Math.round((i * 37.8 + Math.sin(i) * 11) % 104);
+        const size = (1.6 + ((i * 19) % 44) / 10) * scale;
+        const height = size * (1.8 + ((i * 7) % 9));
+        const duration = (7 + ((i * 13) % 14)) / speed;
+        const delay = -1 * ((i * 11) % 18);
+        const wind = ((i % 2 ? 14 : -10) + ((i * 3) % 18)) * scale;
+        const rotate = (i * 29) % 180;
+        html.push(`<i class="p" style="--x:${x}%;--s:${size.toFixed(1)}px;--h:${height.toFixed(1)}px;--d:${duration.toFixed(1)}s;--delay:${delay.toFixed(1)}s;--wind:${wind.toFixed(1)}vw;--r:${rotate}deg"></i>`);
+      }
+      target.innerHTML = html.join("");
+    }
+
+    renderParticles("particlesBack", 56, .7, .62);
+    renderParticles("particlesMid", 46, 1, .9);
+    renderParticles("particlesFront", 26, 1.35, 1.2);
+
+    function setLayout(layout) {
+      body.dataset.layout = layout;
+      document.querySelectorAll(".variant-switcher button").forEach(item => {
+        item.classList.toggle("is-active", item.dataset.layout === layout);
+      });
+    }
+
+    document.querySelectorAll("[data-layout]").forEach(button => {
+      button.addEventListener("click", () => {
+        setLayout(button.dataset.layout);
+      });
+    });
+
+    document.querySelectorAll("[data-look]").forEach(button => {
+      button.addEventListener("click", () => applyLook(button.dataset.look));
+    });
+
+    document.querySelectorAll("[data-env]").forEach(button => {
+      button.addEventListener("click", () => {
+        setEnv(button.dataset.env);
+        rootStyle.setProperty("--weather", ".56");
+        document.querySelectorAll(".weather-card").forEach(item => item.classList.toggle("is-active", item === button));
+      });
+    });
+
+    document.querySelectorAll(".rail-tab").forEach(button => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".rail-tab").forEach(item => item.classList.toggle("is-active", item === button));
+        body.dataset.tab = button.dataset.tab;
+      });
+    });
+
+    intensityRange.addEventListener("input", (event) => {
+      const value = Number(event.target.value);
+      intensityLabel.textContent = String(value).padStart(2, "0");
+      rootStyle.setProperty("--intensity", value / 100);
+    });
+
+    expertButton.addEventListener("click", () => {
+      expertPanel.classList.toggle("is-open");
+    });
+
+    labEntry.addEventListener("click", () => {
+      setLayout("side");
+      body.dataset.tab = "smart";
+      document.querySelectorAll(".rail-tab").forEach(item => item.classList.toggle("is-active", item.dataset.tab === "smart"));
+    });
+
+    const liveInputs = document.querySelectorAll(".live");
+    liveInputs.forEach(input => {
+      input.addEventListener("input", () => {
+        const min = Number(input.dataset.min);
+        const max = Number(input.dataset.max);
+        const rawMin = Number(input.min);
+        const rawMax = Number(input.max);
+        const ratio = (Number(input.value) - rawMin) / (rawMax - rawMin);
+        const value = min + (max - min) * ratio;
+        const finalValue = input.dataset.px === "1" ? `${value.toFixed(2)}px` : value.toFixed(2);
+        rootStyle.setProperty(input.dataset.var, finalValue);
+        const label = input.closest(".knob").querySelector("b");
+        label.textContent = input.dataset.px === "1" ? `${Math.round(value)}px` : String(Math.round(Number(input.value))).padStart(2, "0");
+      });
+    });
+
+    const weatherRange = document.getElementById("weatherRange");
+    if (weatherRange) {
+      weatherRange.addEventListener("input", () => {
+        const value = Number(weatherRange.value);
+        rootStyle.setProperty("--weather", value / 100);
+        weatherRange.closest(".knob").querySelector("b").textContent = String(value).padStart(2, "0");
+      });
+    }
+
+    document.querySelectorAll(".expert input").forEach(input => {
+      input.addEventListener("input", () => {
+        const min = Number(input.dataset.min);
+        const max = Number(input.dataset.max);
+        const rawMin = Number(input.min);
+        const rawMax = Number(input.max);
+        const ratio = (Number(input.value) - rawMin) / (rawMax - rawMin);
+        const value = min + (max - min) * ratio;
+        const finalValue = input.dataset.var === "--vignette" ? value.toFixed(2) : value.toFixed(2);
+        rootStyle.setProperty(input.dataset.var, finalValue);
+        input.parentElement.querySelector("b").textContent = finalValue;
+      });
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("layout")) setLayout(params.get("layout"));
+    if (params.has("tab")) {
+      body.dataset.tab = params.get("tab");
+      document.querySelectorAll(".rail-tab").forEach(item => item.classList.toggle("is-active", item.dataset.tab === params.get("tab")));
+    }
+    if (params.has("look")) applyLook(params.get("look"));
+    if (params.has("env")) setEnv(params.get("env"));
+    if (params.has("intensity")) {
+      const value = Math.min(100, Math.max(0, Number(params.get("intensity")) || 62));
+      intensityRange.value = value;
+      intensityLabel.textContent = String(value).padStart(2, "0");
+      rootStyle.setProperty("--intensity", value / 100);
+    }
+    if (params.get("expert") === "1") expertPanel.classList.add("is-open");
+  </script>
+</body>
+</html>

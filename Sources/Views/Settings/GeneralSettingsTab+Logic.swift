@@ -1,25 +1,42 @@
 import SwiftUI
+import AppKit
 
 extension GeneralSettingsTab {
-    // MARK: - 业务逻辑（占位）
+    // MARK: - 业务逻辑
 
     func setLaunchAtLogin(_ enabled: Bool) {
-        print("setLaunchAtLogin: \(enabled)")
+        viewModel.setLaunchAtLogin(enabled)
     }
 
     func setMenuBarEnabled(_ enabled: Bool) {
-        print("setMenuBarEnabled: \(enabled)")
+        viewModel.setMenuBarEnabled(enabled)
     }
 
     func changeLibraryPath() {
-        print("changeLibraryPath triggered")
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = true
+        panel.prompt = "选择"
+        panel.message = "选择 PlumWallPaper 的资源存储目录"
+
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            Task { @MainActor in
+                viewModel.setLibraryPath(url.path)
+            }
+        }
     }
 
     func clearCache() {
-        print("clearCache triggered")
+        Task {
+            await viewModel.clearCaches()
+        }
     }
 
     func resetAllShortcuts() {
-        print("resetAllShortcuts triggered")
+        GlobalShortcutManager.shared.stop()
+        GlobalShortcutManager.shared.start()
     }
 }

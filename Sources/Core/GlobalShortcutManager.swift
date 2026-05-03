@@ -17,6 +17,8 @@ final class GlobalShortcutManager {
     private init() {}
 
     func start() {
+        guard localMonitor == nil, globalMonitor == nil else { return }
+
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if self?.handleLocalKeyEvent(event) == true { return nil }
             return event

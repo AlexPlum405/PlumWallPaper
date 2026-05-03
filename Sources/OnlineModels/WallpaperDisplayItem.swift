@@ -27,7 +27,12 @@ enum WallpaperDisplayItem: Identifiable {
         switch self {
         case .remote(let w): return w.thumbURL
         case .media(let m): return m.thumbnailURL
-        case .local(let w): return w.thumbnailPath.map { URL(fileURLWithPath: $0) }
+        case .local(let w):
+            guard let thumbnailPath = w.thumbnailPath else { return nil }
+            if let url = URL(string: thumbnailPath), url.scheme != nil {
+                return url
+            }
+            return URL(fileURLWithPath: thumbnailPath)
         }
     }
 

@@ -13,6 +13,8 @@ struct ContentView: View {
     @State private var selectedWallpaper: Wallpaper?
     @State private var hasInitialized = false
     @State private var exploreSection: ExploreSection?
+    @State private var showLaboratory = false
+    @StateObject private var downloadManager = DownloadManager.shared
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -50,6 +52,11 @@ struct ContentView: View {
         .overlay(alignment: .top) {
             TopNavigationBar(
                 selectedTab: $selectedTab,
+                onSearch: {
+                    withAnimation(.gallerySpring) {
+                        selectedTab = selectedTab == .wallpaper ? .media : .wallpaper
+                    }
+                },
                 onOpenSettings: {
                     guard let appDelegate = NSApp.delegate as? AppDelegate else { return }
                     appDelegate.showSettingsWindow(nil)
@@ -61,12 +68,33 @@ struct ContentView: View {
             )
             .padding(.top, 0) // 在 overlay 中已经脱离了主布局流
         }
+        .overlay(alignment: .bottomLeading) {
+            DownloadProgressOverlay(downloadManager: downloadManager)
+        }
         .frame(minWidth: 1200, minHeight: 800)
         .preferredColorScheme(.dark)
         .onChange(of: selectedTab) { _, newValue in
             if newValue == .home {
                 exploreSection = nil
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .plumSwitchMainTab)) { notification in
+            guard let rawValue = notification.object as? Int,
+                  let tab = MainTab(rawValue: rawValue) else { return }
+            withAnimation(.gallerySpring) {
+                selectedTab = tab
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .plumOpenMainWindow)) { _ in
+            NSApp.activate(ignoringOtherApps: true)
+            NSApp.windows.first { $0.title == "PlumWallPaper" }?.makeKeyAndOrderFront(nil)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .plumOpenLaboratory)) { _ in
+            showLaboratory = true
+        }
+        .sheet(isPresented: $showLaboratory) {
+            ShaderEditorView()
+                .frame(width: 980, height: 680)
         }
         .onAppear {
             // 确保只初始化一次

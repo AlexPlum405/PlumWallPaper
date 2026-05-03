@@ -18,7 +18,7 @@ final class MediaExploreViewModel: ObservableObject {
     @Published var selectedSource: MediaSource = .motionBG
     @Published var selectedResolution: String? = nil
     @Published var selectedAudioTrack = AudioTrackFilter.all
-    @Published var selectedSorting = "popular"
+    @Published var selectedSorting = "默认"
 
     // MARK: - Repository
     private let repository = MediaRepository.shared
@@ -38,6 +38,30 @@ final class MediaExploreViewModel: ObservableObject {
         case withAudio = "有音轨"
 
         var displayName: String { rawValue }
+    }
+
+    var sortingOptionsForCurrentSource: [String] {
+        switch selectedSource {
+        case .motionBG:
+            return ["默认"]
+        case .workshop:
+            return ["热门", "最新", "趋势"]
+        }
+    }
+
+    var showResolutionFilter: Bool {
+        selectedSource == .workshop
+    }
+
+    func selectSource(_ source: MediaSource) {
+        selectedSource = source
+        let options = sortingOptionsForCurrentSource
+        if !options.contains(selectedSorting) {
+            selectedSorting = options.first ?? "默认"
+        }
+        if source == .motionBG {
+            selectedResolution = nil
+        }
     }
 
     // MARK: - Public Methods
@@ -65,6 +89,9 @@ final class MediaExploreViewModel: ObservableObject {
             } else {
                 mediaItems.append(contentsOf: newItems)
                 currentPage += 1
+                if selectedSource == .motionBG {
+                    hasMore = false
+                }
             }
         } catch {
             errorMessage = "Failed to load media: \(error.localizedDescription)"
@@ -96,7 +123,10 @@ final class MediaExploreViewModel: ObservableObject {
     private func fetchMotionBGItems() async throws -> [MediaItem] {
         guard currentPage == 1 else { return [] }
 
-        let items = try await mediaService.fetchHomePage()
+        let trimmedQuery = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        let items = trimmedQuery.isEmpty
+            ? try await mediaService.fetchHomePage()
+            : try await repository.search(query: trimmedQuery, page: currentPage)
         return await applyClientFilters(to: items)
     }
 
@@ -119,10 +149,10 @@ final class MediaExploreViewModel: ObservableObject {
     }
 
     private var workshopSortOption: WorkshopSearchParams.SortOption {
-        switch selectedSorting.lowercased() {
-        case "latest":
+        switch selectedSorting {
+        case "最新":
             return .created
-        case "trending":
+        case "趋势":
             return .ranked
         default:
             return .ranked
@@ -130,12 +160,7 @@ final class MediaExploreViewModel: ObservableObject {
     }
 
     private var workshopTrendDays: Int? {
-        switch selectedSorting.lowercased() {
-        case "trending":
-            return 7
-        default:
-            return nil
-        }
+        selectedSorting == "趋势" ? 7 : nil
     }
 
     private var workshopResolutionTag: String? {
@@ -153,26 +178,6 @@ final class MediaExploreViewModel: ObservableObject {
 
     private func applyClientFilters(to items: [MediaItem]) async -> [MediaItem] {
         var filtered = items
-
-        let trimmedQuery = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if !trimmedQuery.isEmpty {
-            filtered = filtered.filter { item in
-                item.title.lowercased().contains(trimmedQuery)
-                    || item.tags.contains { $0.lowercased().contains(trimmedQuery) }
-                    || (item.collectionTitle?.lowercased().contains(trimmedQuery) ?? false)
-            }
-        }
-
-        if let selectedResolution {
-            filtered = filtered.filter { item in
-                item.resolutionLabel.localizedCaseInsensitiveContains(selectedResolution)
-                    || (item.exactResolution?.localizedCaseInsensitiveContains(selectedResolution) ?? false)
-                    || resolutionAliases(for: selectedResolution).contains { alias in
-                        item.resolutionLabel.localizedCaseInsensitiveContains(alias)
-                            || (item.exactResolution?.localizedCaseInsensitiveContains(alias) ?? false)
-                    }
-            }
-        }
 
         if selectedAudioTrack == .withAudio {
             filtered = await withTaskGroup(of: (Int, Bool).self) { group in
@@ -194,31 +199,7 @@ final class MediaExploreViewModel: ObservableObject {
             }
         }
 
-        switch selectedSorting.lowercased() {
-        case "latest":
-            filtered.sort { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
-        case "trending":
-            filtered.sort {
-                (($0.viewCount ?? 0) + ($0.favoriteCount ?? 0)) > (($1.viewCount ?? 0) + ($1.favoriteCount ?? 0))
-            }
-        default:
-            break
-        }
-
         return filtered
-    }
-
-    private func resolutionAliases(for value: String) -> [String] {
-        switch value {
-        case "4K":
-            return ["3840", "2160"]
-        case "2K":
-            return ["2560", "1440"]
-        case "1080P":
-            return ["1920", "1080"]
-        default:
-            return []
-        }
     }
 }
 

@@ -29,6 +29,41 @@ actor MediaService {
         return try parseHomePage(html: html)
     }
 
+    func search(query: String) async throws -> [MediaItem] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return try await fetchHomePage() }
+
+        var components = URLComponents(url: baseURL.appendingPathComponent("search"), resolvingAgainstBaseURL: false)
+        components?.queryItems = [URLQueryItem(name: "q", value: trimmed)]
+        guard let url = components?.url else { throw NetworkError.invalidResponse }
+
+        let html = try await networkService.fetchString(
+            from: url,
+            headers: [
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                "Accept-Language": "en-US,en;q=0.9"
+            ]
+        )
+
+        return try parseHomePage(html: html)
+    }
+
+    func fetchDetail(slug: String) async throws -> MediaItem {
+        let trimmed = slug.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard !trimmed.isEmpty else { throw NetworkError.invalidResponse }
+
+        let url = baseURL.appendingPathComponent(trimmed)
+        let html = try await networkService.fetchString(
+            from: url,
+            headers: [
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                "Accept-Language": "en-US,en;q=0.9"
+            ]
+        )
+
+        return try parseDetailPage(html: html, slug: trimmed, pageURL: url)
+    }
+
     // MARK: - HTML Parsing
 
     private func parseHomePage(html: String) throws -> [MediaItem] {
@@ -152,5 +187,159 @@ actor MediaService {
         NSLog("[MediaService] 解析完成，获得 \(items.count) 个项目")
 
         return items
+    }
+
+    private func parseDetailPage(html: String, slug: String, pageURL: URL) throws -> MediaItem {
+        let document = try SwiftSoup.parse(html)
+
+        let title = cleanTitle(
+            (try? document.select("meta[property='og:title']").first()?.attr("content"))
+            ?? (try? document.select("title").first()?.text())
+            ?? slug
+        )
+
+        let posterString = (try? document.select("meta[property='og:image']").first()?.attr("content"))
+            ?? (try? document.select("video[poster]").first()?.attr("poster"))
+            ?? (try? document.select("picture source[srcset]").first()?.attr("srcset").components(separatedBy: " ").first)
+
+        guard let posterString,
+              let thumbnailURL = URL(string: posterString, relativeTo: baseURL)?.absoluteURL else {
+            throw NetworkError.invalidResponse
+        }
+
+        let previewURL = (
+            (try? document.select("meta[property='og:video']").first()?.attr("content"))
+            ?? (try? document.select("video source[src]").first()?.attr("src"))
+        ).flatMap { URL(string: $0, relativeTo: baseURL)?.absoluteURL }
+
+        let tags = ((try? document.select("a[href^='/tag:']").array()) ?? [])
+            .compactMap { try? $0.text().trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .uniqued()
+
+        let summary = (try? document.select("meta[name='description']").first()?.attr("content"))?.htmlDecoded
+        let downloadOptions = parseDownloadOptions(html: html)
+        let bestDownload = downloadOptions.sorted { $0.qualityRank > $1.qualityRank }.first
+        let durationSeconds = parseDurationSeconds(html: html)
+
+        return MediaItem(
+            slug: slug,
+            title: title,
+            pageURL: pageURL,
+            thumbnailURL: thumbnailURL,
+            resolutionLabel: bestDownload?.label ?? "Live",
+            collectionTitle: tags.first,
+            summary: summary,
+            previewVideoURL: previewURL,
+            fullVideoURL: bestDownload?.remoteURL ?? previewURL,
+            posterURL: thumbnailURL,
+            tags: tags,
+            exactResolution: bestDownload?.resolutionText,
+            durationSeconds: durationSeconds,
+            downloadOptions: downloadOptions,
+            sourceName: "MotionBG",
+            isAnimatedImage: false,
+            subscriptionCount: nil,
+            favoriteCount: nil,
+            viewCount: nil,
+            ratingScore: nil,
+            authorName: nil,
+            fileSize: nil,
+            createdAt: nil,
+            updatedAt: nil
+        )
+    }
+
+    private func parseDownloadOptions(html: String) -> [MediaDownloadOption] {
+        let pattern = #"href=["']?(/dl/\w+/\d+)["']?[\s\S]*?font-bold[^>]*>(\w+)</span>[\s\S]*?\(([^)]+)\)[\s\S]*?text-xs[^>]*>([^<]+)</div>"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive, .dotMatchesLineSeparators]) else {
+            return []
+        }
+
+        let range = NSRange(html.startIndex..., in: html)
+        return regex.matches(in: html, options: [], range: range).compactMap { match in
+            guard
+                let href = capture(match: match, in: html, at: 1),
+                let label = capture(match: match, in: html, at: 2)?.htmlDecoded,
+                let fileSize = capture(match: match, in: html, at: 3)?.htmlDecoded,
+                let detailText = capture(match: match, in: html, at: 4)?.htmlDecoded,
+                let url = URL(string: href, relativeTo: baseURL)?.absoluteURL
+            else {
+                return nil
+            }
+
+            return MediaDownloadOption(
+                label: label.trimmingCharacters(in: .whitespacesAndNewlines),
+                fileSizeLabel: fileSize.trimmingCharacters(in: .whitespacesAndNewlines),
+                detailText: detailText.trimmingCharacters(in: .whitespacesAndNewlines),
+                remoteURL: url
+            )
+        }
+    }
+
+    private func parseDurationSeconds(html: String) -> Double? {
+        guard let raw = captureFirst(in: html, pattern: #""duration"\s*:\s*"PT([0-9HM.S]+)""#) else {
+            return nil
+        }
+
+        if raw.hasSuffix("S"), let seconds = Double(raw.dropLast()) {
+            return seconds
+        }
+
+        let parts = raw.components(separatedBy: "M")
+        if parts.count == 2,
+           let minutes = Double(parts[0].replacingOccurrences(of: "H", with: "")),
+           let seconds = Double(parts[1].replacingOccurrences(of: "S", with: "")) {
+            return minutes * 60 + seconds
+        }
+
+        return nil
+    }
+
+    private func cleanTitle(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: " live wallpaper", with: "", options: [.caseInsensitive])
+            .replacingOccurrences(of: " - MotionBGs", with: "", options: [.caseInsensitive])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .htmlDecoded
+    }
+
+    private func capture(match: NSTextCheckingResult, in text: String, at index: Int) -> String? {
+        guard let range = Range(match.range(at: index), in: text) else { return nil }
+        return String(text[range])
+    }
+
+    private func captureFirst(in text: String, pattern: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive, .dotMatchesLineSeparators]) else {
+            return nil
+        }
+        let range = NSRange(text.startIndex..., in: text)
+        guard let match = regex.firstMatch(in: text, options: [], range: range) else { return nil }
+        return capture(match: match, in: text, at: 1)
+    }
+}
+
+private extension Array where Element: Hashable {
+    func uniqued() -> [Element] {
+        var seen = Set<Element>()
+        return filter { seen.insert($0).inserted }
+    }
+}
+
+private extension String {
+    var htmlDecoded: String {
+        let entities: [String: String] = [
+            "&amp;": "&",
+            "&lt;": "<",
+            "&gt;": ">",
+            "&quot;": "\"",
+            "&#39;": "'",
+            "&apos;": "'",
+            "&nbsp;": " "
+        ]
+
+        return entities.reduce(self) { partial, item in
+            partial.replacingOccurrences(of: item.key, with: item.value)
+        }
     }
 }

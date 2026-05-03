@@ -13,52 +13,44 @@ extension PerformanceTab {
     }
 
     func setPauseOnBattery(_ enabled: Bool) {
-        viewModel.settings?.pauseOnBattery = enabled
-        viewModel.save()
+        viewModel.updatePauseStrategy(\.pauseOnBattery, enabled)
     }
 
     func setPauseOnFullscreen(_ enabled: Bool) {
-        viewModel.settings?.pauseOnFullscreen = enabled
-        viewModel.save()
+        viewModel.updatePauseStrategy(\.pauseOnFullscreen, enabled)
     }
 
     func setPauseOnLowBattery(_ enabled: Bool) {
-        viewModel.settings?.pauseOnLowBattery = enabled
-        viewModel.save()
+        viewModel.updatePauseStrategy(\.pauseOnLowBattery, enabled)
     }
 
     func setLowBatteryThreshold(_ threshold: Int) {
         viewModel.settings?.lowBatteryThreshold = threshold
         viewModel.save()
+        PauseStrategyManager.shared.reevaluate()
     }
 
     func setPauseOnScreenSharing(_ enabled: Bool) {
-        viewModel.settings?.pauseOnScreenSharing = enabled
-        viewModel.save()
+        viewModel.updatePauseStrategy(\.pauseOnScreenSharing, enabled)
     }
 
     func setPauseOnHighLoad(_ enabled: Bool) {
-        viewModel.settings?.pauseOnHighLoad = enabled
-        viewModel.save()
+        viewModel.updatePauseStrategy(\.pauseOnHighLoad, enabled)
     }
 
     func setPauseOnLostFocus(_ enabled: Bool) {
-        viewModel.settings?.pauseOnLostFocus = enabled
-        viewModel.save()
+        viewModel.updatePauseStrategy(\.pauseOnLostFocus, enabled)
     }
 
     func setPauseOnLidClosed(_ enabled: Bool) {
-        viewModel.settings?.pauseOnLidClosed = enabled
-        viewModel.save()
+        viewModel.updatePauseStrategy(\.pauseOnLidClosed, enabled)
     }
 
     func setPauseBeforeSleep(_ enabled: Bool) {
-        viewModel.settings?.pauseBeforeSleep = enabled
-        viewModel.save()
+        viewModel.updatePauseStrategy(\.pauseBeforeSleep, enabled)
     }
 
     func setPauseOnOcclusion(_ enabled: Bool) {
-        viewModel.settings?.pauseOnOcclusion = enabled
-        viewModel.save()
+        viewModel.updatePauseStrategy(\.pauseOnOcclusion, enabled)
     }
 }

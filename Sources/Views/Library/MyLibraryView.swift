@@ -12,6 +12,7 @@ struct MyLibraryView: View {
     @State var toast: ToastConfig?
     @State var showDeleteConfirm = false
     @State var showImportSheet = false
+    @State var showTagManager = false
     @State var detailWallpaper: Wallpaper?
     let mainPadding: CGFloat = 88
 
@@ -52,6 +53,7 @@ struct MyLibraryView: View {
             viewModel.configure(modelContext: modelContext)
         }
         .sheet(isPresented: $showImportSheet) { ImportWallpaperSheet(viewModel: viewModel, toast: $toast) }
+        .sheet(isPresented: $showTagManager) { TagManagerSheet() }
         .sheet(item: $detailWallpaper) { wallpaper in
             WallpaperDetailView(
                 wallpaper: wallpaper,
@@ -189,6 +191,19 @@ struct MyLibraryView: View {
 
                     // Import Button (visible when not in edit mode)
                     if !isEditMode {
+                        Button(action: { showTagManager = true }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "tag.fill")
+                                Text("标签管理")
+                            }
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(LiquidGlassColors.textSecondary)
+                            .padding(.horizontal, 16)
+                            .frame(height: 34)
+                            .galleryCardStyle(radius: 17, padding: 0)
+                        }
+                        .buttonStyle(.plain)
+
                         Button(action: { showImportSheet = true }) {
                             Text("导入资源")
                                 .font(.system(size: 12, weight: .bold))

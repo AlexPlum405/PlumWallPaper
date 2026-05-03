@@ -2,6 +2,7 @@
 import Foundation
 import Observation
 import Metal
+import SwiftData
 
 @Observable
 @MainActor
@@ -14,11 +15,16 @@ final class ShaderEditorViewModel {
     var selectedPassIndex: Int?
     var isLivePreview: Bool = true
     var isDirty: Bool = false
+    private var modelContext: ModelContext?
 
     // MARK: - Init
 
     init() {
         loadDefaultPasses()
+    }
+
+    func configure(modelContext: ModelContext) {
+        self.modelContext = modelContext
     }
 
     // MARK: - Actions
@@ -81,20 +87,69 @@ final class ShaderEditorViewModel {
     }
 
     func applyToEngine(screenId: String? = nil) {
-        // TODO: 将当前 passes 配置同步到 RenderPipeline 的 ShaderGraph
-        // RenderPipeline.shared.updateShaderPreset(passes, screenId: screenId)
+        let enabledPasses = passes.filter(\.enabled)
+        guard !enabledPasses.isEmpty else {
+            RenderPipeline.shared.updateEnvironmentEffects(nil)
+            return
+        }
+
+        var effects = WallpaperRenderEffects.identity
+        effects.name = preset?.name ?? "Shader Editor"
+
+        for pass in enabledPasses {
+            switch pass.name {
+            case "曝光调整":
+                effects.exposure = Double(pass.float("exposure", default: 0)) * 100 + 100
+            case "对比度":
+                effects.contrast = Double(pass.float("contrast", default: 1)) * 100
+            case "饱和度":
+                effects.saturation = Double(pass.float("saturation", default: 1)) * 100
+            case "色调旋转":
+                effects.hue = Double(pass.float("hue", default: 0))
+            case "灰度":
+                effects.grayscale = Double(pass.float("intensity", default: 0)) * 100
+            case "反转":
+                effects.invert = Double(pass.float("intensity", default: 0)) * 100
+            case "暗角":
+                effects.vignette = Double(pass.float("intensity", default: 0)) * 100
+            default:
+                break
+            }
+        }
+
+        RenderPipeline.shared.updateEnvironmentEffects(effects.hasVisualAdjustments || effects.hasDynamicEnvironment ? effects : nil)
     }
 
-    func save() {
+    func save(name: String = "全局暗房预设") {
+        if preset == nil {
+            let newPreset = ShaderPreset(name: name)
+            modelContext?.insert(newPreset)
+            preset = newPreset
+        }
+
         guard let preset else { return }
         preset.passes = passes
+        try? modelContext?.save()
         isDirty = false
-        // TODO: persist via ModelContext.save()
     }
 
     func revert() {
         guard let preset else { return }
         passes = preset.passes
         isDirty = false
+    }
+}
+
+private extension ShaderPassConfig {
+    func float(_ key: String, default defaultValue: Float) -> Float {
+        guard let value = parameters[key] else { return defaultValue }
+        switch value {
+        case .float(let number):
+            return number
+        case .int(let number):
+            return Float(number)
+        default:
+            return defaultValue
+        }
     }
 }

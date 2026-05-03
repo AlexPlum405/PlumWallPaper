@@ -50,7 +50,12 @@ final class RestoreManager {
             do {
                 if let wallpaper = try context.fetch(descriptor).first {
                     let url = URL(fileURLWithPath: wallpaper.filePath)
-                    try await RenderPipeline.shared.setWallpaper(url: url, screenId: screen.id)
+                    switch wallpaper.type {
+                    case .video:
+                        try await RenderPipeline.shared.setWallpaper(url: url, screenId: screen.id, wallpaperId: wallpaper.id)
+                    case .image, .heic:
+                        try await RenderPipeline.shared.setImageWallpaper(url: url, screenId: screen.id, wallpaperId: wallpaper.id)
+                    }
                 }
             } catch {
                 continue

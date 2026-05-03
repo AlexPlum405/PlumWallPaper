@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Plum x Zima Blue v2 - Explicit Interaction</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0; background: #000; color: #fff;
+            font-family: -apple-system, sans-serif;
+            overflow: hidden; height: 100vh;
+        }
+        #root { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+
+        /* 交互反馈层 */
+        .scanner-line {
+            position: absolute; width: 100%; height: 2px;
+            background: rgba(54, 169, 225, 0.3);
+            top: -10%; left: 0; pointer-events: none;
+            box-shadow: 0 0 15px #36a9e1;
+        }
+        .scan-anim { animation: scan 2s cubic-bezier(0.19, 1, 0.22, 1) infinite; }
+        @keyframes scan { 0% { top: -10%; } 100% { top: 110%; } }
+
+        .zima-tile {
+            width: 60px; height: 60px; background: #36a9e1;
+            cursor: pointer; transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 0 30px rgba(54, 169, 225, 0.5);
+            z-index: 100;
+        }
+        .zima-tile:hover { transform: scale(1.1) rotate(90deg); box-shadow: 0 0 60px #36a9e1; }
+
+        .nav-card {
+            width: 180px; height: 100px; background: #111;
+            border: 1px solid #222; cursor: pointer;
+            transition: all 0.4s; position: relative; overflow: hidden;
+        }
+        .nav-card.active { border-color: #36a9e1; transform: translateY(-10px); }
+        .nav-card img { width: 100%; height: 100%; object-fit: cover; opacity: 0.5; transition: 0.4s; }
+        .nav-card.active img { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState } = React;
+
+        const DATA = [
+            { id: 1, title: "The Blue", desc: "追求纯粹的本质", img: "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=800" },
+            { id: 2, title: "The Void", desc: "裂缝以外的真相", img: "https://images.unsplash.com/photo-1502691876148-a84978f5d81b?w=800" },
+            { id: 3, title: "The Frame", desc: "叙事边界的解构", img: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=800" }
+        ];
+
+        function App() {
+            const [current, setCurrent] = useState(DATA[0]);
+            const [showControls, setShowControls] = useState(true);
+
+            return (
+                <div style={{ position: 'relative', width: '100vw', height: '100vh', background: '#050505' }}>
+                    {/* 背景扫描线 (LDR 风格) */}
+                    <div className="scanner-line scan-anim" />
+
+                    {/* 主画面 */}
+                    <div style={{
+                        position: 'absolute', inset: 0,
+                        transition: '0.8s',
+                        filter: showControls ? 'brightness(0.3) blur(10px)' : 'none'
+                    }}>
+                        <img src={current.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+
+                    {/* 中央主控方块 (交互核心) */}
+                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                        <div
+                            className="zima-tile"
+                            onClick={() => setShowControls(!showControls)}
+                        >
+                            <div style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>
+                                {showControls ? "CLOSE" : "MENU"}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 显性控制层 */}
+                    {showControls && (
+                        <div style={{
+                            position: 'absolute', inset: 0,
+                            display: 'flex', flexDirection: 'column',
+                            justifyContent: 'space-between', padding: '80px'
+                        }}>
+                            {/* 顶部标题 */}
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontFamily: 'Newsreader', fontSize: 48, fontStyle: 'italic', marginBottom: 10 }}>
+                                    {current.title}
+                                </div>
+                                <div style={{ fontSize: 10, letterSpacing: '0.5em', color: '#36a9e1' }}>
+                                    {current.desc}
+                                </div>
+                            </div>
+
+                            {/* 底部卡片导航 (一眼就能看懂的交互) */}
+                            <div style={{ display: 'flex', gap: 20, justifyContent: 'center' }}>
+                                {DATA.map(item => (
+                                    <div
+                                        key={item.id}
+                                        className={`nav-card ${item.id === current.id ? 'active' : ''}`}
+                                        onClick={() => setCurrent(item)}
+                                    >
+                                        <img src={item.img} />
+                                        <div style={{ position: 'absolute', bottom: 10, left: 10, fontSize: 10 }}>
+                                            0{item.id}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 水印提示 */}
+                    <div style={{ position: 'absolute', top: 30, right: 30, color: '#444', fontSize: 10, letterSpacing: '2px' }}>
+                        ZIMA PROTOCOL // LDR.S01E14
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>

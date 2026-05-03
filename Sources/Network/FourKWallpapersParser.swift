@@ -380,7 +380,7 @@ final class FourKWallpapersParser {
         }
 
         // ⚠️ 注意：/images/walls/{id}.jpg 返回 404！原图在 /images/wallpapers/{name}-{W}x{H}-{id}.jpg
-        // originalURL 先用占位，等 width/height 计算完再构建
+        // originalURL 等 width/height 解析完成后再用详情页和分辨率构建。
         var originalURLString = ""
 
         // 高清图 URL（从 contentUrl 获取，优先于推断的 URL）
@@ -884,7 +884,6 @@ private extension String {
         return regex.firstMatch(in: self, options: [], range: range) != nil
     }
 }
-
 
 
 

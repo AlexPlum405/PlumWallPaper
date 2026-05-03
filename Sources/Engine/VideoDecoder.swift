@@ -7,6 +7,7 @@ import Metal
 @MainActor
 final class VideoDecoder {
     private var asset: AVAsset?
+    private var videoTrack: AVAssetTrack?
     private var reader: AVAssetReader?
     private var output: AVAssetReaderTrackOutput?
     private var displayLink: CVDisplayLink?
@@ -33,12 +34,18 @@ final class VideoDecoder {
         }
 
         self.nominalFrameRate = try await track.load(.nominalFrameRate)
+        self.videoTrack = track
 
         try setupReader(asset: asset, track: track)
     }
 
-    private func setupReader(asset: AVAsset, track: AVAssetTrack) throws {
+    private func setupReader(asset: AVAsset, track: AVAssetTrack, startTime: CMTime = .zero) throws {
         let reader = try AVAssetReader(asset: asset)
+        if startTime > .zero {
+            let totalDuration = CMTime(seconds: duration, preferredTimescale: 600)
+            let remainingDuration = CMTimeSubtract(totalDuration, startTime)
+            reader.timeRange = CMTimeRange(start: startTime, duration: remainingDuration)
+        }
         let settings: [String: Any] = [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
         ]
@@ -53,6 +60,7 @@ final class VideoDecoder {
 
         self.reader = reader
         self.output = output
+        self.currentTime = max(0, CMTimeGetSeconds(startTime))
     }
 
     func nextFrame() -> CVPixelBuffer? {
@@ -61,8 +69,9 @@ final class VideoDecoder {
         if reader.status == .completed {
             if isLooping {
                 try? restartReader()
-                return self.output?.copyNextSampleBuffer().flatMap {
-                    CMSampleBufferGetImageBuffer($0)
+                return self.output?.copyNextSampleBuffer().flatMap { sampleBuffer in
+                    currentTime = max(0, CMTimeGetSeconds(CMSampleBufferGetPresentationTimeStamp(sampleBuffer)))
+                    return CMSampleBufferGetImageBuffer(sampleBuffer)
                 }
             } else {
                 onEnd?()
@@ -71,13 +80,13 @@ final class VideoDecoder {
         }
 
         guard let sampleBuffer = output.copyNextSampleBuffer() else { return nil }
+        currentTime = max(0, CMTimeGetSeconds(CMSampleBufferGetPresentationTimeStamp(sampleBuffer)))
         return CMSampleBufferGetImageBuffer(sampleBuffer)
     }
 
     private func restartReader() throws {
         reader?.cancelReading()
-        guard let asset = asset,
-              let track = try? asset.tracks(withMediaType: .video).first else { return }
+        guard let asset, let track = videoTrack else { return }
         try setupReader(asset: asset, track: track)
     }
 
@@ -93,7 +102,18 @@ final class VideoDecoder {
     private(set) var isMuted: Bool = false
 
     func seek(to fraction: Double) {
-        // TODO: 精确 seek 需要重建 reader 并指定 timeRange
+        guard let asset else { return }
+        let clamped = min(max(fraction, 0), 1)
+        let seconds = duration * clamped
+        let time = CMTime(seconds: seconds, preferredTimescale: 600)
+
+        reader?.cancelReading()
+        guard let track = videoTrack else { return }
+        do {
+            try setupReader(asset: asset, track: track, startTime: time)
+        } catch {
+            try? restartReader()
+        }
     }
 
     func cleanup() {
@@ -101,6 +121,7 @@ final class VideoDecoder {
         reader = nil
         output = nil
         asset = nil
+        videoTrack = nil
     }
 }
 

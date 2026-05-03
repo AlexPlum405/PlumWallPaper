@@ -101,7 +101,6 @@ struct SettingsView: View {
         case .general: GeneralSettingsTab(viewModel: viewModel)
         case .playback: PlaybackTab(viewModel: viewModel)
         case .performance: PerformanceTab(viewModel: viewModel)
-        case .automation: AppRulesTabV2(viewModel: viewModel, toast: $toast)
         case .display: DisplayTab(viewModel: viewModel)
         case .advanced: AdvancedSettingsTab(viewModel: viewModel)
         case .about: AboutSettingsTab()
@@ -111,7 +110,7 @@ struct SettingsView: View {
 
 // MARK: - 设置标签枚举 (重构精简版)
 private enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, playback, display, performance, automation, advanced, about
+    case general, playback, display, performance, advanced, about
     var id: Self { self }
     var title: String {
         switch self {
@@ -119,7 +118,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .playback: return "播放与音频"
         case .display: return "显示与多屏"
         case .performance: return "性能"
-        case .automation: return "自动化"
         case .advanced: return "高级"
         case .about: return "关于"
         }
@@ -130,7 +128,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .playback: return "play.circle.fill"
         case .display: return "display.2"
         case .performance: return "gauge.medium"
-        case .automation: return "bolt.shield.fill"
         case .advanced: return "slider.horizontal.3"
         case .about: return "info.circle.fill"
         }
@@ -180,12 +177,7 @@ func artisanToggle(isOn: Binding<Bool>) -> some View {
 // MARK: - 高级子页
 private struct AdvancedSettingsTab: View {
     var viewModel: SettingsViewModel
-
-    private let mockScreens = [
-        (id: "system", name: "跟随系统默认输出"),
-        (id: "built-in", name: "内建显示器通道"),
-        (id: "external-1", name: "外接显示器通道")
-    ]
+    @State private var displayManager = DisplayManager.shared
 
     var body: some View {
         ScrollView {
@@ -242,8 +234,9 @@ private struct AdvancedSettingsTab: View {
                             get: { viewModel.settings?.audioScreenId ?? "system" },
                             set: { setAudioScreenId($0) }
                         )) {
-                            ForEach(mockScreens, id: \.id) { screen in
-                                Text(screen.name).tag(screen.id)
+                            Text("跟随系统默认输出").tag("system")
+                            ForEach(displayManager.availableScreens) { screen in
+                                Text("\(screen.name) · \(screen.resolution)").tag(screen.id)
                             }
                         }
                         .frame(width: 180)
@@ -270,28 +263,23 @@ private struct AdvancedSettingsTab: View {
     }
 
     private func setPauseOnHighLoad(_ enabled: Bool) {
-        viewModel.settings?.pauseOnHighLoad = enabled
-        viewModel.save()
+        viewModel.updatePauseStrategy(\.pauseOnHighLoad, enabled)
     }
 
     private func setPauseOnLostFocus(_ enabled: Bool) {
-        viewModel.settings?.pauseOnLostFocus = enabled
-        viewModel.save()
+        viewModel.updatePauseStrategy(\.pauseOnLostFocus, enabled)
     }
 
     private func setPauseOnLidClosed(_ enabled: Bool) {
-        viewModel.settings?.pauseOnLidClosed = enabled
-        viewModel.save()
+        viewModel.updatePauseStrategy(\.pauseOnLidClosed, enabled)
     }
 
     private func setPauseBeforeSleep(_ enabled: Bool) {
-        viewModel.settings?.pauseBeforeSleep = enabled
-        viewModel.save()
+        viewModel.updatePauseStrategy(\.pauseBeforeSleep, enabled)
     }
 
     private func setPauseOnOcclusion(_ enabled: Bool) {
-        viewModel.settings?.pauseOnOcclusion = enabled
-        viewModel.save()
+        viewModel.updatePauseStrategy(\.pauseOnOcclusion, enabled)
     }
 
     private func setAudioScreenId(_ id: String) {

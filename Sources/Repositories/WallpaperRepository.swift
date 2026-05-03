@@ -3,13 +3,13 @@ import Foundation
 import SwiftUI
 
 /// 静态壁纸数据仓库（聚合 Wallhaven + 4K Wallpapers）
+@MainActor
 final class WallpaperRepository: ObservableObject {
     static let shared = WallpaperRepository()
 
     // MARK: - Services
     private let wallhavenService = WallhavenService.shared
-    // 4K service 将在 agent 完成后可用
-    // private let fourKService = FourKWallpapersService.shared
+    private let fourKService = FourKWallpapersService.shared
 
     // MARK: - Cache
     private var featuredCache: (data: [RemoteWallpaper], timestamp: Date)?
@@ -29,15 +29,14 @@ final class WallpaperRepository: ObservableObject {
         }
 
         // 获取候选池
-        let wallhavenCandidates = try await fetchWallhavenFeaturedCandidates()
-        // TODO: 4K candidates when service is ready
-        // let fourKCandidates = try await fetchFourKFeaturedCandidates()
+        async let wallhavenCandidates = fetchWallhavenFeaturedCandidatesSafely()
+        async let fourKCandidates = fetchFourKFeaturedCandidatesSafely(limit: 12)
+        let (wallhaven, fourK) = await (wallhavenCandidates, fourKCandidates)
+        let allCandidates = wallhaven + fourK
+        guard !allCandidates.isEmpty else { throw NetworkError.invalidResponse }
 
         // 计算得分
-        let scored = wallhavenCandidates.map { wallpaper -> (RemoteWallpaper, Double) in
-            let score = calculateQualityScore(wallpaper, sourceWeight: 1.0)
-            return (wallpaper, score)
-        }
+        let scored = allCandidates.map { $0 }
 
         // 排序并应用多样性规则
         let sorted = scored.sorted { $0.1 > $1.1 }
@@ -60,14 +59,15 @@ final class WallpaperRepository: ObservableObject {
             return cache.data
         }
 
-        print("[WallpaperRepository] 调用 wallhavenService.fetchLatest()")
         // 获取候选池
-        let wallhavenLatest = try await wallhavenService.fetchLatest(limit: 20)
-        print("[WallpaperRepository] ✅ 获取到 \(wallhavenLatest.count) 个壁纸")
-        // TODO: 4K latest when service is ready
+        async let wallhavenLatest = fetchWallhavenLatestSafely(limit: 20)
+        async let fourKLatest = fetchFourKLatestSafely(limit: 12)
+        let (wallhaven, fourK) = await (wallhavenLatest, fourKLatest)
+        let latest = wallhaven + fourK
+        guard !latest.isEmpty else { throw NetworkError.invalidResponse }
 
         // 评分公式：时效性 60% + 浏览量 20% + 分辨率 20%
-        let scored = wallhavenLatest.map { wallpaper -> (RemoteWallpaper, Double) in
+        let scored = latest.map { wallpaper -> (RemoteWallpaper, Double) in
             let recencyScore = calculateRecencyScore(wallpaper.uploadedAt) * 0.6
             let viewScore = normalizeViews(wallpaper.views) * 0.2
             let resolutionScore = getResolutionScore(wallpaper.resolution) * 0.2
@@ -113,8 +113,18 @@ final class WallpaperRepository: ObservableObject {
             colors: colors
         )
 
-        let response = try await wallhavenService.search(parameters: parameters)
-        return response.data
+        do {
+            let response = try await wallhavenService.search(parameters: parameters)
+            return response.data
+        } catch {
+            return try await fourKService.search(
+                query: query,
+                page: page,
+                perPage: 24,
+                category: fourKCategory(fromWallhavenCategories: categories),
+                usePopular: sorting == WallhavenAPI.SortingOption.toplist.rawValue
+            )
+        }
     }
 
     // MARK: - Private Helpers
@@ -127,6 +137,57 @@ final class WallpaperRepository: ObservableObject {
 
         let (day, week, new) = try await (topDay, topWeek, latest)
         return day + week + new
+    }
+
+    private func fetchWallhavenFeaturedCandidatesSafely() async -> [(RemoteWallpaper, Double)] {
+        do {
+            return try await fetchWallhavenFeaturedCandidates().map {
+                ($0, calculateQualityScore($0, sourceWeight: 1.0))
+            }
+        } catch {
+            NSLog("[WallpaperRepository] Wallhaven featured fallback: \(error.localizedDescription)")
+            return []
+        }
+    }
+
+    private func fetchFourKFeaturedCandidatesSafely(limit: Int) async -> [(RemoteWallpaper, Double)] {
+        do {
+            return try await fourKService.fetchFeatured(limit: limit).map {
+                ($0, calculateQualityScore($0, sourceWeight: 0.82))
+            }
+        } catch {
+            NSLog("[WallpaperRepository] 4K featured fallback: \(error.localizedDescription)")
+            return []
+        }
+    }
+
+    private func fetchWallhavenLatestSafely(limit: Int) async -> [RemoteWallpaper] {
+        do {
+            return try await wallhavenService.fetchLatest(limit: limit)
+        } catch {
+            NSLog("[WallpaperRepository] Wallhaven latest fallback: \(error.localizedDescription)")
+            return []
+        }
+    }
+
+    private func fetchFourKLatestSafely(limit: Int) async -> [RemoteWallpaper] {
+        do {
+            return try await fourKService.fetchLatest(limit: limit)
+        } catch {
+            NSLog("[WallpaperRepository] 4K latest fallback: \(error.localizedDescription)")
+            return []
+        }
+    }
+
+    private func fourKCategory(fromWallhavenCategories categories: String) -> String? {
+        switch categories {
+        case "010":
+            return "anime"
+        case "001":
+            return "people"
+        default:
+            return nil
+        }
     }
 
     /// 计算质量得分

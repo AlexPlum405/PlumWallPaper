@@ -53,7 +53,13 @@ final class PreviewViewModel {
         guard let wallpaper else { return }
         let url = URL(fileURLWithPath: wallpaper.filePath)
         Task {
-            try? await RenderPipeline.shared.setWallpaper(url: url)
+            switch wallpaper.type {
+            case .video:
+                try? await RenderPipeline.shared.setWallpaper(url: url, wallpaperId: wallpaper.id)
+            case .image, .heic:
+                RenderPipeline.shared.cleanup()
+                try? WallpaperSetter.shared.setWallpaper(imageURL: url)
+            }
             // 将当前映射写入 RestoreManager（默认对所有屏幕）
             var mapping: [String: UUID] = [:]
             for screen in DisplayManager.shared.availableScreens {

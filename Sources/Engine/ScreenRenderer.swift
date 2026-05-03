@@ -20,12 +20,19 @@ final class ScreenRenderer {
         self.desktopWindow = DesktopWindow(screen: screen)
     }
 
-    func setWallpaper(url: URL, wallpaperId: UUID? = nil) async throws {
+    func setWallpaper(url: URL, wallpaperId: UUID? = nil, effects: WallpaperRenderEffects? = nil) async throws {
         NSLog("[ScreenRenderer] setWallpaper: \(url.lastPathComponent)")
 
         self.currentWallpaperId = wallpaperId
 
+        desktopWindow.displayVideo()
+        desktopWindow.configureEnvironment(effects: effects)
+
         let playerItem = AVPlayerItem(url: url)
+        if let effects,
+           let composition = WallpaperRenderEffectRenderer.makeVideoComposition(for: url, effects: effects) {
+            playerItem.videoComposition = composition
+        }
         player.replaceCurrentItem(with: playerItem)
 
         // 循环播放
@@ -50,6 +57,22 @@ final class ScreenRenderer {
         NSLog("[ScreenRenderer] ✅ player.play() rate=\(player.rate)")
     }
 
+    func setImageWallpaper(url: URL, wallpaperId: UUID? = nil, effects: WallpaperRenderEffects? = nil) async throws {
+        NSLog("[ScreenRenderer] setImageWallpaper: \(url.lastPathComponent)")
+
+        self.currentWallpaperId = wallpaperId
+        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
+        try desktopWindow.displayImage(url: url)
+        desktopWindow.configureEnvironment(effects: effects)
+
+        desktopWindow.alphaValue = 1.0
+        desktopWindow.show()
+    }
+
+    func updateEnvironment(effects: WallpaperRenderEffects?) {
+        desktopWindow.configureEnvironment(effects: effects)
+    }
+
     @objc private func playerDidFinishPlaying() {
         player.seek(to: .zero)
         player.play()
@@ -69,6 +92,7 @@ final class ScreenRenderer {
 
     func cleanup() {
         NotificationCenter.default.removeObserver(self)
+        desktopWindow.configureEnvironment(effects: nil)
         player.pause()
         player.replaceCurrentItem(with: nil)
         desktopWindow.hide()

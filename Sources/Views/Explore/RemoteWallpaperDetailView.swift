@@ -1,10 +1,15 @@
 import SwiftUI
+import AppKit
+import SwiftData
 
 // MARK: - Remote Wallpaper Detail View
 struct RemoteWallpaperDetailView: View {
     let wallpaper: RemoteWallpaper
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @State private var isDownloading = false
+    @State private var toast: ToastConfig?
+    @StateObject private var downloadManager = DownloadManager.shared
 
     var body: some View {
         ZStack {
@@ -41,6 +46,10 @@ struct RemoteWallpaperDetailView: View {
                 .padding(.bottom, 60)
             }
         }
+        .overlay(alignment: .bottomLeading) {
+            DownloadProgressOverlay(downloadManager: downloadManager)
+        }
+        .toast($toast)
     }
 
     // MARK: - 壁纸预览
@@ -118,10 +127,9 @@ struct RemoteWallpaperDetailView: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    // TODO: 实现下载功能
-                    isDownloading = true
+                    Task { await downloadWallpaper() }
                 } label: {
-                    Label("下载", systemImage: "arrow.down.circle")
+                    Label(isDownloading ? "下载中..." : "下载", systemImage: isDownloading ? "hourglass" : "arrow.down.circle")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(LiquidGlassColors.textPrimary)
                         .padding(.horizontal, 24)
@@ -190,5 +198,33 @@ struct RemoteWallpaperDetailView: View {
             return String(format: "%.1fk", Double(number) / 1000.0)
         }
         return "\(number)"
+    }
+
+    private func downloadWallpaper() async {
+        guard !isDownloading else { return }
+        guard let url = wallpaper.fullImageURL else {
+            toast = ToastConfig(message: "缺少可下载的原图地址", type: .warning)
+            return
+        }
+
+        if DownloadManager.shared.isAlreadyDownloaded(remoteId: wallpaper.id, context: modelContext) != nil {
+            toast = ToastConfig(message: "这张壁纸已在本地库中", type: .info)
+            return
+        }
+
+        isDownloading = true
+        defer { isDownloading = false }
+
+        do {
+            _ = try await DownloadManager.shared.downloadWallpaper(
+                item: .remote(wallpaper),
+                quality: wallpaper.resolution,
+                downloadURL: url,
+                context: modelContext
+            )
+            toast = ToastConfig(message: "下载完成，已加入本地库", type: .success)
+        } catch {
+            toast = ToastConfig(message: "下载失败: \(error.localizedDescription)", type: .error)
+        }
     }
 }

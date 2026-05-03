@@ -129,7 +129,7 @@ extension ParticleSystemPanel {
                 emitter.colorEnd = .white.opacity(0.3)
                 emitter.sizeStart = 4
                 emitter.sizeEnd = 4
-                emitter.texture = "circle.fill"
+                emitter.texture = ParticleMaterial.snow.rawValue
             case "火花":
                 emitter.rate = 200
                 emitter.velocity = [0, -50]
@@ -139,7 +139,7 @@ extension ParticleSystemPanel {
                 emitter.colorEnd = .red
                 emitter.sizeStart = 2
                 emitter.sizeEnd = 0
-                emitter.texture = "sparkles"
+                emitter.texture = ParticleMaterial.ember.rawValue
             default: break
             }
         }
@@ -157,7 +157,34 @@ extension ParticleSystemPanel {
     }
     
     func applyToDesktop() {
-        // TODO: 调用 WebBridge 应用这些粒子配置到桌面
-        print("Applied current emitter setup to desktop engine.")
+        guard let emitter = emitters.first(where: { $0.id == selectedEmitterID }) ?? emitters.first else { return }
+        let material = ParticleMaterial(style: emitter.texture)
+        let velocityLength = hypot(Double(emitter.velocity.x), Double(emitter.velocity.y))
+        let varianceLength = hypot(Double(emitter.velocityVariance.x), Double(emitter.velocityVariance.y))
+        let angle = atan2(Double(emitter.velocity.y), Double(emitter.velocity.x)) * 180.0 / .pi
+
+        var effects = WallpaperRenderEffects.identity
+        effects.name = "粒子系统编辑器"
+        effects.particleStyle = material.rawValue
+        effects.particleRate = Double(emitter.rate)
+        effects.particleLifetime = Double(max(emitter.lifetimeMin, emitter.lifetimeMax))
+        effects.particleSize = Double(max(emitter.sizeStart, emitter.sizeEnd))
+        effects.particleGravity = Double(emitter.gravity.y)
+        effects.weatherWind = Double(emitter.gravity.x)
+        effects.particleTurbulence = max(1, varianceLength)
+        effects.particleThrust = velocityLength / 10.0
+        effects.particleAngle = angle
+        effects.particleSpread = 90
+        effects.particleFadeIn = 8
+        effects.particleFadeOut = 38
+
+        if material == .rain {
+            effects.weatherRain = min(100, Double(emitter.rate) * 0.35)
+        }
+        if material == .snow {
+            effects.weatherSnow = min(100, Double(emitter.rate) * 0.28)
+        }
+
+        RenderPipeline.shared.updateEnvironmentEffects(effects)
     }
 }

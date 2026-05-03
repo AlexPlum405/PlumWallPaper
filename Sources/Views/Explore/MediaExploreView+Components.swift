@@ -53,7 +53,7 @@ extension MediaExploreView {
                         isSelected: viewModel.selectedSource == source
                     ) {
                         withAnimation(.gallerySpring) {
-                            viewModel.selectedSource = source
+                            viewModel.selectSource(source)
                         }
                         Task { await viewModel.applyFilters() }
                     }
@@ -92,7 +92,7 @@ extension MediaExploreView {
     var sortingFilters: some View {
         artisanFilterGroup(
             title: "排序",
-            options: sortingOptions,
+            options: viewModel.sortingOptionsForCurrentSource,
             selected: $viewModel.selectedSorting
         )
     }
@@ -131,9 +131,11 @@ extension MediaExploreView {
         VStack(alignment: .leading, spacing: 20) {
             Divider()
                 .background(LiquidGlassColors.glassBorder)
-            
+
             HStack(spacing: 32) {
-                resolutionFilters
+                if viewModel.showResolutionFilter {
+                    resolutionFilters
+                }
                 audioTrackFilters
                 Spacer()
             }
@@ -273,9 +275,5 @@ extension MediaExploreView {
 
     var audioTrackOptions: [String] {
         MediaExploreViewModel.AudioTrackFilter.allCases.map(\.displayName)
-    }
-
-    var sortingOptions: [String] {
-        ["popular", "latest", "trending"]
     }
 }

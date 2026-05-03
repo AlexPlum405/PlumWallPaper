@@ -53,6 +53,7 @@ final class Wallpaper {
 
 /// 壁纸来源
 enum WallpaperSource: String, Codable {
+    case online      // 在线收藏，仅保存远程引用
     case downloaded  // 从在线下载
     case imported    // 本地导入
 }

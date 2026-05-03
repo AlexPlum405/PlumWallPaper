@@ -91,10 +91,27 @@ final class LibraryViewModel {
     }
 
     func importFiles(urls: [URL]) {
-        // Skeleton: real import logic will be added in a later task
         isImporting = true
-        defer { isImporting = false }
-        // TODO: call import pipeline
+        Task {
+            do {
+                let imported = try await FileImporter.shared.importFiles(urls: urls)
+                guard let store else {
+                    wallpapers.append(contentsOf: imported)
+                    isImporting = false
+                    return
+                }
+                for wallpaper in imported {
+                    if !wallpapers.contains(where: { $0.fileHash == wallpaper.fileHash && !$0.fileHash.isEmpty }) {
+                        try store.add(wallpaper)
+                    }
+                }
+                loadWallpapers()
+                isImporting = false
+            } catch {
+                errorMessage = error.localizedDescription
+                isImporting = false
+            }
+        }
     }
 
     var filteredWallpapers: [Wallpaper] {

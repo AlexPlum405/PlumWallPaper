@@ -2,9 +2,7 @@ import SwiftUI
 
 struct DisplayTab: View {
     var viewModel: SettingsViewModel
-    
-    // 模拟屏幕顺序列表
-    @State private var mockScreens = ["Studio Display (Main)", "Side Monitor", "Liquid Retina XDR"]
+    @State private var displayManager = DisplayManager.shared
 
     var body: some View {
         ScrollView {
@@ -40,23 +38,65 @@ struct DisplayTab: View {
 
                 // MARK: - [物理排布顺序]
                 VStack(alignment: .leading, spacing: 16) {
-                    LiquidGlassSectionHeader(title: "物理排布顺序", icon: "arrow.left.and.right.square", color: LiquidGlassColors.primaryPink)
+                    HStack {
+                        LiquidGlassSectionHeader(title: "物理排布顺序", icon: "arrow.left.and.right.square", color: LiquidGlassColors.primaryPink)
+                        Spacer()
+                        Button {
+                            displayManager.refreshScreens()
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(LiquidGlassColors.textSecondary)
+                                .frame(width: 30, height: 30)
+                                .galleryCardStyle(radius: 15, padding: 0)
+                        }
+                        .buttonStyle(.plain)
+                    }
                     
                     VStack(spacing: 12) {
-                        ForEach(mockScreens, id: \.self) { screen in
+                        ForEach(displayManager.availableScreens) { screen in
                             HStack {
-                                Image(systemName: "line.3.horizontal")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundStyle(LiquidGlassColors.textQuaternary)
-                                
                                 Image(systemName: "display")
                                     .font(.system(size: 14))
                                     .foregroundStyle(LiquidGlassColors.primaryPink)
                                 
-                                Text(screen)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(screen.name)
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundStyle(LiquidGlassColors.textPrimary)
+                                    Text(screen.resolution)
+                                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                        .foregroundStyle(LiquidGlassColors.textQuaternary)
+                                }
+
+                                if screen.isMain {
+                                    Text("MAIN")
+                                        .font(.system(size: 9, weight: .black))
+                                        .kerning(1)
+                                        .foregroundStyle(LiquidGlassColors.primaryPink)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 3)
+                                        .background(Capsule().fill(LiquidGlassColors.primaryPink.opacity(0.12)))
+                                }
+
+                                Spacer()
+
+                                Text(screen.id)
+                                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                    .foregroundStyle(LiquidGlassColors.textQuaternary)
+                            }
+                            .padding(.horizontal, 16)
+                            .frame(height: 52)
+                            .galleryCardStyle(radius: 12, padding: 0)
+                        }
+
+                        if displayManager.availableScreens.isEmpty {
+                            HStack {
+                                Image(systemName: "display.trianglebadge.exclamationmark")
+                                    .foregroundStyle(LiquidGlassColors.warningOrange)
+                                Text("未检测到可用显示器")
                                     .font(.system(size: 13, weight: .bold))
                                     .foregroundStyle(LiquidGlassColors.textPrimary)
-                                
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
@@ -65,7 +105,7 @@ struct DisplayTab: View {
                         }
                     }
                     
-                    Text("拖拽行以调整全景模式下的渲染衔接顺序。")
+                    Text("全景模式将按 macOS 当前显示器顺序进行渲染衔接。")
                         .font(.system(size: 11))
                         .foregroundStyle(LiquidGlassColors.textQuaternary)
                         .padding(.leading, 4)

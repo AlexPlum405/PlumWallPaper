@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 // MARK: - Artisan Monograph HomeView (Scheme C: Online Data Integration)
 struct HomeView: View {
@@ -6,14 +7,19 @@ struct HomeView: View {
     var onSwitchToWallpaperTab: (() -> Void)? = nil
     var onSwitchToMediaTab: (() -> Void)? = nil
 
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Wallpaper.importDate, order: .reverse) private var savedWallpapers: [Wallpaper]
     @StateObject var viewModel = HomeFeedViewModel()
     @State var currentHeroIndex = 0
     @State private var timer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
     @State private var isApplying = false
+    @State private var isHeroDownloading = false
+    @State private var isHeroFavoriteUpdating = false
     @State var currentDetailIndex: Int = 0
     @State var detailWallpaper: Wallpaper?
     @State private var isHeroLeftHovered = false
     @State private var isHeroRightHovered = false
+    @State private var toast: ToastConfig?
 
     private let mainPadding: CGFloat = 88
 
@@ -111,11 +117,12 @@ struct HomeView: View {
                 }
             )
         }
+        .toast($toast)
     }
 
     private func preheatHomeVideos() {
         preheatHeroVideos()
-        let motionURLs = viewModel.popularMotions.compactMap(primaryVideoURL(for:))
+        let motionURLs = viewModel.popularMotions.compactMap(previewVideoURL(for:))
         VideoPreloader.shared.preload(urls: motionURLs, limit: 6)
     }
 
@@ -131,12 +138,12 @@ struct HomeView: View {
 
         let urls = indexes
             .map { viewModel.heroItems[$0] }
-            .compactMap(primaryVideoURL(for:))
+            .compactMap(bestHeroVideoURL(for:))
 
         VideoPreloader.shared.preload(urls: urls, limit: 3)
     }
 
-    private func primaryVideoURL(for item: MediaItem) -> URL? {
+    private func previewVideoURL(for item: MediaItem) -> URL? {
         item.previewVideoURL ?? item.fullVideoURL
     }
 
@@ -299,13 +306,13 @@ struct HomeView: View {
                     let item = viewModel.heroItems[currentHeroIndex]
 
                     // 只渲染当前视频。前后项通过 VideoPreloader 预热，避免 AppKit 视频层透出旧画面。
-                    if let videoURL = item.previewVideoURL ?? item.fullVideoURL {
+                    if let videoURL = bestHeroVideoURL(for: item) {
                         HeroVideoPlayer(url: videoURL, isActive: true)
                         .id(videoURL.absoluteString)
                         .frame(width: size.width, height: size.height)
                         .clipped()
                     } else {
-                        AsyncImage(url: item.thumbnailURL) { phase in
+                        AsyncImage(url: bestHeroImageURL(for: item)) { phase in
                             if let image = phase.image {
                                 image.resizable().aspectRatio(contentMode: .fill)
                             } else { Color.black }
@@ -325,15 +332,22 @@ struct HomeView: View {
             ).frame(height: 300)
 
             if !viewModel.heroItems.isEmpty {
+                let item = viewModel.heroItems[currentHeroIndex]
                 VStack(alignment: .leading, spacing: 14) {
-                    Text(viewModel.heroItems[currentHeroIndex].collectionTitle?.uppercased() ?? "FEATURED")
+                    Text(item.collectionTitle?.uppercased() ?? "FEATURED")
                         .font(.system(size: 9, weight: .black))
                         .kerning(4)
                         .foregroundStyle(LiquidGlassColors.primaryPink)
 
-                    Text(viewModel.heroItems[currentHeroIndex].title)
+                    Text(item.title)
                         .font(.custom("Georgia", size: 44).bold())
                         .foregroundStyle(.white)
+
+                    HStack(spacing: 10) {
+                        artisanHeroMetaChip(text: "ORIGINAL", icon: "sparkles")
+                        artisanHeroMetaChip(text: bestHeroResolutionLabel(for: item), icon: "square.resize")
+                        artisanHeroMetaChip(text: item.sourceName.uppercased(), icon: "globe")
+                    }
 
                     HStack(spacing: 24) {
                         Button(action: {
@@ -352,7 +366,29 @@ struct HomeView: View {
                             .padding(.horizontal, 32).frame(height: 44)
                             .background(Capsule().fill(LiquidGlassColors.primaryPink))
                             .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.3), radius: 15)
-                        }.buttonStyle(.plain)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isApplying)
+
+                        HStack(spacing: 12) {
+                            heroActionIconButton(
+                                icon: isHeroFavorite(item) ? "heart.fill" : "heart",
+                                isActive: isHeroFavorite(item),
+                                isBusy: isHeroFavoriteUpdating,
+                                help: isHeroFavorite(item) ? "取消收藏" : "收藏"
+                            ) {
+                                Task { await toggleHeroFavorite(item) }
+                            }
+
+                            heroActionIconButton(
+                                icon: "arrow.down.to.line.compact",
+                                isActive: isHeroDownloaded(item),
+                                isBusy: isHeroDownloading,
+                                help: isHeroDownloaded(item) ? "已下载" : "下载原片"
+                            ) {
+                                Task { await downloadHero(item) }
+                            }
+                        }
 
                         HStack(spacing: 8) {
                             ForEach(0..<viewModel.heroItems.count, id: \.self) { index in
@@ -374,6 +410,53 @@ struct HomeView: View {
             }
         }
         .frame(height: size.height)
+    }
+
+    private func artisanHeroMetaChip(text: String, icon: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 9, weight: .bold))
+            Text(text)
+                .font(.system(size: 10, weight: .black, design: .monospaced))
+        }
+        .foregroundStyle(.white.opacity(0.82))
+        .padding(.horizontal, 11)
+        .frame(height: 24)
+        .background(.ultraThinMaterial)
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(Color.white.opacity(0.16), lineWidth: 0.5))
+    }
+
+    private func heroActionIconButton(
+        icon: String,
+        isActive: Bool,
+        isBusy: Bool,
+        help: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            ZStack {
+                Circle()
+                    .fill(isActive ? LiquidGlassColors.primaryPink.opacity(0.22) : Color.white.opacity(0.08))
+                    .background(.ultraThinMaterial, in: Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(isActive ? LiquidGlassColors.primaryPink.opacity(0.5) : Color.white.opacity(0.14), lineWidth: 0.5)
+                    )
+
+                if isBusy {
+                    CustomProgressView(tint: .white, scale: 0.65)
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(isActive ? LiquidGlassColors.primaryPink : .white.opacity(0.86))
+                }
+            }
+            .frame(width: 44, height: 44)
+        }
+        .buttonStyle(.plain)
+        .disabled(isBusy)
+        .help(help)
     }
 
     private func artisanHeroNavButton(isLeft: Bool) -> some View {
@@ -440,7 +523,7 @@ struct HomeView: View {
                             detailWallpaper = wallpaper
                         }, onDownload: {
                             Task {
-                                await downloadFromCard(wallpaper)
+                                await downloadRemoteFromCard(remoteWallpaper)
                             }
                         })
                         .onHover { hovering in
@@ -495,7 +578,7 @@ struct HomeView: View {
                             detailWallpaper = wallpaper
                         }, onDownload: {
                             Task {
-                                await downloadFromCard(wallpaper)
+                                await downloadMediaFromCard(mediaItem)
                             }
                         })
                         .onHover { hovering in
@@ -544,37 +627,218 @@ struct HomeView: View {
         return allWallpapers.first ?? Wallpaper(name: "Unknown", filePath: "", type: .image)
     }
 
-    // MARK: - 快捷下载
+    // MARK: - Hero Online Actions
 
-    private func downloadFromCard(_ wallpaper: Wallpaper) async {
-        guard let remoteURL = URL(string: wallpaper.filePath), remoteURL.scheme?.hasPrefix("http") == true else {
+    private func bestHeroVideoURL(for item: MediaItem) -> URL? {
+        item.fullVideoURL ?? item.previewVideoURL
+    }
+
+    private func bestHeroImageURL(for item: MediaItem) -> URL {
+        item.posterURL ?? item.thumbnailURL
+    }
+
+    private func bestHeroDownloadOption(for item: MediaItem) -> MediaDownloadOption? {
+        item.downloadOptions.sorted { $0.qualityRank > $1.qualityRank }.first
+    }
+
+    private func bestHeroDownloadURL(for item: MediaItem) -> URL? {
+        bestHeroDownloadOption(for: item)?.remoteURL
+            ?? item.fullVideoURL
+            ?? item.previewVideoURL
+    }
+
+    private func bestHeroResolutionLabel(for item: MediaItem) -> String {
+        if let option = bestHeroDownloadOption(for: item) {
+            return option.resolutionText
+        }
+        return item.exactResolution ?? item.resolutionLabel
+    }
+
+    private func bestHeroQualityLabel(for item: MediaItem) -> String {
+        bestHeroDownloadOption(for: item)?.label ?? bestHeroResolutionLabel(for: item)
+    }
+
+    private func isHeroFavorite(_ item: MediaItem) -> Bool {
+        savedWallpapers.contains { $0.remoteId == item.id && $0.isFavorite }
+    }
+
+    private func isHeroDownloaded(_ item: MediaItem) -> Bool {
+        savedWallpapers.contains { wallpaper in
+            wallpaper.remoteId == item.id
+                && wallpaper.source == .downloaded
+                && !isRemotePath(wallpaper.filePath)
+                && FileManager.default.fileExists(atPath: wallpaper.filePath)
+        }
+    }
+
+    private func toggleHeroFavorite(_ item: MediaItem) async {
+        guard !isHeroFavoriteUpdating else { return }
+        isHeroFavoriteUpdating = true
+        defer { isHeroFavoriteUpdating = false }
+
+        do {
+            if let existing = try fetchSavedHeroWallpaper(remoteID: item.id) {
+                if existing.isFavorite && existing.source == .online {
+                    modelContext.delete(existing)
+                    toast = ToastConfig(message: "已取消收藏", type: .info)
+                } else {
+                    existing.isFavorite.toggle()
+                    toast = ToastConfig(message: existing.isFavorite ? "已加入收藏" : "已取消收藏", type: .success)
+                }
+            } else {
+                let wallpaper = makeOnlineHeroWallpaper(from: item)
+                modelContext.insert(wallpaper)
+                toast = ToastConfig(message: "已加入收藏", type: .success)
+            }
+
+            try modelContext.save()
+            SlideshowScheduler.shared.rebuildPlaylist()
+        } catch {
+            toast = ToastConfig(message: "收藏失败: \(error.localizedDescription)", type: .error)
+        }
+    }
+
+    private func downloadHero(_ item: MediaItem) async {
+        guard !isHeroDownloading else { return }
+
+        if let existing = DownloadManager.shared.isAlreadyDownloaded(remoteId: item.id, context: modelContext) {
+            if existing.isFavorite {
+                toast = ToastConfig(message: "这张壁纸已在本地库中", type: .info)
+            } else {
+                toast = ToastConfig(message: "下载完成，已在本地库中", type: .info)
+            }
+            return
+        }
+
+        isHeroDownloading = true
+        defer { isHeroDownloading = false }
+
+        do {
+            _ = try await downloadHeroIfNeeded(item)
+            SlideshowScheduler.shared.rebuildPlaylist()
+            toast = ToastConfig(message: "下载完成，已加入本地库", type: .success)
+        } catch {
+            toast = ToastConfig(message: "下载失败: \(error.localizedDescription)", type: .error)
+        }
+    }
+
+    private func downloadHeroIfNeeded(_ item: MediaItem) async throws -> Wallpaper {
+        if let existing = DownloadManager.shared.isAlreadyDownloaded(remoteId: item.id, context: modelContext) {
+            return existing
+        }
+
+        guard let downloadURL = bestHeroDownloadURL(for: item) else {
+            throw HomeHeroActionError.missingDownloadURL
+        }
+
+        return try await DownloadManager.shared.downloadWallpaper(
+            item: .media(item),
+            quality: bestHeroQualityLabel(for: item),
+            downloadURL: downloadURL,
+            context: modelContext
+        )
+    }
+
+    private func downloadRemoteFromCard(_ wallpaper: RemoteWallpaper) async {
+        guard let url = wallpaper.fullImageURL else {
+            toast = ToastConfig(message: "缺少可下载的原图地址", type: .warning)
+            return
+        }
+
+        if DownloadManager.shared.isAlreadyDownloaded(remoteId: wallpaper.id, context: modelContext) != nil {
+            toast = ToastConfig(message: "这张壁纸已在本地库中", type: .info)
             return
         }
 
         do {
-            let imageURL = URL(string: wallpaper.thumbnailPath ?? wallpaper.filePath) ?? remoteURL
-            let downloadsDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-                .appendingPathComponent("PlumWallPaper/Downloads", isDirectory: true)
-            try FileManager.default.createDirectory(at: downloadsDir, withIntermediateDirectories: true)
-
-            let ext = wallpaper.type == .video ? "mp4" : "jpg"
-            let sanitizedName = wallpaper.name.replacingOccurrences(of: "[^a-zA-Z0-9]", with: "_", options: .regularExpression).prefix(50)
-            let filename = "\(sanitizedName)_\(wallpaper.id.uuidString.prefix(8)).\(ext)"
-            let localURL = downloadsDir.appendingPathComponent(filename)
-
-            let (data, _) = try await URLSession.shared.data(from: imageURL)
-            try data.write(to: localURL)
-
-            NSLog("[HomeView] ✅ 快捷下载完成: \(localURL.path)")
+            _ = try await DownloadManager.shared.downloadWallpaper(
+                item: .remote(wallpaper),
+                quality: wallpaper.resolution,
+                downloadURL: url,
+                context: modelContext
+            )
+            SlideshowScheduler.shared.rebuildPlaylist()
+            toast = ToastConfig(message: "下载完成，已加入本地库", type: .success)
         } catch {
-            NSLog("[HomeView] ❌ 快捷下载失败: \(error.localizedDescription)")
+            toast = ToastConfig(message: "下载失败: \(error.localizedDescription)", type: .error)
         }
+    }
+
+    private func downloadMediaFromCard(_ item: MediaItem) async {
+        if DownloadManager.shared.isAlreadyDownloaded(remoteId: item.id, context: modelContext) != nil {
+            toast = ToastConfig(message: "这张壁纸已在本地库中", type: .info)
+            return
+        }
+
+        guard let downloadURL = bestHeroDownloadURL(for: item) else {
+            toast = ToastConfig(message: "缺少可下载的原片地址", type: .warning)
+            return
+        }
+
+        do {
+            _ = try await DownloadManager.shared.downloadWallpaper(
+                item: .media(item),
+                quality: bestHeroQualityLabel(for: item),
+                downloadURL: downloadURL,
+                context: modelContext
+            )
+            SlideshowScheduler.shared.rebuildPlaylist()
+            toast = ToastConfig(message: "下载完成，已加入本地库", type: .success)
+        } catch {
+            toast = ToastConfig(message: "下载失败: \(error.localizedDescription)", type: .error)
+        }
+    }
+
+    private func fetchSavedHeroWallpaper(remoteID: String) throws -> Wallpaper? {
+        let descriptor = FetchDescriptor<Wallpaper>(
+            predicate: #Predicate { wallpaper in
+                wallpaper.remoteId == remoteID
+            },
+            sortBy: [SortDescriptor(\.importDate, order: .reverse)]
+        )
+        return try modelContext.fetch(descriptor).first
+    }
+
+    private func makeOnlineHeroWallpaper(from item: MediaItem) -> Wallpaper {
+        let remoteSource: RemoteSourceType = item.sourceName.lowercased() == "steam workshop" ? .steamWorkshop : .motionBG
+        let contentURL = bestHeroDownloadURL(for: item)?.absoluteString ?? ""
+        let posterURL = bestHeroImageURL(for: item).absoluteString
+
+        return Wallpaper(
+            name: item.title,
+            filePath: contentURL,
+            type: .video,
+            resolution: bestHeroResolutionLabel(for: item),
+            fileSize: item.fileSize ?? 0,
+            duration: item.durationSeconds,
+            hasAudio: item.hasAudioTrack ?? false,
+            thumbnailPath: posterURL,
+            isFavorite: true,
+            source: .online,
+            remoteId: item.id,
+            remoteSource: remoteSource,
+            downloadQuality: item.fullVideoURL?.absoluteString,
+            remoteMetadata: RemoteMetadata(
+                author: item.authorName,
+                views: item.viewCount,
+                favorites: item.favoriteCount,
+                uploadDate: item.createdAt,
+                originalURL: item.pageURL.absoluteString
+            )
+        )
+    }
+
+    private func isRemotePath(_ path: String) -> Bool {
+        guard let url = URL(string: path), let scheme = url.scheme?.lowercased() else {
+            return false
+        }
+        return scheme == "http" || scheme == "https"
     }
 
     // MARK: - Hero 壁纸设置
 
     private func applyCurrentHeroAsWallpaper() async {
-        guard !viewModel.heroItems.isEmpty else { return }
+        guard !isApplying, !viewModel.heroItems.isEmpty else { return }
 
         let currentItem = viewModel.heroItems[currentHeroIndex]
 
@@ -584,42 +848,42 @@ struct HomeView: View {
         do {
             NSLog("[HomeView] 开始设置壁纸: \(currentItem.title)")
 
-            if let videoURL = currentItem.fullVideoURL ?? currentItem.previewVideoURL {
-                // 视频壁纸：通过 RenderPipeline 渲染到桌面
-                let tempDir = FileManager.default.temporaryDirectory
-                let filename = "\(currentItem.slug).mp4"
-                let localURL = tempDir.appendingPathComponent(filename)
-
-                if !FileManager.default.fileExists(atPath: localURL.path) {
-                    NSLog("[HomeView] 下载视频: \(videoURL.absoluteString)")
-                    let (data, _) = try await URLSession.shared.data(from: videoURL)
-                    try data.write(to: localURL)
-                    NSLog("[HomeView] ✅ 视频下载完成: \(localURL.path)")
-                }
-
-                try await RenderPipeline.shared.setWallpaper(url: localURL)
-                NSLog("[HomeView] ✅ 动态壁纸设置成功")
-            } else {
-                // 静态壁纸：使用 posterURL 高清图
-                let imageURL = currentItem.posterURL ?? currentItem.thumbnailURL
-                let tempDir = FileManager.default.temporaryDirectory
-                let filename = "\(currentItem.slug).jpg"
-                let localURL = tempDir.appendingPathComponent(filename)
-
-                if !FileManager.default.fileExists(atPath: localURL.path) {
-                    NSLog("[HomeView] 下载图片: \(imageURL.absoluteString)")
-                    let (data, _) = try await URLSession.shared.data(from: imageURL)
-                    try data.write(to: localURL)
-                    NSLog("[HomeView] ✅ 下载完成: \(localURL.path)")
-                }
-
-                try await MainActor.run {
-                    try WallpaperSetter.shared.setWallpaper(imageURL: localURL)
-                }
-                NSLog("[HomeView] ✅ 壁纸设置成功")
-            }
+            let wallpaper = try await downloadHeroIfNeeded(currentItem)
+            try await applyDownloadedWallpaper(wallpaper)
+            SlideshowScheduler.shared.rebuildPlaylist()
+            toast = ToastConfig(message: "已下载并应用最高质量壁纸", type: .success)
         } catch {
             NSLog("[HomeView] ❌ 设置壁纸失败: \(error.localizedDescription)")
+            toast = ToastConfig(message: "设置失败: \(error.localizedDescription)", type: .error)
+        }
+    }
+
+    private func applyDownloadedWallpaper(_ wallpaper: Wallpaper) async throws {
+        let url = URL(fileURLWithPath: wallpaper.filePath)
+        switch wallpaper.type {
+        case .video:
+            try await RenderPipeline.shared.setWallpaper(url: url, wallpaperId: wallpaper.id)
+        case .image, .heic:
+            RenderPipeline.shared.cleanup()
+            try WallpaperSetter.shared.setWallpaper(imageURL: url)
+        }
+
+        var mapping: [String: UUID] = [:]
+        for screen in DisplayManager.shared.availableScreens {
+            mapping[screen.id] = wallpaper.id
+        }
+        RestoreManager.shared.saveSession(mapping: mapping)
+        SlideshowScheduler.shared.onWallpaperChanged(wallpaper.id)
+    }
+}
+
+private enum HomeHeroActionError: LocalizedError {
+    case missingDownloadURL
+
+    var errorDescription: String? {
+        switch self {
+        case .missingDownloadURL:
+            return "缺少可下载的原片地址"
         }
     }
 }

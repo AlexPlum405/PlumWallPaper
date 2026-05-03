@@ -48,8 +48,29 @@ final class MenuBarViewModel {
     }
 
     func openMainWindow() {
+        NotificationCenter.default.post(name: .plumOpenMainWindow, object: nil)
         NSApp.activate(ignoringOtherApps: true)
         NSApp.windows.first?.makeKeyAndOrderFront(nil)
+    }
+
+    func openLibrary() {
+        openMainWindow()
+        NotificationCenter.default.post(name: .plumSwitchMainTab, object: MainTab.myLibrary.rawValue)
+    }
+
+    func openLaboratory() {
+        NotificationCenter.default.post(name: .plumOpenLaboratory, object: nil)
+        openMainWindow()
+    }
+
+    func nextWallpaper() {
+        SlideshowScheduler.shared.next()
+    }
+
+    func openFeedback() {
+        if let url = URL(string: "mailto:feedback@plumstudio.art?subject=PlumWallPaper%20Feedback") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     func quit() {

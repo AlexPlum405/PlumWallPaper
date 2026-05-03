@@ -5,6 +5,111 @@ import AVFoundation
 // MARK: - Artisan Exhibition Hall (Scheme C: Artisan Gallery)
 // 沉浸式壁纸鉴赏厅，UI 仅在鼠标触碰功能区时如雾般浮现。
 
+private enum LabTab: Int, CaseIterable, Identifiable {
+    case smart, color, effects, weather, particles
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .smart: return "预设"
+        case .color: return "色彩"
+        case .effects: return "特效"
+        case .weather: return "环境"
+        case .particles: return "粒子"
+        }
+    }
+
+    var headerTitle: String {
+        switch self {
+        case .smart: return "快速调校"
+        case .color: return "色彩调校"
+        case .effects: return "视觉特效"
+        case .weather: return "环境层"
+        case .particles: return "粒子层"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .smart: return "总强度 + 风格预设"
+        case .color: return "曝光、反差、色调即时反馈"
+        case .effects: return "颗粒、暗角、色散和质感"
+        case .weather: return "风、雾、雨、雪与雷电"
+        case .particles: return "前中后三层环境粒子"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .smart: return "sparkles"
+        case .color: return "camera.filters"
+        case .effects: return "wand.and.stars"
+        case .weather: return "cloud.sun"
+        case .particles: return "circle.hexagongrid"
+        }
+    }
+}
+
+private enum LabWeatherScene: String, CaseIterable, Identifiable {
+    case dust, fog, snow, cyberRain
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .dust: return "微尘"
+        case .fog: return "薄雾"
+        case .snow: return "薄雪"
+        case .cyberRain: return "霓光雨"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .dust: return "低速漂浮，适合漫画/插画"
+        case .fog: return "低透明雾层，柔化远景"
+        case .snow: return "三层景深，低透明混合"
+        case .cyberRain: return "斜向雨丝，响应风向"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .dust: return "aqi.medium"
+        case .fog: return "cloud.fog.fill"
+        case .snow: return "snowflake"
+        case .cyberRain: return "cloud.rain.fill"
+        }
+    }
+}
+
+private enum LabParticleLayer: String, CaseIterable, Identifiable {
+    case background, middle, foreground, blend
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .background: return "背景层"
+        case .middle: return "中景层"
+        case .foreground: return "前景层"
+        case .blend: return "融合规则"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .background: return "小、慢、模糊"
+        case .middle: return "跟随画面色调"
+        case .foreground: return "少量大颗粒"
+        case .blend: return "亮部降透明"
+        }
+    }
+}
+
+private let labParticleMaterials = ParticleMaterial.allCases
+
 struct WallpaperDetailView: View {
     @State var wallpaper: Wallpaper 
     var onPrevious: ((Wallpaper, @escaping (Wallpaper) -> Void) -> Void)? = nil
@@ -23,6 +128,7 @@ struct WallpaperDetailView: View {
     @State private var toastMessage: String?
     @State private var showToast = false
     @State private var isNavigatingWallpaper = false
+    @StateObject private var downloadManager = DownloadManager.shared
 
     // 侧翼导航悬停
     @State internal var isLeftEdgeHovered = false
@@ -45,8 +151,8 @@ struct WallpaperDetailView: View {
     @State internal var currentPresetName: String = "原图"
 
     // 粒子与环境系统状态
-    @State var particleStyle: String = "circle.fill"
-    @State var particleRate: Double = 60
+    @State var particleStyle: String = ParticleMaterial.dust.rawValue
+    @State var particleRate: Double = 0
     @State var particleLifetime: Double = 3
     @State var particleSize: Double = 4
     @State var particleGravity: Double = 9.8
@@ -68,6 +174,10 @@ struct WallpaperDetailView: View {
     @State private var lightningFlash: Double = 0 
 
     @State var isShowingShaderEditor = false
+    @State private var studioIntensity: Double = 0
+    @State private var isExpertExpanded = false
+    @State private var activeWeatherScene: LabWeatherScene = .dust
+    @State private var activeParticleLayer: LabParticleLayer = .middle
     
     var body: some View {
         ZStack {
@@ -81,12 +191,16 @@ struct WallpaperDetailView: View {
         }
         .frame(minWidth: 1200, minHeight: 800)
         .overlay { chromeOverlay }
+        .overlay(alignment: .bottomLeading) {
+            DownloadProgressOverlay(downloadManager: downloadManager)
+        }
         .overlay { toastOverlay }
         .preferredColorScheme(.dark)
         .onAppear {
             if wallpaper.type == .video, let videoURL = wallpaperContentURL {
                 VideoPreloader.shared.preload(url: videoURL)
             }
+            loadSavedStudioPreset()
         }
     }
     
@@ -97,7 +211,6 @@ struct WallpaperDetailView: View {
             HStack {
                 if onPrevious != nil {
                     navigationEdgeButton(direction: -1, isHovered: $isLeftEdgeHovered)
-                        .padding(.leading, 24)
                         .transition(.opacity)
                 }
 
@@ -105,7 +218,6 @@ struct WallpaperDetailView: View {
 
                 if onNext != nil {
                     navigationEdgeButton(direction: 1, isHovered: $isRightEdgeHovered)
-                        .padding(.trailing, 24)
                         .transition(.opacity)
                 }
             }
@@ -132,19 +244,21 @@ struct WallpaperDetailView: View {
 
                 Spacer(minLength: 0)
 
-                if isStudioActive {
-                    artisanStudioHUD
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .bottom).combined(with: .opacity),
-                            removal: .opacity
-                        ))
-                        .padding(.bottom, 24)
-                }
-
                 artisanMainDock
                     .padding(.bottom, 40)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            if isStudioActive {
+                artisanStudioHUD
+                    .padding(.trailing, 52)
+                    .padding(.vertical, 86)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .move(edge: .trailing).combined(with: .opacity)
+                    ))
+            }
         }
         .zIndex(10)
     }
@@ -197,7 +311,7 @@ struct WallpaperDetailView: View {
                 }
             }
 
-            if isStudioActive && studioTab == 4 && particleRate > 0 {
+            if isStudioActive && particleRate > 0 {
                 ParticleOverlay(
                     style: particleStyle,
                     rate: particleRate,
@@ -230,34 +344,40 @@ struct WallpaperDetailView: View {
             navigateWallpaper(direction: direction)
         } label: {
             ZStack {
-                // 核心：极高对比度背景 (黑色渐变盾牌)
-                Circle()
-                    .fill(Color.black.opacity(isHovered.wrappedValue ? 0.8 : 0.2))
-                    .frame(width: 64, height: 64)
-                    .blur(radius: isHovered.wrappedValue ? 2 : 12)
-                    .background(Circle().fill(.ultraThinMaterial))
-                    .overlay(Circle().stroke(Color.white.opacity(isHovered.wrappedValue ? 0.5 : 0.2), lineWidth: 1.5))
-                
+                Color.black.opacity(0.001)
+
                 navigationChevron(isPrevious: direction < 0)
-                    .frame(width: 20, height: 48)
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.8), radius: 4)
+                    .frame(width: 14, height: 44)
+                    .opacity(isHovered.wrappedValue ? 1 : 0.72)
+                    .offset(x: direction < 0 ? 28 : -28)
             }
-            .scaleEffect(isHovered.wrappedValue ? 1.05 : 1.0)
-            .frame(width: 140, height: 320) // 增加宽度提高热区，限制高度防止遮挡
+            .frame(width: 160)
+            .frame(maxHeight: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(isNavigatingWallpaper)
         .onHover { h in withAnimation(.galleryEase) { isHovered.wrappedValue = h } }
-        .padding(direction < 0 ? .leading : .trailing, 10)
         .keyboardShortcut(direction < 0 ? .leftArrow : .rightArrow, modifiers: [])
     }
 
     private func navigationChevron(isPrevious: Bool) -> some View {
-        RoundedChevron()
-            .stroke(.white, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
-            .rotationEffect(.degrees(isPrevious ? 180 : 0))
+        ZStack {
+            RoundedChevron()
+                .stroke(LiquidGlassColors.primaryPink.opacity(0.3), style: StrokeStyle(lineWidth: 12, lineCap: .round, lineJoin: .round))
+                .blur(radius: 8)
+
+            RoundedChevron()
+                .stroke(.white.opacity(0.6), style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round))
+                .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+
+            RoundedChevron()
+                .stroke(
+                    LinearGradient(colors: [.white, .white.opacity(0.2)], startPoint: .top, endPoint: .bottom),
+                    style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
+                )
+        }
+        .rotationEffect(.degrees(isPrevious ? 180 : 0))
     }
 
     private func navigateWallpaper(direction: Int) {
@@ -315,21 +435,13 @@ struct WallpaperDetailView: View {
 
     private var closeButtonHUD: some View {
         Button(action: { dismiss() }) {
-            ZStack {
-                Circle()
-                    .fill(Color.black.opacity(isCloseHovered ? 0.8 : 0.6))
-                    .frame(width: 48, height: 48)
-                Image(systemName: "xmark")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.white)
-            }
-            .background(.ultraThinMaterial, in: Circle())
-            .overlay(Circle().stroke(Color.white.opacity(isCloseHovered ? 0.6 : 0.3), lineWidth: 2))
-            .scaleEffect(isCloseHovered ? 1.1 : 1.0)
-            .artisanShadow(color: .black, radius: 10)
+            Image(systemName: "xmark")
+                .font(.system(size: 14, weight: .light))
+                .frame(width: 44, height: 44)
+                .background(Circle().fill(Color.black.opacity(0.4)))
+                .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
         }
         .buttonStyle(.plain)
-        .onHover { h in withAnimation(.galleryEase) { isCloseHovered = h } }
         .keyboardShortcut(.escape, modifiers: [])
     }
 
@@ -356,7 +468,7 @@ struct WallpaperDetailView: View {
             } }) {
                 VStack(spacing: 4) {
                     Image(systemName: "camera.aperture").font(.system(size: 18))
-                    Text("实验室").font(.system(size: 8, weight: .bold))
+                    Text("实验室").font(.system(size: 10, weight: .bold))
                 }
                 .foregroundStyle(isStudioActive ? LiquidGlassColors.primaryPink : .white.opacity(0.6))
                 .frame(width: 52, height: 52).background(Circle().fill(Color.white.opacity(0.05)))
@@ -372,156 +484,789 @@ struct WallpaperDetailView: View {
 
     private var artisanStudioHUD: some View {
         HStack(spacing: 0) {
-            VStack(spacing: 6) {
-                ArtisanHorizonTab(icon: "grid", label: "预设", isSelected: studioTab == 0) { withAnimation { studioTab = 0 } }
-                ArtisanHorizonTab(icon: "camera.filters", label: "光学", isSelected: studioTab == 1) { withAnimation { studioTab = 1 } }
-                ArtisanHorizonTab(icon: "crop", label: "风格", isSelected: studioTab == 2) { withAnimation { studioTab = 2 } }
-                ArtisanHorizonTab(icon: "cloud.sun", label: "天气", isSelected: studioTab == 3) { withAnimation { studioTab = 3 } }
-                ArtisanHorizonTab(icon: "sparkles", label: "粒子", isSelected: studioTab == 4) { withAnimation { studioTab = 4 } }
-            }
-            .frame(width: 84, height: 220).background(Color.white.opacity(0.01))
-            Divider().frame(width: 1, height: 220).opacity(0.06)
+            studioRail
+                .frame(width: 112)
+                .background(Color.white.opacity(0.018))
+
+            Divider()
+                .frame(width: 1)
+                .opacity(0.08)
+
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 24) {
-                    if studioTab == 4 { particleStyleRow }
-                    else {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("MODE: CURATED").font(.system(size: 6.5, weight: .black)).opacity(0.15).kerning(1.5)
-                            Text(currentTabLabel.uppercased()).font(.system(size: 10, weight: .medium)).kerning(2.5)
-                        }
-                        Spacer()
-                    }
-                    if studioTab == 4 {
-                        HStack(spacing: 16) {
-                            colorPreview(label: "START", color: $particleColorStart)
-                            colorPreview(label: "END", color: $particleColorEnd)
-                        }
-                    }
-                }
-                .padding(.horizontal, 40).padding(.top, 24).padding(.bottom, 12).frame(height: 64).border(width: 0.5, edges: [.bottom], color: .white.opacity(0.04))
+                studioHeader
+
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 0) {
-                        parameterGrid
-                        if studioTab == 4 {
-                            Text("SCROLL FOR MORE").font(.system(size: 6.5, weight: .bold)).opacity(0.08).kerning(1.5).padding(.vertical, 20)
-                        }
+                    VStack(alignment: .leading, spacing: 22) {
+                        studioWorkspace
+                        if isExpertExpanded { expertParameterShelf }
                     }
-                }.frame(height: 156) 
-            }.frame(width: 740, height: 220)
-            Divider().frame(width: 1, height: 220).opacity(0.06)
-            VStack(spacing: 24) {
-                Button(action: { resetFilters() }) {
-                    VStack(spacing: 4) { Text("↺").font(.system(size: 14)); Text("RESET").font(.system(size: 6.5, weight: .black)) }
-                    .foregroundStyle(.white.opacity(0.2)).frame(width: 44, height: 44).background(Circle().fill(.white.opacity(0.02)))
-                }.buttonStyle(.plain)
-                Button(action: { applyCurrentPreset() }) {
-                    VStack(spacing: 4) { Image(systemName: "checkmark").font(.system(size: 11)); Text("APPLY").font(.system(size: 6.5, weight: .black)) }
-                    .foregroundStyle(.black).frame(width: 44, height: 44).background(Circle().fill(LiquidGlassColors.primaryPink))
-                }.buttonStyle(.plain)
-            }.padding(.vertical, 20).frame(width: 80)
+                    .padding(22)
+                }
+
+                studioActionBar
+            }
+            .frame(width: 430)
         }
-        .frame(height: 220).background(LiquidGlassColors.deepBackground.opacity(0.7)).background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous)).artisanShadow(color: .black.opacity(0.4), radius: 60)
+        .frame(width: 544, height: 570)
+        .background(LiquidGlassColors.deepBackground.opacity(0.74))
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+        )
+        .artisanShadow(color: .black.opacity(0.44), radius: 64, y: 26)
+    }
+
+    private var studioRail: some View {
+        VStack(spacing: 12) {
+            Text("实验室")
+                .font(.system(size: 11, weight: .black))
+                .kerning(1.6)
+                .foregroundStyle(LiquidGlassColors.primaryPink)
+                .padding(.top, 24)
+                .padding(.bottom, 10)
+
+            ForEach(LabTab.allCases) { tab in
+                studioRailButton(tab)
+            }
+
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func studioRailButton(_ tab: LabTab) -> some View {
+        let isSelected = selectedLabTab == tab
+        return Button {
+            withAnimation(.gallerySpring) { studioTab = tab.rawValue }
+        } label: {
+            VStack(spacing: 6) {
+                Image(systemName: tab.icon)
+                    .font(.system(size: 16, weight: .light))
+                    .frame(width: 34, height: 30)
+                Text(tab.title)
+                    .font(.system(size: 11, weight: .black))
+                    .kerning(0.8)
+            }
+            .foregroundStyle(isSelected ? LiquidGlassColors.primaryPink : .white.opacity(0.28))
+            .frame(width: 84, height: 70)
+            .background {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(isSelected ? Color.white.opacity(0.055) : Color.clear)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(isSelected ? LiquidGlassColors.primaryPink.opacity(0.28) : Color.clear, lineWidth: 0.5)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var studioHeader: some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("实时调校")
+                    .font(.system(size: 10, weight: .black))
+                    .kerning(1.5)
+                    .foregroundStyle(.white.opacity(0.24))
+                Text(selectedLabTab.headerTitle)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.88))
+                Text(selectedLabTab.subtitle)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.36))
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+
+            Button {
+                withAnimation(.gallerySpring) {
+                    isStudioActive = false
+                    NSColorPanel.shared.orderOut(nil)
+                }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.36))
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(Color.white.opacity(0.045)))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 22)
+        .padding(.vertical, 20)
+        .border(width: 0.5, edges: [.bottom], color: .white.opacity(0.06))
     }
 
     private var currentTabLabel: String {
-        ["Presets", "Optics", "Style", "Weather", "Particles"][studioTab]
+        selectedLabTab.headerTitle
     }
 
-    private func colorPreview(label: String, color: Binding<Color>) -> some View {
-        VStack(spacing: 4) {
-            Text(label).font(.system(size: 6, weight: .black)).opacity(0.2)
-            ColorPicker("", selection: color).labelsHidden().frame(width: 20, height: 20).clipShape(Circle())
-        }
+    private var selectedLabTab: LabTab {
+        LabTab(rawValue: studioTab) ?? .smart
     }
 
-    private var particleStyleRow: some View {
-        HStack(spacing: 24) {
-            Text("STYLES").font(.system(size: 7, weight: .black)).opacity(0.15).kerning(1.2)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 24) {
-                    ForEach(["circle.fill", "sparkle", "sparkles", "star.fill", "aqi.medium", "sun.max.fill", "leaf.fill", "flower.fill", "drop.fill", "snowflake", "cloud.fill"], id: \.self) { icon in
-                        Button(action: { withAnimation { particleStyle = icon } }) {
-                            Image(systemName: icon).font(.system(size: 13, weight: .light))
-                                .foregroundStyle(particleStyle == icon ? LiquidGlassColors.primaryPink : .white.opacity(0.12))
-                        }.buttonStyle(.plain)
-                    }
-                }
+    private var compactDialColumns: [GridItem] {
+        [
+            GridItem(.fixed(180), spacing: 20),
+            GridItem(.fixed(180), spacing: 20)
+        ]
+    }
+
+    private var intensityBinding: Binding<Double> {
+        Binding(
+            get: { studioIntensity },
+            set: { newValue in
+                studioIntensity = newValue
+                applyStudioIntensity(newValue)
             }
-            Spacer()
+        )
+    }
+
+    @ViewBuilder
+    private var studioWorkspace: some View {
+        switch selectedLabTab {
+        case .smart:
+            smartWorkspace
+        case .color:
+            colorWorkspace
+        case .effects:
+            effectsWorkspace
+        case .weather:
+            weatherWorkspace
+        case .particles:
+            particlesWorkspace
         }
     }
 
     @ViewBuilder
-    private var parameterGrid: some View {
-        if studioTab == 0 {
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
-                ForEach(BuiltInPreset.allCases) { preset in
-                    let isActive = currentPresetName == preset.name
-                    Button(action: { applyPreset(preset) }) {
-                        Text(preset.name).font(.system(size: 9.5, weight: .bold)).frame(maxWidth: .infinity).frame(height: 40)
-                            .background(isActive ? LiquidGlassColors.primaryPink.opacity(0.12) : Color.white.opacity(0.02))
-                            .foregroundStyle(isActive ? LiquidGlassColors.primaryPink : .white.opacity(0.3)).clipShape(Capsule())
-                    }.buttonStyle(.plain)
+    private var smartWorkspace: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            intensityControl
+
+            sectionKicker("风格预设")
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                ForEach([BuiltInPreset.cinematic, .warm, .cool, .vintage, .fade, .original]) { preset in
+                    lookButton(preset)
                 }
-            }.padding(32)
-        } else if studioTab == 1 {
-            VStack(spacing: 24) {
-                HStack(spacing: 40) {
-                    ArtisanRulerDial(label: "曝光", value: $exposure, range: 0...200, unit: "ev")
-                    ArtisanRulerDial(label: "对比度", value: $contrast, range: 50...150, unit: "%")
-                    ArtisanRulerDial(label: "饱和度", value: $saturation, range: 0...200, unit: "%")
-                }
-                HStack(spacing: 40) {
-                    ArtisanRulerDial(label: "色相", value: $hue, range: -180...180, unit: "°")
-                    ArtisanRulerDial(label: "高光", value: $highlights, range: 0...200, unit: "%")
-                    ArtisanRulerDial(label: "阴影", value: $shadows, range: 0...200, unit: "%")
-                }
-            }.padding(32)
-        } else if studioTab == 2 {
-            VStack(spacing: 24) {
-                HStack(spacing: 40) {
-                    ArtisanRulerDial(label: "模糊", value: $blur, range: 0...40, unit: "px")
-                    ArtisanRulerDial(label: "噪点", value: $grain, range: 0...100, unit: "%")
-                    ArtisanRulerDial(label: "暗角", value: $vignette, range: 0...100, unit: "%")
-                }
-                HStack(spacing: 40) {
-                    ArtisanRulerDial(label: "黑白", value: $grayscale, range: 0...100, unit: "%")
-                    ArtisanRulerDial(label: "反相", value: $invert, range: 0...100, unit: "%")
-                    ArtisanRulerDial(label: "色散", value: $dispersion, range: 0...20, unit: "px")
-                }
-            }.padding(32)
-        } else if studioTab == 3 {
-            VStack(spacing: 32) {
-                HStack(spacing: 40) {
-                    ArtisanRulerDial(label: "全局风力", value: $weatherWind, range: -50...50, unit: "km/h")
-                    ArtisanRulerDial(label: "降雨强度", value: $weatherRain, range: 0...100, unit: "%")
-                    ArtisanRulerDial(label: "降雪密度", value: $weatherSnow, range: 0...100, unit: "%")
-                }
-                HStack(spacing: 40) {
-                    ArtisanRulerDial(label: "雷电频率", value: $weatherThunder, range: 0...100, unit: "%")
-                    Spacer().frame(width: 150); Spacer().frame(width: 150)
-                }
-            }.padding(32)
-        } else if studioTab == 4 {
-            VStack(spacing: 32) {
-                HStack(spacing: 40) {
-                    ArtisanRulerDial(label: "速率", value: $particleRate, range: 1...300, unit: "p/s")
-                    ArtisanRulerDial(label: "寿命", value: $particleLifetime, range: 0.1...10, unit: "s")
-                    ArtisanRulerDial(label: "尺寸", value: $particleSize, range: 1...40, unit: "px")
-                }
-                HStack(spacing: 40) {
-                    ArtisanRulerDial(label: "自旋", value: $particleSpin, range: 0...20, unit: "deg")
-                    ArtisanRulerDial(label: "扰动", value: $particleTurbulence, range: 0...20, unit: "px")
-                    ArtisanRulerDial(label: "重力", value: $particleGravity, range: -20...20, unit: "m/s²")
-                }
-                HStack(spacing: 40) {
-                    ArtisanRulerDial(label: "推力", value: $particleThrust, range: 0...50, unit: "pow")
-                    ArtisanRulerDial(label: "渐显", value: $particleFadeIn, range: 0...100, unit: "%")
-                    ArtisanRulerDial(label: "渐隐", value: $particleFadeOut, range: 0...100, unit: "%")
-                }
-            }.padding(32)
+            }
         }
+    }
+
+    private var colorWorkspace: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            sectionKicker("色彩调校")
+            LazyVGrid(columns: compactDialColumns, alignment: .leading, spacing: 24) {
+                ArtisanRulerDial(label: "曝光", value: $exposure, range: 0...200, unit: "ev")
+                ArtisanRulerDial(label: "对比度", value: $contrast, range: 50...150, unit: "%")
+                ArtisanRulerDial(label: "饱和度", value: $saturation, range: 0...200, unit: "%")
+                ArtisanRulerDial(label: "高光", value: $highlights, range: 0...200, unit: "%")
+                ArtisanRulerDial(label: "阴影", value: $shadows, range: 0...200, unit: "%")
+                ArtisanRulerDial(label: "色相", value: $hue, range: -180...180, unit: "°")
+            }
+        }
+    }
+
+    private var effectsWorkspace: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            sectionKicker("视觉特效")
+            LazyVGrid(columns: compactDialColumns, alignment: .leading, spacing: 24) {
+                ArtisanRulerDial(label: "模糊", value: $blur, range: 0...40, unit: "px")
+                ArtisanRulerDial(label: "颗粒", value: $grain, range: 0...100, unit: "%")
+                ArtisanRulerDial(label: "暗角", value: $vignette, range: 0...100, unit: "%")
+                ArtisanRulerDial(label: "黑白", value: $grayscale, range: 0...100, unit: "%")
+                ArtisanRulerDial(label: "反相", value: $invert, range: 0...100, unit: "%")
+                ArtisanRulerDial(label: "色散", value: $dispersion, range: 0...20, unit: "px")
+            }
+        }
+    }
+
+    private var weatherWorkspace: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            sectionKicker("环境层")
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                ForEach(LabWeatherScene.allCases) { scene in
+                    weatherSceneCard(scene)
+                }
+            }
+
+            LazyVGrid(columns: compactDialColumns, alignment: .leading, spacing: 24) {
+                ArtisanRulerDial(label: "全局风力", value: $weatherWind, range: -50...50, unit: "km/h")
+                ArtisanRulerDial(label: "降雨强度", value: $weatherRain, range: 0...100, unit: "%")
+                ArtisanRulerDial(label: "降雪密度", value: $weatherSnow, range: 0...100, unit: "%")
+                ArtisanRulerDial(label: "雷电频率", value: $weatherThunder, range: 0...100, unit: "%")
+            }
+        }
+    }
+
+    private var particlesWorkspace: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            sectionKicker("粒子系统")
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                ForEach(LabParticleLayer.allCases) { layer in
+                    layerCard(layer)
+                }
+            }
+
+            particleStylePicker
+
+            HStack(spacing: 18) {
+                colorPreview(label: "起始色", color: $particleColorStart)
+                colorPreview(label: "结束色", color: $particleColorEnd)
+            }
+
+            LazyVGrid(columns: compactDialColumns, alignment: .leading, spacing: 24) {
+                ArtisanRulerDial(label: "速率", value: $particleRate, range: 1...300, unit: "p/s")
+                ArtisanRulerDial(label: "寿命", value: $particleLifetime, range: 0.1...10, unit: "s")
+                ArtisanRulerDial(label: "尺寸", value: $particleSize, range: 1...40, unit: "px")
+                ArtisanRulerDial(label: "扰动", value: $particleTurbulence, range: 0...20, unit: "px")
+                ArtisanRulerDial(label: "自旋", value: $particleSpin, range: 0...20, unit: "deg")
+                ArtisanRulerDial(label: "重力", value: $particleGravity, range: -20...20, unit: "m/s²")
+            }
+        }
+    }
+
+    private var intensityControl: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("总强度")
+                    .font(.system(size: 10, weight: .black))
+                    .kerning(1.2)
+                    .foregroundStyle(.white.opacity(0.24))
+                Spacer()
+                Text("\(Int(studioIntensity))")
+                    .font(.system(size: 17, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(LiquidGlassColors.primaryPink.opacity(0.82))
+            }
+
+            Slider(value: intensityBinding, in: 0...100)
+                .tint(LiquidGlassColors.primaryPink)
+        }
+        .padding(18)
+        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white.opacity(0.035)))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+    }
+
+    private var expertParameterShelf: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            sectionKicker("专家参数")
+            LazyVGrid(columns: compactDialColumns, alignment: .leading, spacing: 20) {
+                ArtisanRulerDial(label: "推力", value: $particleThrust, range: 0...50, unit: "pow")
+                ArtisanRulerDial(label: "角度", value: $particleAngle, range: -180...180, unit: "°")
+                ArtisanRulerDial(label: "扩散", value: $particleSpread, range: 0...360, unit: "°")
+                ArtisanRulerDial(label: "渐显", value: $particleFadeIn, range: 0...100, unit: "%")
+                ArtisanRulerDial(label: "渐隐", value: $particleFadeOut, range: 0...100, unit: "%")
+            }
+        }
+        .padding(.top, 2)
+    }
+
+    private var studioActionBar: some View {
+        HStack(spacing: 10) {
+            Button(action: { resetStudioState() }) {
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.32))
+                    .frame(width: 42, height: 42)
+                    .background(Circle().fill(Color.white.opacity(0.04)))
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                withAnimation(.gallerySpring) { isExpertExpanded.toggle() }
+            } label: {
+                Text(isExpertExpanded ? "收起专家参数" : "专家参数")
+                    .font(.system(size: 13, weight: .black))
+                    .kerning(0.8)
+                    .foregroundStyle(isExpertExpanded ? LiquidGlassColors.primaryPink : .white.opacity(0.45))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 42)
+                    .background(Capsule().fill(Color.white.opacity(isExpertExpanded ? 0.07 : 0.035)))
+                    .overlay(Capsule().stroke(isExpertExpanded ? LiquidGlassColors.primaryPink.opacity(0.28) : Color.white.opacity(0.08), lineWidth: 0.5))
+            }
+            .buttonStyle(.plain)
+
+            Button(action: { applyCurrentPreset() }) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 15, weight: .black))
+                    .foregroundStyle(.black)
+                    .frame(width: 42, height: 42)
+                    .background(Circle().fill(LiquidGlassColors.primaryPink))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 22)
+        .padding(.vertical, 16)
+        .border(width: 0.5, edges: [.top], color: .white.opacity(0.06))
+    }
+
+    private func sectionKicker(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 10, weight: .black))
+            .kerning(1.3)
+            .foregroundStyle(.white.opacity(0.24))
+    }
+
+    private func lookButton(_ preset: BuiltInPreset) -> some View {
+        let isActive = currentPresetName == preset.name
+        return Button {
+            applySmartPreset(preset)
+        } label: {
+            Text(preset.name)
+                .font(.system(size: 13, weight: .bold))
+                .frame(maxWidth: .infinity)
+                .frame(height: 46)
+                .background(isActive ? LiquidGlassColors.primaryPink.opacity(0.14) : Color.white.opacity(0.035))
+                .foregroundStyle(isActive ? LiquidGlassColors.primaryPink : .white.opacity(0.45))
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(isActive ? LiquidGlassColors.primaryPink.opacity(0.35) : Color.white.opacity(0.08), lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func weatherSceneCard(_ scene: LabWeatherScene) -> some View {
+        let isActive = activeWeatherScene == scene
+        return Button {
+            applyWeatherScene(scene)
+        } label: {
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 8) {
+                    Image(systemName: scene.icon)
+                        .font(.system(size: 14, weight: .semibold))
+                    Text(scene.title)
+                        .font(.system(size: 14, weight: .bold))
+                }
+                Text(scene.detail)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white.opacity(isActive ? 0.48 : 0.28))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .foregroundStyle(isActive ? LiquidGlassColors.primaryPink : .white.opacity(0.48))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 88, alignment: .topLeading)
+            .padding(14)
+            .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(isActive ? LiquidGlassColors.primaryPink.opacity(0.09) : Color.white.opacity(0.035)))
+            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(isActive ? LiquidGlassColors.primaryPink.opacity(0.3) : Color.white.opacity(0.08), lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func layerCard(_ layer: LabParticleLayer) -> some View {
+        let isActive = activeParticleLayer == layer
+        return Button {
+            applyParticleLayer(layer)
+        } label: {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(layer.title)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(isActive ? LiquidGlassColors.primaryPink : .white.opacity(0.68))
+                Text(layer.detail)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white.opacity(isActive ? 0.45 : 0.3))
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(isActive ? LiquidGlassColors.primaryPink.opacity(0.09) : Color.white.opacity(0.035)))
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(isActive ? LiquidGlassColors.primaryPink.opacity(0.3) : Color.white.opacity(0.075), lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var particleStylePicker: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionKicker("粒子材质")
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                ForEach(labParticleMaterials) { material in
+                    particleMaterialCard(material)
+                }
+            }
+        }
+    }
+
+    private func particleMaterialCard(_ material: ParticleMaterial) -> some View {
+        let selectedMaterial = ParticleMaterial(style: particleStyle)
+        let isActive = selectedMaterial == material
+        return Button {
+            withAnimation(.gallerySpring) { particleStyle = material.rawValue }
+        } label: {
+            HStack(spacing: 10) {
+                ParticleMaterialSwatch(material: material, isActive: isActive)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(material.title)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(isActive ? LiquidGlassColors.primaryPink : .white.opacity(0.68))
+                    Text(material.detail)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.white.opacity(isActive ? 0.46 : 0.28))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 66)
+            .padding(.horizontal, 12)
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(isActive ? LiquidGlassColors.primaryPink.opacity(0.09) : Color.white.opacity(0.035)))
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(isActive ? LiquidGlassColors.primaryPink.opacity(0.32) : Color.white.opacity(0.08), lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func colorPreview(label: String, color: Binding<Color>) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.system(size: 10, weight: .black))
+                .kerning(1.0)
+                .foregroundStyle(.white.opacity(0.24))
+            ColorPicker("", selection: color)
+                .labelsHidden()
+                .frame(width: 32, height: 32)
+                .clipShape(Circle())
+        }
+    }
+
+    private func resetStudioState() {
+        resetFilters()
+        withAnimation(.gallerySpring) {
+            studioIntensity = 0
+            isExpertExpanded = false
+            activeWeatherScene = .dust
+            activeParticleLayer = .middle
+            weatherWind = 0
+            weatherRain = 0
+            weatherThunder = 0
+            weatherSnow = 0
+        }
+    }
+
+    private func applySmartPreset(_ preset: BuiltInPreset) {
+        applyPreset(preset)
+        withAnimation(.easeInOut(duration: 0.22)) {
+            switch preset {
+            case .original:
+                studioIntensity = 0
+                weatherRain = 0
+                weatherSnow = 0
+                weatherThunder = 0
+                particleRate = 0
+                particleStyle = ParticleMaterial.dust.rawValue
+            case .vivid:
+                studioIntensity = 58
+                particleStyle = ParticleMaterial.shard.rawValue
+                particleRate = 72
+                particleSize = 4
+                particleGravity = 1.2
+                particleTurbulence = 6
+                activeWeatherScene = .dust
+            case .warm:
+                studioIntensity = 54
+                activeWeatherScene = .fog
+                particleStyle = ParticleMaterial.petal.rawValue
+                particleRate = 42
+                particleSize = 8
+                particleGravity = 2.2
+                particleTurbulence = 5
+                weatherRain = 0
+                weatherSnow = 0
+            case .cool:
+                studioIntensity = 48
+                activeWeatherScene = .dust
+                particleStyle = ParticleMaterial.mist.rawValue
+                particleRate = 58
+                particleSize = 3
+                particleGravity = 0.7
+                particleTurbulence = 5
+                weatherRain = 0
+                weatherSnow = 12
+            case .noir:
+                studioIntensity = 46
+                activeWeatherScene = .dust
+                particleStyle = ParticleMaterial.dust.rawValue
+                particleRate = 48
+                particleSize = 2.6
+                particleGravity = 0.4
+                weatherRain = 0
+                weatherSnow = 0
+            case .vintage:
+                studioIntensity = 62
+                activeWeatherScene = .dust
+                particleStyle = ParticleMaterial.bokeh.rawValue
+                particleRate = 86
+                particleSize = 3.2
+                particleGravity = 0.8
+                particleTurbulence = 8
+                weatherRain = 0
+                weatherSnow = 0
+            case .cinematic:
+                studioIntensity = 66
+                activeWeatherScene = .cyberRain
+                particleStyle = ParticleMaterial.rain.rawValue
+                particleRate = 68
+                particleSize = 3.6
+                particleGravity = 4
+                particleTurbulence = 3
+                weatherWind = 18
+                weatherRain = 26
+                weatherSnow = 0
+            case .fade:
+                studioIntensity = 40
+                activeWeatherScene = .dust
+                particleStyle = ParticleMaterial.glow.rawValue
+                particleRate = 38
+                particleSize = 3
+                particleGravity = 0.4
+                particleTurbulence = 3
+                weatherRain = 0
+                weatherSnow = 0
+            }
+        }
+    }
+
+    private func applyWeatherScene(_ scene: LabWeatherScene) {
+        withAnimation(.easeInOut(duration: 0.22)) {
+            activeWeatherScene = scene
+            switch scene {
+            case .dust:
+                weatherWind = 8
+                weatherRain = 0
+                weatherSnow = 0
+                weatherThunder = 0
+                particleStyle = ParticleMaterial.dust.rawValue
+                particleRate = max(44, studioIntensity * 1.1)
+                particleLifetime = 5
+                particleSize = 3
+                particleGravity = 0.5
+                particleTurbulence = 5
+                particleColorStart = .white
+                particleColorEnd = LiquidGlassColors.champagne
+            case .fog:
+                weatherWind = 6
+                weatherRain = 0
+                weatherSnow = 0
+                weatherThunder = 0
+                particleStyle = ParticleMaterial.mist.rawValue
+                particleRate = max(32, studioIntensity * 0.75)
+                particleLifetime = 8
+                particleSize = 7
+                particleGravity = 0.15
+                particleTurbulence = 4
+                particleColorStart = .white
+                particleColorEnd = LiquidGlassColors.champagne
+            case .snow:
+                weatherWind = -8
+                weatherRain = 0
+                weatherSnow = max(22, studioIntensity * 0.7)
+                weatherThunder = 0
+                particleStyle = ParticleMaterial.snow.rawValue
+                particleRate = max(32, studioIntensity * 0.9)
+                particleLifetime = 7
+                particleSize = 5
+                particleGravity = 1.4
+                particleTurbulence = 4
+                particleColorStart = .white
+                particleColorEnd = LiquidGlassColors.tertiaryBlue
+            case .cyberRain:
+                weatherWind = 18
+                weatherRain = max(24, studioIntensity * 0.8)
+                weatherSnow = 0
+                weatherThunder = min(42, studioIntensity * 0.28)
+                particleStyle = ParticleMaterial.rain.rawValue
+                particleRate = max(54, studioIntensity * 1.25)
+                particleLifetime = 2.8
+                particleSize = 3.6
+                particleGravity = 5.5
+                particleTurbulence = 3
+                particleColorStart = LiquidGlassColors.tertiaryBlue
+                particleColorEnd = LiquidGlassColors.primaryViolet
+            }
+        }
+    }
+
+    private func applyParticleLayer(_ layer: LabParticleLayer) {
+        withAnimation(.easeInOut(duration: 0.22)) {
+            activeParticleLayer = layer
+            switch layer {
+            case .background:
+                particleRate = max(42, studioIntensity * 1.15)
+                particleLifetime = 7
+                particleSize = 2.4
+                particleGravity = 0.2
+                particleTurbulence = 3.5
+                particleSpin = 1.5
+                particleFadeIn = 18
+                particleFadeOut = 52
+            case .middle:
+                particleRate = max(56, studioIntensity * 1.25)
+                particleLifetime = 5
+                particleSize = 4
+                particleGravity = 1.0
+                particleTurbulence = 5
+                particleSpin = 3
+                particleFadeIn = 12
+                particleFadeOut = 36
+            case .foreground:
+                particleRate = max(18, studioIntensity * 0.42)
+                particleLifetime = 3.2
+                particleSize = 9
+                particleGravity = 2.5
+                particleTurbulence = 8
+                particleSpin = 7
+                particleFadeIn = 6
+                particleFadeOut = 24
+            case .blend:
+                grain = min(28, max(grain, studioIntensity * 0.22))
+                vignette = min(62, max(vignette, studioIntensity * 0.52))
+                particleFadeIn = 22
+                particleFadeOut = 64
+                particleTurbulence = 4
+            }
+        }
+    }
+
+    private func applyStudioIntensity(_ value: Double) {
+        let normalized = value / 100.0
+        withAnimation(.easeInOut(duration: 0.12)) {
+            particleRate = max(1, normalized * 150)
+            vignette = min(70, normalized * 56)
+            grain = min(38, normalized * 24)
+            switch activeWeatherScene {
+            case .dust, .fog:
+                weatherRain = 0
+                weatherSnow = 0
+            case .snow:
+                weatherSnow = normalized * 88
+                weatherRain = 0
+            case .cyberRain:
+                weatherRain = normalized * 82
+                weatherThunder = normalized * 32
+                weatherSnow = 0
+            }
+        }
+    }
+
+    private func loadSavedStudioPreset() {
+        guard let pass = wallpaper.shaderPreset?.passes.first(where: { $0.name == "实验室实时调校" }) else { return }
+        currentPresetName = wallpaper.shaderPreset?.name ?? currentPresetName
+        exposure = pass.double("exposure", default: exposure)
+        contrast = pass.double("contrast", default: contrast)
+        saturation = pass.double("saturation", default: saturation)
+        hue = pass.double("hue", default: hue)
+        blur = pass.double("blur", default: blur)
+        grain = pass.double("grain", default: grain)
+        vignette = pass.double("vignette", default: vignette)
+        grayscale = pass.double("grayscale", default: grayscale)
+        invert = pass.double("invert", default: invert)
+        highlights = pass.double("highlights", default: highlights)
+        shadows = pass.double("shadows", default: shadows)
+        dispersion = pass.double("dispersion", default: dispersion)
+        weatherWind = pass.double("weatherWind", default: weatherWind)
+        weatherRain = pass.double("weatherRain", default: weatherRain)
+        weatherThunder = pass.double("weatherThunder", default: weatherThunder)
+        weatherSnow = pass.double("weatherSnow", default: weatherSnow)
+        activeWeatherScene = LabWeatherScene.allCases[safe: pass.int("activeWeatherScene", default: LabWeatherScene.allCases.firstIndex(of: activeWeatherScene) ?? 0)] ?? activeWeatherScene
+        activeParticleLayer = LabParticleLayer.allCases[safe: pass.int("activeParticleLayer", default: LabParticleLayer.allCases.firstIndex(of: activeParticleLayer) ?? 0)] ?? activeParticleLayer
+        let currentMaterialIndex = labParticleMaterials.firstIndex(of: ParticleMaterial(style: particleStyle)) ?? 0
+        if let material = labParticleMaterials[safe: pass.int("particleMaterial", default: -1)] {
+            particleStyle = material.rawValue
+        } else if let legacyMaterial = ParticleMaterial.legacyMaterial(for: pass.int("particleStyle", default: -1)) {
+            particleStyle = legacyMaterial.rawValue
+        } else {
+            particleStyle = labParticleMaterials[safe: currentMaterialIndex]?.rawValue ?? particleStyle
+        }
+        particleRate = pass.double("particleRate", default: particleRate)
+        particleLifetime = pass.double("particleLifetime", default: particleLifetime)
+        particleSize = pass.double("particleSize", default: particleSize)
+        particleGravity = pass.double("particleGravity", default: particleGravity)
+        particleTurbulence = pass.double("particleTurbulence", default: particleTurbulence)
+        particleSpin = pass.double("particleSpin", default: particleSpin)
+        particleThrust = pass.double("particleThrust", default: particleThrust)
+        particleAngle = pass.double("particleAngle", default: particleAngle)
+        particleSpread = pass.double("particleSpread", default: particleSpread)
+        particleFadeIn = pass.double("particleFadeIn", default: particleFadeIn)
+        particleFadeOut = pass.double("particleFadeOut", default: particleFadeOut)
+    }
+
+    private var currentRenderEffects: WallpaperRenderEffects {
+        WallpaperRenderEffects(
+            name: currentPresetName,
+            exposure: exposure,
+            contrast: contrast,
+            saturation: saturation,
+            hue: hue,
+            blur: blur,
+            grain: grain,
+            vignette: vignette,
+            grayscale: grayscale,
+            invert: invert,
+            highlights: highlights,
+            shadows: shadows,
+            dispersion: dispersion,
+            weatherWind: weatherWind,
+            weatherRain: weatherRain,
+            weatherThunder: weatherThunder,
+            weatherSnow: weatherSnow,
+            particleStyle: ParticleMaterial(style: particleStyle).rawValue,
+            particleRate: particleRate,
+            particleLifetime: particleLifetime,
+            particleSize: particleSize,
+            particleGravity: particleGravity,
+            particleTurbulence: particleTurbulence,
+            particleSpin: particleSpin,
+            particleThrust: particleThrust,
+            particleAngle: particleAngle,
+            particleSpread: particleSpread,
+            particleFadeIn: particleFadeIn,
+            particleFadeOut: particleFadeOut
+        )
+    }
+
+    private var currentShaderPasses: [ShaderPassConfig] {
+        let effects = currentRenderEffects
+        return [
+            ShaderPassConfig(
+                id: UUID(),
+                type: .postprocess,
+                name: "实验室实时调校",
+                enabled: true,
+                parameters: [
+                    "exposure": .float(Float(effects.exposure)),
+                    "contrast": .float(Float(effects.contrast)),
+                    "saturation": .float(Float(effects.saturation)),
+                    "hue": .float(Float(effects.hue)),
+                    "blur": .float(Float(effects.blur)),
+                    "grain": .float(Float(effects.grain)),
+                    "vignette": .float(Float(effects.vignette)),
+                    "grayscale": .float(Float(effects.grayscale)),
+                    "invert": .float(Float(effects.invert)),
+                    "highlights": .float(Float(effects.highlights)),
+                    "shadows": .float(Float(effects.shadows)),
+                    "dispersion": .float(Float(effects.dispersion)),
+                    "weatherWind": .float(Float(effects.weatherWind)),
+                    "weatherRain": .float(Float(effects.weatherRain)),
+                    "weatherThunder": .float(Float(effects.weatherThunder)),
+                    "weatherSnow": .float(Float(effects.weatherSnow)),
+                    "activeWeatherScene": .int(LabWeatherScene.allCases.firstIndex(of: activeWeatherScene) ?? 0),
+                    "activeParticleLayer": .int(LabParticleLayer.allCases.firstIndex(of: activeParticleLayer) ?? 0),
+                    "particleMaterial": .int(labParticleMaterials.firstIndex(of: ParticleMaterial(style: effects.particleStyle)) ?? 0),
+                    "particleRate": .float(Float(effects.particleRate)),
+                    "particleLifetime": .float(Float(effects.particleLifetime)),
+                    "particleSize": .float(Float(effects.particleSize)),
+                    "particleGravity": .float(Float(effects.particleGravity)),
+                    "particleTurbulence": .float(Float(effects.particleTurbulence)),
+                    "particleSpin": .float(Float(effects.particleSpin)),
+                    "particleThrust": .float(Float(effects.particleThrust)),
+                    "particleAngle": .float(Float(effects.particleAngle)),
+                    "particleSpread": .float(Float(effects.particleSpread)),
+                    "particleFadeIn": .float(Float(effects.particleFadeIn)),
+                    "particleFadeOut": .float(Float(effects.particleFadeOut))
+                ]
+            )
+        ]
     }
 
     private func actionCircleButton(icon: String, color: Color, action: @escaping () -> Void) -> some View {
@@ -544,15 +1289,26 @@ struct WallpaperDetailView: View {
     private func applyWallpaper() async {
         isApplying = true; defer { isApplying = false }
         do {
+            let effects = currentRenderEffects
             if wallpaper.type == .video {
                 let path = highQualityVideoPathForApply ?? wallpaper.filePath
                 let videoURL = URL(string: path)?.scheme != nil ? try await downloadTemp(URL(string: path)!) : URL(fileURLWithPath: path)
-                try await RenderPipeline.shared.setWallpaper(url: videoURL)
+                try await RenderPipeline.shared.setWallpaper(url: videoURL, wallpaperId: wallpaper.id, effects: effects)
             } else {
                 let imageURL = URL(string: wallpaper.filePath)?.scheme != nil ? try await downloadTemp(URL(string: wallpaper.filePath)!) : URL(fileURLWithPath: wallpaper.filePath)
-                try await MainActor.run { try WallpaperSetter.shared.setWallpaper(imageURL: imageURL) }
+                let renderedURL = try WallpaperRenderEffectRenderer.renderImage(sourceURL: imageURL, effects: effects)
+                if effects.hasDynamicEnvironment {
+                    try await RenderPipeline.shared.setImageWallpaper(url: renderedURL, wallpaperId: wallpaper.id, effects: effects)
+                } else {
+                    RenderPipeline.shared.cleanup()
+                    try await MainActor.run { try WallpaperSetter.shared.setWallpaper(imageURL: renderedURL) }
+                }
             }
-            showToastMessage("设置成功")
+            if effects.hasDynamicEnvironment {
+                showToastMessage("已应用基础调校，动态天气/粒子已保存")
+            } else {
+                showToastMessage("设置成功")
+            }
         } catch { showToastMessage("失败: \(error.localizedDescription)") }
     }
 
@@ -569,29 +1325,181 @@ struct WallpaperDetailView: View {
 
     private func downloadWallpaper() async {
         guard let remoteURL = URL(string: wallpaper.filePath), remoteURL.scheme != nil else { showToastMessage("此壁纸已在本地"); return }
+        if let remoteId = wallpaper.remoteId,
+           DownloadManager.shared.isAlreadyDownloaded(remoteId: remoteId, context: modelContext) != nil {
+            showToastMessage("此壁纸已在本地")
+            return
+        }
+
         isDownloading = true; defer { isDownloading = false }
         do {
-            let downloadsDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!.appendingPathComponent("PlumWallPaper/Downloads", isDirectory: true)
-            try FileManager.default.createDirectory(at: downloadsDir, withIntermediateDirectories: true)
-            let localURL = downloadsDir.appendingPathComponent("\(wallpaper.name)_\(wallpaper.id.uuidString.prefix(8)).\(wallpaper.type == .video ? "mp4" : "jpg")")
-            let (data, _) = try await URLSession.shared.data(from: remoteURL)
-            try data.write(to: localURL)
-            let newWp = Wallpaper(name: wallpaper.name, filePath: localURL.path, type: wallpaper.type, resolution: wallpaper.resolution, fileSize: Int64(data.count), thumbnailPath: wallpaper.thumbnailPath, source: .downloaded, remoteId: wallpaper.remoteId, remoteSource: wallpaper.remoteSource, remoteMetadata: wallpaper.remoteMetadata)
-            modelContext.insert(newWp); try modelContext.save()
-            wallpaper.filePath = localURL.path; wallpaper.source = .downloaded
-            onDownload?(wallpaper); showToastMessage("下载完成")
+            let downloaded = try await DownloadManager.shared.downloadWallpaper(
+                item: .local(wallpaper),
+                quality: wallpaper.resolution ?? "Original",
+                downloadURL: remoteURL,
+                context: modelContext
+            )
+            wallpaper = downloaded
+            onDownload?(downloaded)
+            showToastMessage("下载完成")
         } catch { showToastMessage("失败: \(error.localizedDescription)") }
     }
 
     private func applyCurrentPreset() {
-        if wallpaper.shaderPreset == nil { wallpaper.shaderPreset = ShaderPreset(name: currentPresetName) }
-        else { wallpaper.shaderPreset?.name = currentPresetName }
-        try? modelContext.save(); showToastMessage("已保存预设")
+        if wallpaper.shaderPreset == nil {
+            wallpaper.shaderPreset = ShaderPreset(name: currentPresetName)
+        } else {
+            wallpaper.shaderPreset?.name = currentPresetName
+        }
+        wallpaper.shaderPreset?.passes = currentShaderPasses
+        try? modelContext.save()
+        showToastMessage("已保存实验室参数")
     }
 
     private func showToastMessage(_ message: String) {
         toastMessage = message; showToast = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { withAnimation { showToast = false } }
+    }
+}
+
+private extension ShaderPassConfig {
+    func double(_ key: String, default defaultValue: Double) -> Double {
+        guard let value = parameters[key] else { return defaultValue }
+        if case .float(let number) = value {
+            return Double(number)
+        }
+        if case .int(let number) = value {
+            return Double(number)
+        }
+        return defaultValue
+    }
+
+    func int(_ key: String, default defaultValue: Int) -> Int {
+        guard let value = parameters[key] else { return defaultValue }
+        if case .int(let number) = value {
+            return number
+        }
+        if case .float(let number) = value {
+            return Int(number)
+        }
+        return defaultValue
+    }
+}
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
+    }
+}
+
+private struct ParticleMaterialSwatch: View {
+    let material: ParticleMaterial
+    let isActive: Bool
+
+    var body: some View {
+        Canvas { context, size in
+            drawMaterial(into: &context, size: size)
+        }
+        .frame(width: 38, height: 38)
+        .background(Circle().fill(Color.white.opacity(isActive ? 0.07 : 0.035)))
+        .overlay(Circle().stroke(isActive ? LiquidGlassColors.primaryPink.opacity(0.32) : Color.white.opacity(0.08), lineWidth: 0.5))
+    }
+
+    private func drawMaterial(into context: inout GraphicsContext, size: CGSize) {
+        let accent = isActive ? LiquidGlassColors.primaryPink : Color.white.opacity(0.58)
+        let center = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
+
+        switch material {
+        case .dust:
+            for i in 0..<9 {
+                let seed = Double(i)
+                let point = CGPoint(
+                    x: size.width * (0.22 + 0.56 * (sin(seed * 31.7) * 0.5 + 0.5)),
+                    y: size.height * (0.22 + 0.56 * (cos(seed * 17.4) * 0.5 + 0.5))
+                )
+                let radius = CGFloat(1.2 + (sin(seed * 9.1) * 0.5 + 0.5) * 1.8)
+                context.fill(Path(ellipseIn: CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2)), with: .color(accent.opacity(0.22 + seed.truncatingRemainder(dividingBy: 3) * 0.08)))
+            }
+        case .glow:
+            var glow = context
+            glow.addFilter(.blur(radius: 5))
+            glow.fill(Path(ellipseIn: CGRect(x: center.x - 12, y: center.y - 12, width: 24, height: 24)), with: .color(accent.opacity(0.42)))
+            context.fill(Path(ellipseIn: CGRect(x: center.x - 3, y: center.y - 3, width: 6, height: 6)), with: .color(.white.opacity(0.72)))
+        case .bokeh:
+            for i in 0..<3 {
+                let rect = CGRect(x: 6 + CGFloat(i) * 8, y: 8 + CGFloat(i % 2) * 10, width: 14 + CGFloat(i) * 3, height: 14 + CGFloat(i) * 3)
+                var soft = context
+                soft.addFilter(.blur(radius: 2.5))
+                soft.fill(Path(ellipseIn: rect), with: .color(accent.opacity(0.16)))
+                context.stroke(Path(ellipseIn: rect.insetBy(dx: 2, dy: 2)), with: .color(.white.opacity(0.16)), lineWidth: 0.7)
+            }
+        case .petal:
+            for i in 0..<3 {
+                var copy = context
+                copy.translateBy(x: 11 + CGFloat(i) * 8, y: 14 + CGFloat(i % 2) * 6)
+                copy.rotate(by: .degrees(Double(i) * 28 - 18))
+                copy.fill(Self.petalPath(width: 15 + CGFloat(i) * 2, height: 7), with: .color(accent.opacity(0.52)))
+            }
+        case .shard:
+            for i in 0..<4 {
+                let x = CGFloat(8 + i * 7)
+                var path = Path()
+                path.move(to: CGPoint(x: x, y: 23 - CGFloat(i % 2) * 8))
+                path.addLine(to: CGPoint(x: x + 7, y: 15 - CGFloat(i % 2) * 8))
+                context.stroke(path, with: .color(accent.opacity(0.54)), lineWidth: 1.4)
+            }
+        case .ember:
+            var glow = context
+            glow.addFilter(.blur(radius: 4))
+            glow.fill(Path(ellipseIn: CGRect(x: 9, y: 13, width: 20, height: 12)), with: .color(Color.orange.opacity(0.46)))
+            context.fill(Path(ellipseIn: CGRect(x: 15, y: 17, width: 8, height: 5)), with: .color(Color.orange.opacity(0.9)))
+        case .snow:
+            for i in 0..<6 {
+                let seed = Double(i)
+                let radius = CGFloat(2.0 + (seed.truncatingRemainder(dividingBy: 3)))
+                let point = CGPoint(x: 8 + CGFloat(i * 5), y: 11 + CGFloat(Int(seed * 7) % 17))
+                context.fill(Path(ellipseIn: CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2)), with: .color(.white.opacity(0.5)))
+            }
+        case .rain:
+            for i in 0..<5 {
+                let x = CGFloat(8 + i * 6)
+                var path = Path()
+                path.move(to: CGPoint(x: x + 7, y: 7))
+                path.addLine(to: CGPoint(x: x, y: 31))
+                context.stroke(path, with: .color(accent.opacity(0.46)), lineWidth: 1.2)
+            }
+        case .mist:
+            for i in 0..<3 {
+                var mist = context
+                mist.addFilter(.blur(radius: 5))
+                let rect = CGRect(x: 5 + CGFloat(i) * 6, y: 13 + CGFloat(i % 2) * 3, width: 19, height: 12)
+                mist.fill(Path(ellipseIn: rect), with: .color(.white.opacity(0.18)))
+            }
+        case .firefly:
+            for i in 0..<3 {
+                let point = CGPoint(x: 12 + CGFloat(i * 8), y: 13 + CGFloat((i * 7) % 14))
+                var glow = context
+                glow.addFilter(.blur(radius: 4))
+                glow.fill(Path(ellipseIn: CGRect(x: point.x - 7, y: point.y - 7, width: 14, height: 14)), with: .color(Color.yellow.opacity(0.32)))
+                context.fill(Path(ellipseIn: CGRect(x: point.x - 2, y: point.y - 2, width: 4, height: 4)), with: .color(.white.opacity(0.75)))
+            }
+        }
+    }
+
+    private static func petalPath(width: CGFloat, height: CGFloat) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: -width * 0.5, y: 0))
+        path.addCurve(
+            to: CGPoint(x: width * 0.5, y: 0),
+            control1: CGPoint(x: -width * 0.22, y: -height),
+            control2: CGPoint(x: width * 0.32, y: -height * 0.85)
+        )
+        path.addCurve(
+            to: CGPoint(x: -width * 0.5, y: 0),
+            control1: CGPoint(x: width * 0.28, y: height * 0.95),
+            control2: CGPoint(x: -width * 0.26, y: height * 0.75)
+        )
+        return path
     }
 }
 

@@ -41,4 +41,34 @@ extension PlaybackTab {
         viewModel.settings?.audioScreenId = id
         viewModel.save()
     }
+
+    func setSlideshowEnabled(_ enabled: Bool) {
+        viewModel.settings?.slideshowEnabled = enabled
+        viewModel.save()
+        viewModel.applySlideshowSettings()
+    }
+
+    func setSlideshowInterval(_ seconds: Double) {
+        viewModel.settings?.slideshowInterval = seconds
+        viewModel.save()
+        SlideshowScheduler.shared.updateInterval(seconds)
+    }
+
+    func setSlideshowOrder(_ order: SlideshowOrder) {
+        viewModel.settings?.slideshowOrder = order
+        viewModel.save()
+        SlideshowScheduler.shared.rebuildPlaylist()
+    }
+
+    func setSlideshowSource(_ source: SlideshowSource) {
+        viewModel.settings?.slideshowSource = source
+        viewModel.save()
+        SlideshowScheduler.shared.rebuildPlaylist()
+    }
+
+    func setSlideshowTagId(_ id: String) {
+        viewModel.settings?.slideshowTagId = id.isEmpty ? nil : id
+        viewModel.save()
+        SlideshowScheduler.shared.rebuildPlaylist()
+    }
 }

@@ -17,7 +17,7 @@ extension WallpaperDetailView {
     func resetFilters() {
         applyPreset(.original)
         withAnimation(.gallerySpring) {
-            particleRate = 60
+            particleRate = 0
             particleLifetime = 3
             particleSize = 4
             particleGravity = 9.8
@@ -28,12 +28,11 @@ extension WallpaperDetailView {
             particleSpread = 360
             particleColorStart = .white
             particleColorEnd = LiquidGlassColors.primaryPink
-            particleStyle = "circle.fill"
+            particleStyle = ParticleMaterial.dust.rawValue
         }
     }
 
     func openShaderEditor() {
-        print("openShaderEditor called")
         isShowingShaderEditor = true
     }
 }

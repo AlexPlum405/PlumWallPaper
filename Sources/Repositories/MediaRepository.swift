@@ -100,14 +100,17 @@ final class MediaRepository: ObservableObject {
 
     /// 搜索媒体
     func search(query: String, page: Int = 1) async throws -> [MediaItem] {
-        // 临时禁用
-        return []
+        guard page == 1 else { return [] }
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let items = trimmed.isEmpty
+            ? try await mediaService.fetchHomePage()
+            : try await mediaService.search(query: trimmed)
+        return Array(items.prefix(24))
     }
 
     /// 获取媒体详情
     func fetchDetail(slug: String) async throws -> MediaItem {
-        // 临时禁用
-        throw NetworkError.invalidResponse
+        try await mediaService.fetchDetail(slug: slug)
     }
 
     // MARK: - Private Helpers

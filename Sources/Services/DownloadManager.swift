@@ -57,13 +57,18 @@ final class DownloadManager: ObservableObject {
                 to: destinationURL,
                 progressHandler: { [weak self] progress in
                     Task { @MainActor in
-                        self?.activeDownloads[taskId]?.progress = progress
+                        self?.updateTask(taskId) { task in
+                            task.progress = progress
+                        }
                     }
                 }
             )
 
             // 更新任务状态
-            activeDownloads[taskId]?.status = .completed
+            updateTask(taskId) { task in
+                task.progress = 1
+                task.status = .completed
+            }
 
             // 导入到 SwiftData
             let wallpaper = try await importToSwiftData(
@@ -73,13 +78,15 @@ final class DownloadManager: ObservableObject {
                 context: context
             )
 
-            // 移除任务
-            activeDownloads.removeValue(forKey: taskId)
+            scheduleRemoval(for: taskId)
 
             return wallpaper
         } catch {
-            activeDownloads[taskId]?.status = .failed
-            activeDownloads[taskId]?.error = error.localizedDescription
+            updateTask(taskId) { task in
+                task.status = .failed
+                task.error = error.localizedDescription
+            }
+            scheduleRemoval(for: taskId, delay: 6)
             throw error
         }
     }
@@ -92,7 +99,11 @@ final class DownloadManager: ObservableObject {
             }
         )
 
-        return try? context.fetch(descriptor).first
+        return try? context.fetch(descriptor).first { wallpaper in
+            wallpaper.source == .downloaded
+                && !Self.isRemotePath(wallpaper.filePath)
+                && fileManager.fileExists(atPath: wallpaper.filePath)
+        }
     }
 
     // MARK: - Private Methods
@@ -110,7 +121,11 @@ final class DownloadManager: ObservableObject {
             .replacingOccurrences(of: "[^a-zA-Z0-9]", with: "_", options: .regularExpression)
             .prefix(50)
 
-        return "\(sanitizedTitle)_\(quality).\(ext)"
+        let sanitizedQuality = quality
+            .replacingOccurrences(of: "[^a-zA-Z0-9_\\-]", with: "_", options: .regularExpression)
+            .prefix(30)
+
+        return "\(sanitizedTitle)_\(sanitizedQuality).\(ext)"
     }
 
     private func importToSwiftData(
@@ -122,6 +137,37 @@ final class DownloadManager: ObservableObject {
         // 获取文件信息
         let attributes = try fileManager.attributesOfItem(atPath: localURL.path)
         let fileSize = attributes[.size] as? Int64 ?? 0
+        let remoteId = extractRemoteId(from: item)
+        let remoteSource = extractRemoteSource(from: item)
+        let metadata = RemoteMetadata(
+            author: extractAuthor(from: item),
+            views: item.views,
+            favorites: item.favorites,
+            uploadDate: extractUploadDate(from: item),
+            originalURL: extractOriginalURL(from: item)
+        )
+
+        let descriptor = FetchDescriptor<Wallpaper>(
+            predicate: #Predicate { wallpaper in
+                wallpaper.remoteId == remoteId
+            }
+        )
+
+        if let existing = try context.fetch(descriptor).first {
+            existing.name = item.title
+            existing.filePath = localURL.path
+            existing.type = item.type
+            existing.resolution = item.resolution
+            existing.fileSize = fileSize
+            existing.thumbnailPath = item.thumbnailURL?.absoluteString
+            existing.source = .downloaded
+            existing.remoteId = remoteId
+            existing.remoteSource = remoteSource
+            existing.downloadQuality = quality
+            existing.remoteMetadata = metadata
+            try context.save()
+            return existing
+        }
 
         // 创建 Wallpaper 对象
         let wallpaper = Wallpaper(
@@ -131,16 +177,10 @@ final class DownloadManager: ObservableObject {
             resolution: item.resolution,
             fileSize: fileSize,
             source: .downloaded,
-            remoteId: extractRemoteId(from: item),
-            remoteSource: extractRemoteSource(from: item),
+            remoteId: remoteId,
+            remoteSource: remoteSource,
             downloadQuality: quality,
-            remoteMetadata: RemoteMetadata(
-                author: nil,
-                views: item.views,
-                favorites: item.favorites,
-                uploadDate: Date(),
-                originalURL: nil
-            )
+            remoteMetadata: metadata
         )
 
         context.insert(wallpaper)
@@ -153,7 +193,7 @@ final class DownloadManager: ObservableObject {
         switch item {
         case .remote(let w): return w.id
         case .media(let m): return m.id
-        case .local(let w): return w.id.uuidString
+        case .local(let w): return w.remoteId ?? w.id.uuidString
         }
     }
 
@@ -162,7 +202,50 @@ final class DownloadManager: ObservableObject {
         case .remote: return .wallhaven
         case .media(let m):
             return m.sourceName == "MotionBG" ? .motionBG : .steamWorkshop
-        case .local: return .wallhaven
+        case .local(let w): return w.remoteSource ?? .wallhaven
+        }
+    }
+
+    private func extractAuthor(from item: WallpaperDisplayItem) -> String? {
+        switch item {
+        case .media(let media): return media.authorName
+        case .remote, .local: return nil
+        }
+    }
+
+    private func extractUploadDate(from item: WallpaperDisplayItem) -> Date? {
+        switch item {
+        case .remote(let wallpaper): return wallpaper.uploadedAt
+        case .media(let media): return media.createdAt
+        case .local(let wallpaper): return wallpaper.importDate
+        }
+    }
+
+    private func extractOriginalURL(from item: WallpaperDisplayItem) -> String? {
+        switch item {
+        case .remote(let wallpaper): return wallpaper.url
+        case .media(let media): return media.pageURL.absoluteString
+        case .local(let wallpaper): return wallpaper.remoteMetadata?.originalURL
+        }
+    }
+
+    private static func isRemotePath(_ path: String) -> Bool {
+        guard let url = URL(string: path), let scheme = url.scheme?.lowercased() else {
+            return false
+        }
+        return scheme == "http" || scheme == "https"
+    }
+
+    private func updateTask(_ taskId: String, mutate: (inout DownloadTask) -> Void) {
+        guard var task = activeDownloads[taskId] else { return }
+        mutate(&task)
+        activeDownloads[taskId] = task
+    }
+
+    private func scheduleRemoval(for taskId: String, delay: TimeInterval = 3.5) {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            activeDownloads.removeValue(forKey: taskId)
         }
     }
 }
@@ -172,6 +255,7 @@ struct DownloadTask: Identifiable {
     let id: String
     let title: String
     let quality: String
+    let createdAt: Date = Date()
     var totalSize: Int64
     var downloadedSize: Int64
     var progress: Double

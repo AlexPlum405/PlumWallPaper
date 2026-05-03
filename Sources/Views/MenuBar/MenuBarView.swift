@@ -124,7 +124,7 @@ struct MenuBarView: View {
                 withAnimation(.gallerySpring) { viewModel.toggleWallpaper() }
             }
             
-            artisanCircleControl(icon: "forward.fill", isPrimary: false) { }
+            artisanCircleControl(icon: "forward.fill", isPrimary: false) { viewModel.nextWallpaper() }
             artisanCircleControl(icon: "slider.horizontal.3", isPrimary: false) { viewModel.openMainWindow() }
         }
     }
@@ -167,8 +167,8 @@ struct MenuBarView: View {
     
     private var artisanQuickNav: some View {
         VStack(spacing: 10) {
-            artisanNavRow(title: "管理壁纸库", icon: "archivebox.fill") { viewModel.openMainWindow() }
-            artisanNavRow(title: "实验室后期", icon: "sparkles") { }
+            artisanNavRow(title: "管理壁纸库", icon: "archivebox.fill") { viewModel.openLibrary() }
+            artisanNavRow(title: "实验室后期", icon: "sparkles") { viewModel.openLaboratory() }
         }
     }
     
@@ -187,7 +187,7 @@ struct MenuBarView: View {
     
     private var artisanFooterSection: some View {
         HStack {
-            Button("反馈建议") { }
+            Button("反馈建议") { viewModel.openFeedback() }
                 .font(.system(size: 11, weight: .bold)).foregroundStyle(LiquidGlassColors.textQuaternary)
             Spacer()
             Button { viewModel.quit() } label: {

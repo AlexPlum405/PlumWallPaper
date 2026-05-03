@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 // MARK: - Media Detail View
 struct MediaDetailView: View {
@@ -7,10 +8,13 @@ struct MediaDetailView: View {
     var onNext: ((@escaping (MediaItem) -> Void) -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @State private var selectedDownloadOption: MediaDownloadOption?
     @State private var isDownloading = false
+    @State private var toast: ToastConfig?
     @State private var isLeftEdgeHovered = false
     @State private var isRightEdgeHovered = false
+    @StateObject private var downloadManager = DownloadManager.shared
 
     var body: some View {
         ZStack {
@@ -33,6 +37,9 @@ struct MediaDetailView: View {
         }
         .frame(minWidth: 1000, minHeight: 700)
         .preferredColorScheme(.dark)
+        .overlay(alignment: .bottomLeading) {
+            DownloadProgressOverlay(downloadManager: downloadManager)
+        }
         .onAppear {
             NSLog("[MediaDetailView] 显示详情页")
             NSLog("[MediaDetailView] 标题: \(mediaItem.title)")
@@ -40,6 +47,7 @@ struct MediaDetailView: View {
             NSLog("[MediaDetailView] previewVideoURL: \(mediaItem.previewVideoURL?.absoluteString ?? "nil")")
             NSLog("[MediaDetailView] thumbnailURL: \(mediaItem.thumbnailURL.absoluteString)")
         }
+        .toast($toast)
     }
 
     // MARK: - 全屏画布
@@ -197,7 +205,6 @@ struct MediaDetailView: View {
                 .disabled(mediaItem.downloadOptions.isEmpty || isDownloading)
 
                 Button {
-                    // TODO: 在浏览器中打开
                     NSWorkspace.shared.open(mediaItem.pageURL)
                 } label: {
                     HStack(spacing: 8) {
@@ -280,51 +287,29 @@ struct MediaDetailView: View {
 
     // MARK: - 操作方法
     private func startDownload(_ option: MediaDownloadOption) async {
+        guard DownloadManager.shared.isAlreadyDownloaded(remoteId: mediaItem.id, context: modelContext) == nil else {
+            toast = ToastConfig(message: "这张动态壁纸已在本地库中", type: .info)
+            return
+        }
+
         isDownloading = true
         defer { isDownloading = false }
 
         do {
             NSLog("[MediaDetailView] 开始下载: \(option.label) - \(option.remoteURL.absoluteString)")
-
-            // 1. 下载文件
-            let tempDir = FileManager.default.temporaryDirectory
-            let filename = "\(mediaItem.slug)_\(option.label).mp4"
-            let localURL = tempDir.appendingPathComponent(filename)
-
-            // 检查是否已下载
-            if !FileManager.default.fileExists(atPath: localURL.path) {
-                NSLog("[MediaDetailView] 下载文件...")
-
-                let (data, _) = try await URLSession.shared.data(from: option.remoteURL)
-                try data.write(to: localURL)
-
-                NSLog("[MediaDetailView] ✅ 下载完成: \(localURL.path)")
-                NSLog("[MediaDetailView] 文件大小: \(data.count / 1024 / 1024) MB")
-            } else {
-                NSLog("[MediaDetailView] 使用缓存文件: \(localURL.path)")
-            }
-
-            // 2. 移动到下载目录
-            let downloadsDir = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
-            let finalURL = downloadsDir.appendingPathComponent(filename)
-
-            // 如果目标文件已存在，先删除
-            if FileManager.default.fileExists(atPath: finalURL.path) {
-                try FileManager.default.removeItem(at: finalURL)
-            }
-
-            try FileManager.default.moveItem(at: localURL, to: finalURL)
-
-            NSLog("[MediaDetailView] ✅ 文件已保存到: \(finalURL.path)")
-
-            // 3. 在 Finder 中显示
+            let wallpaper = try await DownloadManager.shared.downloadWallpaper(
+                item: .media(mediaItem),
+                quality: option.label,
+                downloadURL: option.remoteURL,
+                context: modelContext
+            )
+            let finalURL = URL(fileURLWithPath: wallpaper.filePath)
             NSWorkspace.shared.activateFileViewerSelecting([finalURL])
-
-            // TODO: 显示成功提示
+            toast = ToastConfig(message: "下载完成，已加入本地库", type: .success)
 
         } catch {
             NSLog("[MediaDetailView] ❌ 下载失败: \(error.localizedDescription)")
-            // TODO: 显示错误提示
+            toast = ToastConfig(message: "下载失败: \(error.localizedDescription)", type: .error)
         }
     }
 
