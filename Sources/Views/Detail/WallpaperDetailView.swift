@@ -40,6 +40,9 @@ struct WallpaperDetailView: View {
     @State internal var vignette: Double = 0
     @State internal var grayscale: Double = 0
     @State internal var invert: Double = 0
+    @State internal var highlights: Double = 100
+    @State internal var shadows: Double = 100
+    @State internal var dispersion: Double = 0
     @State internal var currentPresetName: String = "原图"
 
     // 粒子系统状态
@@ -53,6 +56,8 @@ struct WallpaperDetailView: View {
     @State var particleThrust: Double = 0
     @State var particleAngle: Double = 0
     @State var particleSpread: Double = 360
+    @State var particleFadeIn: Double = 10
+    @State var particleFadeOut: Double = 30
     @State var particleColorStart = Color.white
     @State var particleColorEnd = LiquidGlassColors.primaryPink
 
@@ -135,42 +140,25 @@ struct WallpaperDetailView: View {
     
     private var fullscreenCanvas: some View {
         ZStack {
-            if wallpaper.type == .video, let videoURL = wallpaperContentURL {
-                DetailVideoLayerContainer(url: videoURL)
-                    .id(videoURL.absoluteString)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
-            } else if let url = wallpaperContentURL {
-                artisanAsyncImage(url: url)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
-            } else {
-                fallbackPoster
-            }
-            
-            // 实验室功能 - 光学/风格 滤镜应用
-            Color.clear
-                .background(
-                    Group {
-                        if invert > 50 { Color.white.blendMode(.difference) }
-                    }
-                )
-            
-            if grain > 0 {
-                GrainTextureOverlay(opacity: grain / 100.0)
-                    .blendMode(.overlay)
-            }
-            
-            if vignette > 0 {
-                RadialGradient(
-                    colors: [.clear, .black.opacity(vignette / 100.0)],
-                    center: .center,
-                    startRadius: 300,
-                    endRadius: 1000
-                )
-            }
+            // 1. 背景层：壁纸 + 滤镜 (性能关键：隔离重度计算)
+            ArtisanBackgroundLayer(
+                wallpaper: wallpaper,
+                contentURL: wallpaperContentURL,
+                posterURL: wallpaperPosterURL,
+                blur: blur,
+                grayscale: grayscale,
+                contrast: contrast,
+                saturation: saturation,
+                exposure: exposure,
+                hue: hue,
+                highlights: highlights,
+                shadows: shadows,
+                invert: invert,
+                grain: grain,
+                vignette: vignette
+            )
 
-            // 粒子系统 (位于滤镜层之后)
+            // 2. 顶层：粒子系统 (开启 Metal 合成加速)
             if isStudioActive && studioTab == 3 && particleRate > 0 {
                 ParticleOverlay(
                     style: particleStyle,
@@ -183,26 +171,18 @@ struct WallpaperDetailView: View {
                     thrust: particleThrust,
                     angle: particleAngle,
                     spread: particleSpread,
+                    fadeIn: particleFadeIn,
+                    fadeOut: particleFadeOut,
                     colorStart: particleColorStart,
                     colorEnd: particleColorEnd
                 )
+                .drawingGroup() // 核心性能开关：强制 Metal 合成
             }
         }
-        .blur(radius: CGFloat(blur))
-        .grayscale(grayscale / 100.0)
-        .contrast(contrast / 100.0)
-        .saturation(saturation / 100.0)
-        .brightness((exposure - 100) / 100.0)
-        .hueRotation(.degrees(hue))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black)
         .ignoresSafeArea()
-        .id("canvas-\(wallpaper.id)") // 只根据壁纸 ID 刷新，滤镜改变时不刷新
-        .onAppear {
-            if wallpaper.type == .video, let videoURL = wallpaperContentURL {
-                VideoPreloader.shared.preload(url: videoURL)
-            }
-        }
+        .id("canvas-\(wallpaper.id)") // 只在壁纸 ID 改变时重建基础容器
     }
 
     private var fallbackPoster: some View {
@@ -417,7 +397,15 @@ struct WallpaperDetailView: View {
             .disabled(isApplying)
 
             // 3. 实验室按钮（圆形，toggle 控制 isStudioActive）
-            Button(action: { withAnimation(.gallerySpring) { isStudioActive.toggle() } }) {
+            Button(action: { 
+                withAnimation(.gallerySpring) { 
+                    isStudioActive.toggle() 
+                    if !isStudioActive {
+                        // 强制关闭 macOS 原生调色面板
+                        NSColorPanel.shared.orderOut(nil)
+                    }
+                } 
+            }) {
                 VStack(spacing: 4) {
                     Image(systemName: "camera.aperture").font(.system(size: 18))
                     Text("实验室").font(.system(size: 8, weight: .bold))
@@ -578,8 +566,8 @@ struct WallpaperDetailView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 24) {
                     ForEach([
-                        "circle.fill", "star.fill", "sparkles", "leaf.fill", "drop.fill",
-                        "flower.fill", "heart.fill", "snowflake", "bolt.fill", "music.note", "cloud.fill"
+                        "circle.fill", "sparkle", "sparkles", "star.fill", "aqi.medium", 
+                        "sun.max.fill", "leaf.fill", "flower.fill", "drop.fill", "snowflake", "cloud.fill"
                     ], id: \.self) { icon in
                         Button(action: { withAnimation(.gallerySpring) { particleStyle = icon } }) {
                             Image(systemName: icon)
@@ -618,7 +606,7 @@ struct WallpaperDetailView: View {
             }
             .padding(32)
         } else if studioTab == 1 {
-            // 光学网格
+            // 光学网格 (绑定新变量)
             VStack(spacing: 24) {
                 HStack(spacing: 40) {
                     ArtisanRulerDial(label: "曝光", value: $exposure, range: 0...200, unit: "ev")
@@ -627,13 +615,13 @@ struct WallpaperDetailView: View {
                 }
                 HStack(spacing: 40) {
                     ArtisanRulerDial(label: "色相", value: $hue, range: -180...180, unit: "°")
-                    ArtisanRulerDial(label: "高光", value: .constant(100), range: 0...200, unit: "%") // 模拟参数
-                    ArtisanRulerDial(label: "阴影", value: .constant(100), range: 0...200, unit: "%") // 模拟参数
+                    ArtisanRulerDial(label: "高光", value: $highlights, range: 0...200, unit: "%")
+                    ArtisanRulerDial(label: "阴影", value: $shadows, range: 0...200, unit: "%")
                 }
             }
             .padding(32)
         } else if studioTab == 2 {
-            // 风格网格
+            // 风格网格 (绑定新变量)
             VStack(spacing: 24) {
                 HStack(spacing: 40) {
                     ArtisanRulerDial(label: "模糊", value: $blur, range: 0...40, unit: "px")
@@ -643,12 +631,12 @@ struct WallpaperDetailView: View {
                 HStack(spacing: 40) {
                     ArtisanRulerDial(label: "黑白", value: $grayscale, range: 0...100, unit: "%")
                     ArtisanRulerDial(label: "反相", value: $invert, range: 0...100, unit: "%")
-                    ArtisanRulerDial(label: "色散", value: .constant(0), range: 0...20, unit: "px") // 模拟参数
+                    ArtisanRulerDial(label: "色散", value: $dispersion, range: 0...20, unit: "px")
                 }
             }
             .padding(32)
         } else if studioTab == 3 {
-            // 粒子全量网格 (11 个参数，滚动可见)
+            // 粒子全量网格 (绑定新变量，垂直滚动可见)
             VStack(spacing: 32) {
                 HStack(spacing: 40) {
                     ArtisanRulerDial(label: "速率", value: $particleRate, range: 1...300, unit: "p/s")
@@ -666,9 +654,9 @@ struct WallpaperDetailView: View {
                     ArtisanRulerDial(label: "发散", value: $particleSpread, range: 0...360, unit: "°")
                 }
                 HStack(spacing: 40) {
-                    ArtisanRulerDial(label: "渐显", value: .constant(0), range: 0...100, unit: "%")
-                    ArtisanRulerDial(label: "渐隐", value: .constant(0), range: 0...100, unit: "%")
-                    Spacer().frame(width: 160)
+                    ArtisanRulerDial(label: "渐显", value: $particleFadeIn, range: 0...100, unit: "%")
+                    ArtisanRulerDial(label: "渐隐", value: $particleFadeOut, range: 0...100, unit: "%")
+                    Spacer().frame(width: 150)
                 }
             }
             .padding(32)
@@ -884,6 +872,93 @@ struct WallpaperDetailView: View {
         showToast = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
             withAnimation { showToast = false }
+        }
+    }
+}
+
+// MARK: - 性能优化子层级
+private struct ArtisanBackgroundLayer: View {
+    let wallpaper: Wallpaper
+    let contentURL: URL?
+    let posterURL: URL?
+    let blur: Double
+    let grayscale: Double
+    let contrast: Double
+    let saturation: Double
+    let exposure: Double
+    let hue: Double
+    let highlights: Double
+    let shadows: Double
+    let invert: Double
+    let grain: Double
+    let vignette: Double
+
+    var body: some View {
+        ZStack {
+            // 原始素材
+            if wallpaper.type == .video, let videoURL = contentURL {
+                DetailVideoLayerContainer(url: videoURL)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+            } else if let url = contentURL {
+                ArtisanSimpleImage(url: url)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+            } else {
+                ArtisanSimplePoster(url: posterURL)
+            }
+            
+            // 效果层
+            if invert > 50 { Color.white.blendMode(.difference) }
+            
+            if grain > 0 {
+                GrainTextureOverlay(opacity: grain / 100.0)
+                    .blendMode(.overlay)
+            }
+            
+            if vignette > 0 {
+                RadialGradient(
+                    colors: [.clear, .black.opacity(vignette / 100.0)],
+                    center: .center,
+                    startRadius: 300,
+                    endRadius: 1000
+                )
+            }
+        }
+        .blur(radius: CGFloat(blur))
+        .grayscale(grayscale / 100.0)
+        .contrast(contrast / 100.0)
+        .saturation(saturation / 100.0)
+        .brightness((exposure - 100) / 100.0)
+        .hueRotation(.degrees(hue))
+        .colorMultiply(Color(white: highlights / 100.0)) // 模拟高光控制
+    }
+}
+
+private struct ArtisanSimpleImage: View {
+    let url: URL
+    var body: some View {
+        if url.isFileURL {
+            if let nsImage = NSImage(contentsOf: url) {
+                Image(nsImage: nsImage).resizable().aspectRatio(contentMode: .fill)
+            } else { Color.black }
+        } else {
+            AsyncImage(url: url) { phase in
+                if let image = phase.image { image.resizable().aspectRatio(contentMode: .fill) }
+                else { Color.black }
+            }
+        }
+    }
+}
+
+private struct ArtisanSimplePoster: View {
+    let url: URL?
+    var body: some View {
+        ZStack {
+            Color.black
+            if let url = url {
+                ArtisanSimpleImage(url: url).blur(radius: 16).opacity(0.45)
+            }
         }
     }
 }

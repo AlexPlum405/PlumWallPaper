@@ -107,67 +107,84 @@ struct ParticleOverlay: View {
     var thrust: Double = 0
     var angle: Double = 0
     var spread: Double = 360
+    var fadeIn: Double = 10  // % of lifetime
+    var fadeOut: Double = 30 // % of lifetime
     var colorStart: Color
     var colorEnd: Color
 
     var body: some View {
         TimelineView(.animation) { timeline in
             Canvas { context, size in
-                let now = timeline.date.timeIntervalSinceReferenceDate
-                let particleCount = Int(rate * lifetime)
-                
-                for i in 0..<particleCount {
-                    let seed = Double(i)
-                    let birthTime = seed / rate
-                    let age = now - birthTime
-                    let cycle = floor(max(0, age) / lifetime)
-                    let currentAge = max(0, age) - cycle * lifetime
-                    
-                    if currentAge >= 0 && currentAge <= lifetime {
-                        let progress = currentAge / lifetime
-                        
-                        // Determinitic pseudo-random based on seed + cycle
-                        let cycleSeed = seed + cycle * 1000
-                        let startX = (sin(cycleSeed * 12.3) * 0.5 + 0.5) * size.width
-                        let startY = (cos(cycleSeed * 45.6) * 0.5 + 0.5) * size.height
-                        
-                        // Velocity with Thrust and Angle
-                        let radAngle = (angle + (sin(cycleSeed * 32.1) * spread * 0.5)) * .pi / 180.0
-                        let vx = (sin(cycleSeed * 78.9) * turbulence * 20) + (cos(radAngle) * thrust * 10)
-                        let vy = (gravity * currentAge * 50) + (sin(radAngle) * thrust * 10)
-                        
-                        let currentX = startX + vx * currentAge
-                        let currentY = startY + vy * currentAge
-                        
-                        // Rotation
-                        let rotation = currentAge * spin * 5.0
-                        
-                        // Basic interpolation without NSColor complex calls for performance
-                        let opacity = (1.0 - progress) * 0.6
-                        let color = colorStart.opacity(opacity)
-                        
-                        let pSize = self.size * (1.0 - progress * 0.5)
-                        
-                        var innerContext = context
-                        innerContext.translateBy(x: currentX, y: currentY)
-                        innerContext.rotate(by: .degrees(rotation))
-                        
-                        if style == "circle.fill" {
-                            let rect = CGRect(x: -pSize/2, y: -pSize/2, width: pSize, height: pSize)
-                            innerContext.fill(Path(ellipseIn: rect), with: .color(color))
-                        } else {
-                            // Draw system icon as text
-                            innerContext.draw(
-                                Text(Image(systemName: style))
-                                    .font(.system(size: pSize))
-                                    .foregroundStyle(color),
-                                at: .zero
-                            )
-                        }
-                    }
-                }
+                drawParticles(into: &context, size: size, at: timeline.date)
             }
         }
         .allowsHitTesting(false)
+    }
+
+    private func drawParticles(into context: inout GraphicsContext, size: CGSize, at date: Date) {
+        let now = date.timeIntervalSinceReferenceDate
+        // 限制最大粒子数，防止极端参数导致系统卡顿
+        let maxDisplayParticles = 800
+        let particleCount = min(Int(rate * (lifetime > 0 ? lifetime : 1)), maxDisplayParticles)
+        
+        // 预解析样式图片，杜绝在循环中重复创建对象
+        let resolvedSymbol = style == "circle.fill" ? nil : context.resolve(Image(systemName: style))
+        
+        for i in 0..<particleCount {
+            let seed = Double(i)
+            let birthTime = seed / (rate > 0 ? rate : 1.0)
+            let age = now - birthTime
+            let life = (lifetime > 0 ? lifetime : 1.0)
+            let cycle = floor(max(0, age) / life)
+            let currentAge = max(0, age) - cycle * life
+            
+            if currentAge >= 0 && currentAge <= life {
+                let progress = currentAge / life
+                
+                // Deterministic pseudo-random based on seed + cycle
+                let cycleSeed = seed + cycle * 1000
+                let startX = (sin(cycleSeed * 12.3) * 0.5 + 0.5) * size.width
+                let startY = (cos(cycleSeed * 45.6) * 0.5 + 0.5) * size.height
+                
+                // Velocity with Thrust and Angle
+                let radAngle = (angle + (sin(cycleSeed * 32.1) * spread * 0.5)) * .pi / 180.0
+                let vx = (sin(cycleSeed * 78.9) * turbulence * 20) + (cos(radAngle) * thrust * 10)
+                let vy = (gravity * currentAge * 50) + (sin(radAngle) * thrust * 10)
+                
+                let currentX = startX + vx * currentAge
+                let currentY = startY + vy * currentAge
+                
+                // Rotation
+                let rotation = currentAge * spin * 5.0
+                
+                // Advanced Opacity Logic (Fade In / Fade Out)
+                var opacity: Double = 0.6
+                let inDuration = (fadeIn / 100.0)
+                let outDuration = (fadeOut / 100.0)
+                
+                if progress < inDuration {
+                    opacity *= (progress / (inDuration > 0 ? inDuration : 0.01))
+                } else if progress > (1.0 - outDuration) {
+                    opacity *= ((1.0 - progress) / (outDuration > 0 ? outDuration : 0.01))
+                }
+                
+                let color = colorStart.opacity(opacity)
+                let pSize = self.size * (1.0 - progress * 0.5)
+                
+                if let symbol = resolvedSymbol {
+                    // 绘制预解析的图标 (极速)
+                    var copy = context
+                    copy.translateBy(x: currentX, y: currentY)
+                    copy.rotate(by: .degrees(rotation))
+                    copy.opacity = opacity
+                    copy.addFilter(.colorMultiply(colorStart)) 
+                    copy.draw(symbol, at: .zero)
+                } else {
+                    // 绘制原生圆形 (极速)
+                    let rect = CGRect(x: currentX - pSize/2, y: currentY - pSize/2, width: pSize, height: pSize)
+                    context.fill(Path(ellipseIn: rect), with: .color(color))
+                }
+            }
+        }
     }
 }
