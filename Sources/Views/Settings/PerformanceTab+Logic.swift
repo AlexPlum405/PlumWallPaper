@@ -1,53 +1,64 @@
 import SwiftUI
 
 extension PerformanceTab {
-    // MARK: - 业务逻辑（占位）
+    // MARK: - 业务逻辑
 
     func setFPSLimit(_ limit: Int) {
-        print("setFPSLimit: \(limit)")
+        viewModel.setFPSLimit(limit)
     }
 
     func setVSyncEnabled(_ enabled: Bool) {
-        print("setVSyncEnabled: \(enabled)")
+        viewModel.settings?.vSyncEnabled = enabled
+        viewModel.save()
     }
 
     func setPauseOnBattery(_ enabled: Bool) {
-        print("setPauseOnBattery: \(enabled)")
+        viewModel.settings?.pauseOnBattery = enabled
+        viewModel.save()
     }
 
     func setPauseOnFullscreen(_ enabled: Bool) {
-        print("setPauseOnFullscreen: \(enabled)")
+        viewModel.settings?.pauseOnFullscreen = enabled
+        viewModel.save()
     }
 
     func setPauseOnLowBattery(_ enabled: Bool) {
-        print("setPauseOnLowBattery: \(enabled)")
+        viewModel.settings?.pauseOnLowBattery = enabled
+        viewModel.save()
     }
 
     func setLowBatteryThreshold(_ threshold: Int) {
-        print("setLowBatteryThreshold: \(threshold)")
+        viewModel.settings?.lowBatteryThreshold = threshold
+        viewModel.save()
     }
 
     func setPauseOnScreenSharing(_ enabled: Bool) {
-        print("setPauseOnScreenSharing: \(enabled)")
+        viewModel.settings?.pauseOnScreenSharing = enabled
+        viewModel.save()
     }
 
     func setPauseOnHighLoad(_ enabled: Bool) {
-        print("setPauseOnHighLoad: \(enabled)")
+        viewModel.settings?.pauseOnHighLoad = enabled
+        viewModel.save()
     }
 
     func setPauseOnLostFocus(_ enabled: Bool) {
-        print("setPauseOnLostFocus: \(enabled)")
+        viewModel.settings?.pauseOnLostFocus = enabled
+        viewModel.save()
     }
 
     func setPauseOnLidClosed(_ enabled: Bool) {
-        print("setPauseOnLidClosed: \(enabled)")
+        viewModel.settings?.pauseOnLidClosed = enabled
+        viewModel.save()
     }
 
     func setPauseBeforeSleep(_ enabled: Bool) {
-        print("setPauseBeforeSleep: \(enabled)")
+        viewModel.settings?.pauseBeforeSleep = enabled
+        viewModel.save()
     }
 
     func setPauseOnOcclusion(_ enabled: Bool) {
-        print("setPauseOnOcclusion: \(enabled)")
+        viewModel.settings?.pauseOnOcclusion = enabled
+        viewModel.save()
     }
 }

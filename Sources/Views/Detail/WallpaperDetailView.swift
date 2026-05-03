@@ -6,7 +6,7 @@ import AVFoundation
 // 沉浸式壁纸鉴赏厅，UI 仅在鼠标触碰功能区时如雾般浮现。
 
 struct WallpaperDetailView: View {
-    @State var wallpaper: Wallpaper // 改为 @State 以支持内部平滑更新
+    @State var wallpaper: Wallpaper 
     var onPrevious: ((Wallpaper, @escaping (Wallpaper) -> Void) -> Void)? = nil
     var onNext: ((Wallpaper, @escaping (Wallpaper) -> Void) -> Void)? = nil
     var onFavorite: ((Wallpaper) -> Void)? = nil
@@ -16,11 +16,9 @@ struct WallpaperDetailView: View {
     @Environment(\.modelContext) private var modelContext
     
     // 状态驱动
-    @State internal var isStudioActive = false      // 实验室面板是否展开
-    @State internal var studioTab = 0               // 0: 预设, 1: 光学, 2: 风格, 3: 粒子
-    @State private var studioScrollOffset: CGFloat = 0 // 实验室面板滚动位移
-    @State private var studioDragOffset: CGFloat = 0   // 实验室面板拖拽位移
-    @State internal var isApplying = false           // 应用壁纸中
+    @State internal var isStudioActive = false      
+    @State internal var studioTab = 0               
+    @State internal var isApplying = false           
     @State private var isDownloading = false
     @State private var toastMessage: String?
     @State private var showToast = false
@@ -29,8 +27,9 @@ struct WallpaperDetailView: View {
     // 侧翼导航悬停
     @State internal var isLeftEdgeHovered = false
     @State internal var isRightEdgeHovered = false
+    @State private var isCloseHovered = false
     
-    // 滤镜状态 (保留现有变量名)
+    // 滤镜状态
     @State internal var exposure: Double = 100
     @State internal var contrast: Double = 100
     @State internal var saturation: Double = 100
@@ -45,7 +44,7 @@ struct WallpaperDetailView: View {
     @State internal var dispersion: Double = 0
     @State internal var currentPresetName: String = "原图"
 
-    // 粒子系统状态
+    // 粒子与环境系统状态
     @State var particleStyle: String = "circle.fill"
     @State var particleRate: Double = 60
     @State var particleLifetime: Double = 3
@@ -60,65 +59,98 @@ struct WallpaperDetailView: View {
     @State var particleFadeOut: Double = 30
     @State var particleColorStart = Color.white
     @State var particleColorEnd = LiquidGlassColors.primaryPink
+    
+    // 天气系统
+    @State var weatherWind: Double = 0
+    @State var weatherRain: Double = 0
+    @State var weatherThunder: Double = 0
+    @State var weatherSnow: Double = 0
+    @State private var lightningFlash: Double = 0 
 
     @State var isShowingShaderEditor = false
     
     var body: some View {
-        detailChrome(includeStaticCanvas: true)
-            .sheet(isPresented: $isShowingShaderEditor) {
-                ShaderEditorView()
+        ZStack {
+            fullscreenCanvas
+                .brightness(lightningFlash)
+                .allowsHitTesting(false)
+
+            Color.clear
+                .contentShape(Rectangle())
+                .windowDragGesture()
+        }
+        .frame(minWidth: 1200, minHeight: 800)
+        .overlay { chromeOverlay }
+        .overlay { toastOverlay }
+        .preferredColorScheme(.dark)
+        .onAppear {
+            if wallpaper.type == .video, let videoURL = wallpaperContentURL {
+                VideoPreloader.shared.preload(url: videoURL)
             }
-            .frame(minWidth: 1200, minHeight: 800)
-            .preferredColorScheme(.dark)
-            .onAppear {
-                if wallpaper.type == .video, let videoURL = wallpaperContentURL {
-                    VideoPreloader.shared.preload(url: videoURL)
+        }
+    }
+    
+    // MARK: - Subviews
+
+    private var chromeOverlay: some View {
+        ZStack {
+            HStack {
+                if onPrevious != nil {
+                    navigationEdgeButton(direction: -1, isHovered: $isLeftEdgeHovered)
+                        .padding(.leading, 24)
+                        .transition(.opacity)
+                }
+
+                Spacer(minLength: 0)
+
+                if onNext != nil {
+                    navigationEdgeButton(direction: 1, isHovered: $isRightEdgeHovered)
+                        .padding(.trailing, 24)
+                        .transition(.opacity)
                 }
             }
-    }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-    @ViewBuilder
-    private func detailChrome(includeStaticCanvas: Bool) -> some View {
-        ZStack {
-            // 1. 底层：纯净画布（100% 视野）
-            if includeStaticCanvas {
-                fullscreenCanvas
-                    .allowsHitTesting(false)
-            } else {
-                RadialGradient(colors: [.clear, .black.opacity(0.3)], center: .center, startRadius: 300, endRadius: 1000)
-                    .allowsHitTesting(false)
-            }
+            VStack(spacing: 0) {
+                HStack(alignment: .top) {
+                    artisanTitleHUD
+                        .frame(maxWidth: 720, alignment: .leading)
+                        .padding(.leading, 80)
+                        .padding(.top, 80)
 
-            // 2. 交互辅助层：透明拖拽与背景点击
-            Color.clear.contentShape(Rectangle()).windowDragGesture()
-            
-            // 3. 侧翼导航
-            sideNavigationArrows
-            
-            // 4. 标题 HUD
-            artisanTitleHUD
-                .padding(.leading, 80).padding(.top, 80)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    Spacer(minLength: 24)
 
-            // 5. 底部 HUD
-            VStack(spacing: 24) {
-                Spacer()
+                    // Keep the close button in its own corner slot so long titles cannot push it out.
+                    Color.clear
+                        .frame(width: 88, height: 88)
+                        .overlay(alignment: .topTrailing) {
+                            closeButtonHUD
+                                .padding(.top, 40)
+                                .padding(.trailing, 40)
+                        }
+                }
+
+                Spacer(minLength: 0)
+
                 if isStudioActive {
                     artisanStudioHUD
                         .transition(.asymmetric(
                             insertion: .move(edge: .bottom).combined(with: .opacity),
                             removal: .opacity
                         ))
+                        .padding(.bottom, 24)
                 }
-                artisanMainDock
-            }
-            .padding(.bottom, 40)
-            
-            // 6. 关闭按钮
-            closeButtonHUD
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
 
-            // 7. Toast
+                artisanMainDock
+                    .padding(.bottom, 40)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .zIndex(10)
+    }
+
+    private var toastOverlay: some View {
+        Group {
             if showToast, let message = toastMessage {
                 VStack {
                     Spacer()
@@ -133,14 +165,9 @@ struct WallpaperDetailView: View {
                 .transition(.opacity)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
-    // MARK: - A. 视觉子层级 (Artisan Horizon HUD)
-    
     private var fullscreenCanvas: some View {
         ZStack {
-            // 1. 背景层：壁纸 + 滤镜 (性能关键：隔离重度计算)
             ArtisanBackgroundLayer(
                 wallpaper: wallpaper,
                 contentURL: wallpaperContentURL,
@@ -158,8 +185,19 @@ struct WallpaperDetailView: View {
                 vignette: vignette
             )
 
-            // 2. 顶层：粒子系统 (开启 Metal 合成加速)
-            if isStudioActive && studioTab == 3 && particleRate > 0 {
+            Group {
+                if weatherThunder > 0 {
+                    ArtisanLightningLayer(frequency: weatherThunder, flash: $lightningFlash)
+                }
+                if weatherSnow > 0 {
+                    ArtisanSnowLayer(intensity: weatherSnow, wind: weatherWind)
+                }
+                if weatherRain > 0 {
+                    ArtisanRainLayer(intensity: weatherRain, wind: weatherWind)
+                }
+            }
+
+            if isStudioActive && studioTab == 4 && particleRate > 0 {
                 ParticleOverlay(
                     style: particleStyle,
                     rate: particleRate,
@@ -173,58 +211,18 @@ struct WallpaperDetailView: View {
                     spread: particleSpread,
                     fadeIn: particleFadeIn,
                     fadeOut: particleFadeOut,
+                    wind: weatherWind,
+                    isRainMode: false,
                     colorStart: particleColorStart,
                     colorEnd: particleColorEnd
                 )
-                .drawingGroup() // 核心性能开关：强制 Metal 合成
+                .drawingGroup()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black)
         .ignoresSafeArea()
-        .id("canvas-\(wallpaper.id)") // 只在壁纸 ID 改变时重建基础容器
-    }
-
-    private var fallbackPoster: some View {
-        ZStack {
-            Color.black
-            if let posterURL = wallpaperPosterURL {
-                artisanAsyncImage(url: posterURL)
-                    .blur(radius: 16)
-                    .opacity(0.45)
-            }
-        }
-    }
-
-    private var wallpaperContentURL: URL? {
-        url(from: wallpaper.filePath)
-    }
-
-    private var wallpaperPosterURL: URL? {
-        guard let thumbnailPath = wallpaper.thumbnailPath else { return nil }
-        return url(from: thumbnailPath)
-    }
-
-    private func url(from path: String) -> URL? {
-        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-
-        if let url = URL(string: trimmed), url.scheme != nil {
-            return url
-        }
-
-        return URL(fileURLWithPath: trimmed)
-    }
-
-    private var sideNavigationArrows: some View {
-        HStack(spacing: 0) {
-            navigationEdgeButton(direction: -1, isHovered: $isLeftEdgeHovered)
-
-            Spacer(minLength: 0)
-
-            navigationEdgeButton(direction: 1, isHovered: $isRightEdgeHovered)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .id("canvas-\(wallpaper.id)")
     }
 
     private func navigationEdgeButton(direction: Int, isHovered: Binding<Bool>) -> some View {
@@ -232,79 +230,58 @@ struct WallpaperDetailView: View {
             navigateWallpaper(direction: direction)
         } label: {
             ZStack {
-                Color.black.opacity(0.001)
-
+                // 核心：极高对比度背景 (黑色渐变盾牌)
+                Circle()
+                    .fill(Color.black.opacity(isHovered.wrappedValue ? 0.8 : 0.2))
+                    .frame(width: 64, height: 64)
+                    .blur(radius: isHovered.wrappedValue ? 2 : 12)
+                    .background(Circle().fill(.ultraThinMaterial))
+                    .overlay(Circle().stroke(Color.white.opacity(isHovered.wrappedValue ? 0.5 : 0.2), lineWidth: 1.5))
+                
                 navigationChevron(isPrevious: direction < 0)
-                    .frame(width: 14, height: 44)
-                    .opacity(isHovered.wrappedValue ? 1 : 0.72)
-                    .offset(x: direction < 0 ? 28 : -28)
+                    .frame(width: 20, height: 48)
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.8), radius: 4)
             }
-            .frame(width: 160)
-            .frame(maxHeight: .infinity)
+            .scaleEffect(isHovered.wrappedValue ? 1.05 : 1.0)
+            .frame(width: 140, height: 320) // 增加宽度提高热区，限制高度防止遮挡
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(isNavigatingWallpaper)
-        .onHover { hovering in
-            withAnimation(.galleryEase) {
-                isHovered.wrappedValue = hovering
-            }
-        }
+        .onHover { h in withAnimation(.galleryEase) { isHovered.wrappedValue = h } }
+        .padding(direction < 0 ? .leading : .trailing, 10)
+        .keyboardShortcut(direction < 0 ? .leftArrow : .rightArrow, modifiers: [])
     }
 
     private func navigationChevron(isPrevious: Bool) -> some View {
-        ZStack {
-            RoundedChevron()
-                .stroke(LiquidGlassColors.primaryPink.opacity(0.3), style: StrokeStyle(lineWidth: 12, lineCap: .round, lineJoin: .round))
-                .blur(radius: 8)
-
-            RoundedChevron()
-                .stroke(.white.opacity(0.6), style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round))
-                .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
-
-            RoundedChevron()
-                .stroke(
-                    LinearGradient(colors: [.white, .white.opacity(0.2)], startPoint: .top, endPoint: .bottom),
-                    style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
-                )
-        }
-        .rotationEffect(.degrees(isPrevious ? 180 : 0))
+        RoundedChevron()
+            .stroke(.white, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+            .rotationEffect(.degrees(isPrevious ? 180 : 0))
     }
 
     private func navigateWallpaper(direction: Int) {
+        // 核心修复：如果没有处理器，直接返回，不锁定状态
+        let handler = direction < 0 ? onPrevious : onNext
+        guard let action = handler else { return }
+        
         guard !isNavigatingWallpaper else { return }
         isNavigatingWallpaper = true
-
+        
         let finish: (Wallpaper) -> Void = { newWallpaper in
-            withAnimation(.galleryEase) {
-                self.wallpaper = newWallpaper
-            }
-
+            withAnimation(.galleryEase) { self.wallpaper = newWallpaper }
             if newWallpaper.type == .video, let videoURL = url(from: newWallpaper.filePath) {
                 VideoPreloader.shared.preload(url: videoURL)
             }
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+            // 稍作延迟，防止连续疯狂点击导致的逻辑混乱
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 isNavigatingWallpaper = false
             }
         }
-
-        if direction < 0 {
-            if let onPrevious {
-                onPrevious(wallpaper, finish)
-            } else {
-                isNavigatingWallpaper = false
-            }
-        } else {
-            if let onNext {
-                onNext(wallpaper, finish)
-            } else {
-                isNavigatingWallpaper = false
-            }
-        }
+        
+        action(wallpaper, finish)
     }
 
-    // 自定义圆润箭头图形
     private struct RoundedChevron: Shape {
         func path(in rect: CGRect) -> Path {
             var path = Path()
@@ -317,14 +294,8 @@ struct WallpaperDetailView: View {
 
     private var artisanTitleHUD: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("精选画廊")
-                .font(.system(size: 12, weight: .black)).kerning(5)
-                .foregroundStyle(LiquidGlassColors.primaryPink)
-
-            Text(wallpaper.name)
-                .artisanTitleStyle(size: 48, kerning: 1)
-                .shadow(color: .black.opacity(0.5), radius: 20)
-
+            Text("精选画廊").font(.system(size: 12, weight: .black)).kerning(5).foregroundStyle(LiquidGlassColors.primaryPink)
+            Text(wallpaper.name).artisanTitleStyle(size: 48, kerning: 1).shadow(color: .black.opacity(0.5), radius: 20)
             HStack(spacing: 20) {
                 metadataTag(icon: "ruler", text: wallpaper.resolution ?? "8K 超清")
                 metadataTag(icon: "cpu", text: "全动态渲染")
@@ -339,224 +310,128 @@ struct WallpaperDetailView: View {
         }
         .foregroundStyle(.white.opacity(0.6))
         .padding(.horizontal, 12).padding(.vertical, 6)
-        .background(Capsule().fill(Color.white.opacity(0.05)))
+        .background(Capsule().fill(Color.white.opacity(0.1)))
+    }
+
+    private var closeButtonHUD: some View {
+        Button(action: { dismiss() }) {
+            ZStack {
+                Circle()
+                    .fill(Color.black.opacity(isCloseHovered ? 0.8 : 0.6))
+                    .frame(width: 48, height: 48)
+                Image(systemName: "xmark")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+            .background(.ultraThinMaterial, in: Circle())
+            .overlay(Circle().stroke(Color.white.opacity(isCloseHovered ? 0.6 : 0.3), lineWidth: 2))
+            .scaleEffect(isCloseHovered ? 1.1 : 1.0)
+            .artisanShadow(color: .black, radius: 10)
+        }
+        .buttonStyle(.plain)
+        .onHover { h in withAnimation(.galleryEase) { isCloseHovered = h } }
+        .keyboardShortcut(.escape, modifiers: [])
     }
 
     private var artisanMainDock: some View {
         HStack(spacing: 24) {
-            // 1. 收藏按钮（圆形）
-            actionCircleButton(
-                icon: wallpaper.isFavorite ? "heart.fill" : "heart",
-                color: wallpaper.isFavorite ? LiquidGlassColors.primaryPink : .white.opacity(0.6)
-            ) {
+            actionCircleButton(icon: wallpaper.isFavorite ? "heart.fill" : "heart", color: wallpaper.isFavorite ? LiquidGlassColors.primaryPink : .white.opacity(0.6)) {
                 wallpaper.isFavorite.toggle()
-                
-                do {
-                    var targetToSave = wallpaper
-                    
-                    // 如果它已经在数据库里（本地库里的壁纸），直接保存
-                    if wallpaper.modelContext != nil {
-                        try modelContext.save()
-                    } else {
-                        // 如果它是临时的包装对象（在线预览），去数据库里找找看是不是已经存在了
-                        if let remoteId = wallpaper.remoteId,
-                           let existing = DownloadManager.shared.isAlreadyDownloaded(remoteId: remoteId, context: modelContext) {
-                            existing.isFavorite = wallpaper.isFavorite
-                            targetToSave = existing
-                            try modelContext.save()
-                        } else {
-                            // 既不在数据库，也是首次收藏的在线壁纸
-                            modelContext.insert(wallpaper)
-                            try modelContext.save()
-                        }
-                    }
-                    
-                    onFavorite?(targetToSave)
-                } catch {
-                    NSLog("[WallpaperDetailView] 保存收藏状态失败: \(error)")
-                }
+                try? modelContext.save()
+                onFavorite?(wallpaper)
             }
-
-            // 2. 应用壁纸（主按钮，粉色胶囊）
-            Button(action: {
-                Task {
-                    await applyWallpaper()
-                }
-            }) {
+            Button(action: { Task { await applyWallpaper() } }) {
                 HStack(spacing: 16) {
                     if isApplying { CustomProgressView(tint: .white, scale: 0.8) }
                     else { Text("设为壁纸").font(.system(size: 14, weight: .bold)).kerning(2) }
                 }
                 .padding(.horizontal, 60).frame(height: 52)
-                .background(LiquidGlassColors.primaryPink)
-                .clipShape(Capsule())
-                .foregroundStyle(.black)
+                .background(LiquidGlassColors.primaryPink).clipShape(Capsule()).foregroundStyle(.black)
                 .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.3), radius: 20)
-            }
-            .buttonStyle(.plain)
-            .disabled(isApplying)
+            }.buttonStyle(.plain).disabled(isApplying)
 
-            // 3. 实验室按钮（圆形，toggle 控制 isStudioActive）
-            Button(action: { 
-                withAnimation(.gallerySpring) { 
-                    isStudioActive.toggle() 
-                    if !isStudioActive {
-                        // 强制关闭 macOS 原生调色面板
-                        NSColorPanel.shared.orderOut(nil)
-                    }
-                } 
-            }) {
+            Button(action: { withAnimation(.gallerySpring) { 
+                isStudioActive.toggle()
+                if !isStudioActive { NSColorPanel.shared.orderOut(nil) }
+            } }) {
                 VStack(spacing: 4) {
                     Image(systemName: "camera.aperture").font(.system(size: 18))
                     Text("实验室").font(.system(size: 8, weight: .bold))
                 }
                 .foregroundStyle(isStudioActive ? LiquidGlassColors.primaryPink : .white.opacity(0.6))
-                .frame(width: 52, height: 52)
-                .background(Circle().fill(Color.white.opacity(0.05)))
-                .overlay(Circle().stroke(
-                    isStudioActive ? LiquidGlassColors.primaryPink.opacity(0.5) : Color.white.opacity(0.1),
-                    lineWidth: 1
-                ))
+                .frame(width: 52, height: 52).background(Circle().fill(Color.white.opacity(0.05)))
+                .overlay(Circle().stroke(isStudioActive ? LiquidGlassColors.primaryPink.opacity(0.5) : Color.white.opacity(0.1), lineWidth: 1))
             }.buttonStyle(.plain)
 
-            // 4. 下载按钮（圆形）
-            actionCircleButton(icon: "arrow.down.to.line.compact", color: .white.opacity(0.6)) {
-                Task {
-                    await downloadWallpaper()
-                }
-            }
-            .disabled(isDownloading)
+            actionCircleButton(icon: "arrow.down.to.line.compact", color: .white.opacity(0.6)) { Task { await downloadWallpaper() } }.disabled(isDownloading)
         }
-        .padding(12)
-        .background(.ultraThinMaterial, in: Capsule())
+        .padding(12).background(.ultraThinMaterial, in: Capsule())
         .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
         .artisanShadow(color: .black.opacity(0.2), radius: 30)
     }
 
     private var artisanStudioHUD: some View {
         HStack(spacing: 0) {
-            // === 1. 左侧：垂直导航 (精简间距防止溢出) ===
-            VStack(spacing: 12) {
-                ArtisanHorizonTab(icon: "grid", label: "预设", isSelected: studioTab == 0) {
-                    withAnimation(.gallerySpring) { studioTab = 0 }
-                }
-                ArtisanHorizonTab(icon: "camera.filters", label: "光学", isSelected: studioTab == 1) {
-                    withAnimation(.gallerySpring) { studioTab = 1 }
-                }
-                ArtisanHorizonTab(icon: "crop", label: "风格", isSelected: studioTab == 2) {
-                    withAnimation(.gallerySpring) { studioTab = 2 }
-                }
-                ArtisanHorizonTab(icon: "sparkles", label: "粒子", isSelected: studioTab == 3) {
-                    withAnimation(.gallerySpring) { studioTab = 3 }
-                }
+            VStack(spacing: 6) {
+                ArtisanHorizonTab(icon: "grid", label: "预设", isSelected: studioTab == 0) { withAnimation { studioTab = 0 } }
+                ArtisanHorizonTab(icon: "camera.filters", label: "光学", isSelected: studioTab == 1) { withAnimation { studioTab = 1 } }
+                ArtisanHorizonTab(icon: "crop", label: "风格", isSelected: studioTab == 2) { withAnimation { studioTab = 2 } }
+                ArtisanHorizonTab(icon: "cloud.sun", label: "天气", isSelected: studioTab == 3) { withAnimation { studioTab = 3 } }
+                ArtisanHorizonTab(icon: "sparkles", label: "粒子", isSelected: studioTab == 4) { withAnimation { studioTab = 4 } }
             }
-            .frame(width: 84, height: 220)
-            .background(Color.white.opacity(0.01))
-
+            .frame(width: 84, height: 220).background(Color.white.opacity(0.01))
             Divider().frame(width: 1, height: 220).opacity(0.06)
-
-            // === 2. 中间：内容区域 (排版更细腻) ===
             VStack(alignment: .leading, spacing: 0) {
-                // 固定顶部行
                 HStack(spacing: 24) {
-                    if studioTab == 3 {
-                        // 粒子样式横廊
-                        particleStyleRow
-                    } else {
-                        // 普通状态头 (精密排版升级)
+                    if studioTab == 4 { particleStyleRow }
+                    else {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("MODE: CURATED").font(.system(size: 6.5, weight: .black)).opacity(0.15).kerning(1.5)
                             Text(currentTabLabel.uppercased()).font(.system(size: 10, weight: .medium)).kerning(2.5)
                         }
                         Spacer()
                     }
-                    
-                    // 色彩演化
-                    if studioTab == 3 {
+                    if studioTab == 4 {
                         HStack(spacing: 16) {
                             colorPreview(label: "START", color: $particleColorStart)
                             colorPreview(label: "END", color: $particleColorEnd)
                         }
                     }
                 }
-                .padding(.horizontal, 40).padding(.top, 24).padding(.bottom, 12)
-                .frame(height: 64)
-                .border(width: 0.5, edges: [.bottom], color: .white.opacity(0.04))
-
-                // 滚动参数区
+                .padding(.horizontal, 40).padding(.top, 24).padding(.bottom, 12).frame(height: 64).border(width: 0.5, edges: [.bottom], color: .white.opacity(0.04))
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 0) {
                         parameterGrid
-                        
-                        // 底部提示
-                        if studioTab == 3 {
-                            HStack(spacing: 8) {
-                                Circle().fill(.white.opacity(0.08)).frame(width: 2, height: 2)
-                                Text("SCROLL FOR MORE PARAMETERS").font(.system(size: 6.5, weight: .bold)).opacity(0.08).kerning(1.5)
-                                Circle().fill(.white.opacity(0.08)).frame(width: 2, height: 2)
-                            }
-                            .padding(.vertical, 20)
+                        if studioTab == 4 {
+                            Text("SCROLL FOR MORE").font(.system(size: 6.5, weight: .bold)).opacity(0.08).kerning(1.5).padding(.vertical, 20)
                         }
                     }
-                }
-                .frame(height: 156) 
-            }
-            .frame(width: 740, height: 220)
-
+                }.frame(height: 156) 
+            }.frame(width: 740, height: 220)
             Divider().frame(width: 1, height: 220).opacity(0.06)
-
-            // === 3. 右侧：动作控制 ===
             VStack(spacing: 24) {
                 Button(action: { resetFilters() }) {
-                    VStack(spacing: 4) {
-                        Text("↺").font(.system(size: 14, weight: .light))
-                        Text("RESET").font(.system(size: 6.5, weight: .black)).kerning(1)
-                    }
-                    .foregroundStyle(.white.opacity(0.2))
-                    .frame(width: 44, height: 44)
-                    .background(Circle().fill(.white.opacity(0.02)))
+                    VStack(spacing: 4) { Text("↺").font(.system(size: 14)); Text("RESET").font(.system(size: 6.5, weight: .black)) }
+                    .foregroundStyle(.white.opacity(0.2)).frame(width: 44, height: 44).background(Circle().fill(.white.opacity(0.02)))
                 }.buttonStyle(.plain)
-
                 Button(action: { applyCurrentPreset() }) {
-                    VStack(spacing: 4) {
-                        Image(systemName: "checkmark").font(.system(size: 11, weight: .semibold))
-                        Text("APPLY").font(.system(size: 6.5, weight: .black)).kerning(1)
-                    }
-                    .foregroundStyle(.black)
-                    .frame(width: 44, height: 44)
-                    .background(Circle().fill(LiquidGlassColors.primaryPink))
-                    .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.15), radius: 8)
+                    VStack(spacing: 4) { Image(systemName: "checkmark").font(.system(size: 11)); Text("APPLY").font(.system(size: 6.5, weight: .black)) }
+                    .foregroundStyle(.black).frame(width: 44, height: 44).background(Circle().fill(LiquidGlassColors.primaryPink))
                 }.buttonStyle(.plain)
-            }
-            .padding(.vertical, 20)
-            .frame(width: 80)
-            .background(Color.white.opacity(0.01))
+            }.padding(.vertical, 20).frame(width: 80)
         }
-        .frame(height: 220)
-        .background(LiquidGlassColors.deepBackground.opacity(0.7))
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 32, style: .continuous).stroke(Color.white.opacity(0.04), lineWidth: 0.5))
-        .artisanShadow(color: .black.opacity(0.4), radius: 60)
+        .frame(height: 220).background(LiquidGlassColors.deepBackground.opacity(0.7)).background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous)).artisanShadow(color: .black.opacity(0.4), radius: 60)
     }
 
     private var currentTabLabel: String {
-        switch studioTab {
-        case 0: return "Presets"
-        case 1: return "Optics"
-        case 2: return "Style"
-        case 3: return "Particles"
-        default: return ""
-        }
+        ["Presets", "Optics", "Style", "Weather", "Particles"][studioTab]
     }
 
     private func colorPreview(label: String, color: Binding<Color>) -> some View {
         VStack(spacing: 4) {
             Text(label).font(.system(size: 6, weight: .black)).opacity(0.2)
-            ColorPicker("", selection: color).labelsHidden()
-                .frame(width: 20, height: 20)
-                .clipShape(Circle())
-                .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
+            ColorPicker("", selection: color).labelsHidden().frame(width: 20, height: 20).clipShape(Circle())
         }
     }
 
@@ -565,19 +440,13 @@ struct WallpaperDetailView: View {
             Text("STYLES").font(.system(size: 7, weight: .black)).opacity(0.15).kerning(1.2)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 24) {
-                    ForEach([
-                        "circle.fill", "sparkle", "sparkles", "star.fill", "aqi.medium", 
-                        "sun.max.fill", "leaf.fill", "flower.fill", "drop.fill", "snowflake", "cloud.fill"
-                    ], id: \.self) { icon in
-                        Button(action: { withAnimation(.gallerySpring) { particleStyle = icon } }) {
-                            Image(systemName: icon)
-                                .font(.system(size: 13, weight: .light))
+                    ForEach(["circle.fill", "sparkle", "sparkles", "star.fill", "aqi.medium", "sun.max.fill", "leaf.fill", "flower.fill", "drop.fill", "snowflake", "cloud.fill"], id: \.self) { icon in
+                        Button(action: { withAnimation { particleStyle = icon } }) {
+                            Image(systemName: icon).font(.system(size: 13, weight: .light))
                                 .foregroundStyle(particleStyle == icon ? LiquidGlassColors.primaryPink : .white.opacity(0.12))
-                                .scaleEffect(particleStyle == icon ? 1.15 : 1.0)
                         }.buttonStyle(.plain)
                     }
                 }
-                .padding(.horizontal, 4)
             }
             Spacer()
         }
@@ -586,27 +455,17 @@ struct WallpaperDetailView: View {
     @ViewBuilder
     private var parameterGrid: some View {
         if studioTab == 0 {
-            // 预设网格 (去土味：由矩形改为精致胶囊)
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
                 ForEach(BuiltInPreset.allCases) { preset in
                     let isActive = currentPresetName == preset.name
                     Button(action: { applyPreset(preset) }) {
-                        Text(preset.name).font(.system(size: 9.5, weight: .bold))
-                            .kerning(1)
-                            .frame(maxWidth: .infinity).frame(height: 40)
+                        Text(preset.name).font(.system(size: 9.5, weight: .bold)).frame(maxWidth: .infinity).frame(height: 40)
                             .background(isActive ? LiquidGlassColors.primaryPink.opacity(0.12) : Color.white.opacity(0.02))
-                            .foregroundStyle(isActive ? LiquidGlassColors.primaryPink : .white.opacity(0.3))
-                            .clipShape(Capsule())
-                            .overlay(
-                                Capsule()
-                                    .stroke(isActive ? LiquidGlassColors.primaryPink.opacity(0.3) : Color.white.opacity(0.05), lineWidth: 0.5)
-                            )
+                            .foregroundStyle(isActive ? LiquidGlassColors.primaryPink : .white.opacity(0.3)).clipShape(Capsule())
                     }.buttonStyle(.plain)
                 }
-            }
-            .padding(32)
+            }.padding(32)
         } else if studioTab == 1 {
-            // 光学网格 (绑定新变量)
             VStack(spacing: 24) {
                 HStack(spacing: 40) {
                     ArtisanRulerDial(label: "曝光", value: $exposure, range: 0...200, unit: "ev")
@@ -618,10 +477,8 @@ struct WallpaperDetailView: View {
                     ArtisanRulerDial(label: "高光", value: $highlights, range: 0...200, unit: "%")
                     ArtisanRulerDial(label: "阴影", value: $shadows, range: 0...200, unit: "%")
                 }
-            }
-            .padding(32)
+            }.padding(32)
         } else if studioTab == 2 {
-            // 风格网格 (绑定新变量)
             VStack(spacing: 24) {
                 HStack(spacing: 40) {
                     ArtisanRulerDial(label: "模糊", value: $blur, range: 0...40, unit: "px")
@@ -633,10 +490,20 @@ struct WallpaperDetailView: View {
                     ArtisanRulerDial(label: "反相", value: $invert, range: 0...100, unit: "%")
                     ArtisanRulerDial(label: "色散", value: $dispersion, range: 0...20, unit: "px")
                 }
-            }
-            .padding(32)
+            }.padding(32)
         } else if studioTab == 3 {
-            // 粒子全量网格 (绑定新变量，垂直滚动可见)
+            VStack(spacing: 32) {
+                HStack(spacing: 40) {
+                    ArtisanRulerDial(label: "全局风力", value: $weatherWind, range: -50...50, unit: "km/h")
+                    ArtisanRulerDial(label: "降雨强度", value: $weatherRain, range: 0...100, unit: "%")
+                    ArtisanRulerDial(label: "降雪密度", value: $weatherSnow, range: 0...100, unit: "%")
+                }
+                HStack(spacing: 40) {
+                    ArtisanRulerDial(label: "雷电频率", value: $weatherThunder, range: 0...100, unit: "%")
+                    Spacer().frame(width: 150); Spacer().frame(width: 150)
+                }
+            }.padding(32)
+        } else if studioTab == 4 {
             VStack(spacing: 32) {
                 HStack(spacing: 40) {
                     ArtisanRulerDial(label: "速率", value: $particleRate, range: 1...300, unit: "p/s")
@@ -650,423 +517,235 @@ struct WallpaperDetailView: View {
                 }
                 HStack(spacing: 40) {
                     ArtisanRulerDial(label: "推力", value: $particleThrust, range: 0...50, unit: "pow")
-                    ArtisanRulerDial(label: "角度", value: $particleAngle, range: 0...360, unit: "°")
-                    ArtisanRulerDial(label: "发散", value: $particleSpread, range: 0...360, unit: "°")
-                }
-                HStack(spacing: 40) {
                     ArtisanRulerDial(label: "渐显", value: $particleFadeIn, range: 0...100, unit: "%")
                     ArtisanRulerDial(label: "渐隐", value: $particleFadeOut, range: 0...100, unit: "%")
-                    Spacer().frame(width: 150)
                 }
-            }
-            .padding(32)
+            }.padding(32)
         }
     }
 
-    private var closeButtonHUD: some View {
-        Button(action: { dismiss() }) {
-            Image(systemName: "xmark")
-                .font(.system(size: 14, weight: .light))
-                .frame(width: 44, height: 44)
-                .background(Circle().fill(Color.black.opacity(0.4)))
-                .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
-        }
-        .buttonStyle(.plain)
-        .padding(40)
-    }
-
-    // MARK: - 辅助组件
-    
     private func actionCircleButton(icon: String, color: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon).font(.system(size: 18)).foregroundStyle(color)
-                .frame(width: 52, height: 52)
-                .background(Circle().fill(Color.white.opacity(0.05)))
+                .frame(width: 52, height: 52).background(Circle().fill(Color.white.opacity(0.05)))
                 .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 1))
         }.buttonStyle(.plain)
     }
 
-    @ViewBuilder
-    private func artisanAsyncImage(url: URL) -> some View {
-        if url.isFileURL {
-            if let nsImage = NSImage(contentsOf: url) {
-                Image(nsImage: nsImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else {
-                fallbackPlaceholder
-            }
-        } else {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image.resizable().aspectRatio(contentMode: .fill)
-                        .transition(.opacity)
-                case .failure:
-                    fallbackPlaceholder
-                case .empty:
-                    Rectangle().fill(Color.white.opacity(0.05))
-                @unknown default:
-                    fallbackPlaceholder
-                }
-            }
-        }
+    private func url(from path: String) -> URL? {
+        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let url = URL(string: trimmed), url.scheme != nil { return url }
+        return URL(fileURLWithPath: trimmed)
     }
 
-    private var fallbackPlaceholder: some View {
-        ZStack {
-            Color.black
-            Image(systemName: "photo.on.rectangle.angled")
-                .foregroundStyle(.white.opacity(0.2))
-        }
-    }
-
-    // MARK: - Actions
+    private var wallpaperContentURL: URL? { url(from: wallpaper.filePath) }
+    private var wallpaperPosterURL: URL? { wallpaper.thumbnailPath.flatMap { url(from: $0) } }
 
     private func applyWallpaper() async {
-        isApplying = true
-        defer { isApplying = false }
-
-        NSLog("[WallpaperDetailView] applyWallpaper type=\(wallpaper.type) filePath=\(wallpaper.filePath)")
-
+        isApplying = true; defer { isApplying = false }
         do {
             if wallpaper.type == .video {
-                // 视频壁纸：通过 RenderPipeline 渲染到桌面
-                let videoURL: URL
-                let wallpaperVideoPath = highQualityVideoPathForApply ?? wallpaper.filePath
-                if let remoteURL = URL(string: wallpaperVideoPath), remoteURL.scheme?.hasPrefix("http") == true {
-                    // 远程视频：先下载到临时目录
-                    let tempDir = FileManager.default.temporaryDirectory
-                    let ext = "mp4"
-                    let filename = "\(wallpaper.id.uuidString).\(ext)"
-                    let localURL = tempDir.appendingPathComponent(filename)
-
-                    if !FileManager.default.fileExists(atPath: localURL.path) {
-                        NSLog("[WallpaperDetailView] 下载远程视频...")
-                        let (data, _) = try await URLSession.shared.data(from: remoteURL)
-                        try data.write(to: localURL)
-                        NSLog("[WallpaperDetailView] ✅ 视频下载完成 \(data.count) bytes -> \(localURL.path)")
-                    }
-                    videoURL = localURL
-                } else {
-                    // 本地文件路径
-                    videoURL = URL(fileURLWithPath: wallpaperVideoPath)
-                }
-
+                let path = highQualityVideoPathForApply ?? wallpaper.filePath
+                let videoURL = URL(string: path)?.scheme != nil ? try await downloadTemp(URL(string: path)!) : URL(fileURLWithPath: path)
                 try await RenderPipeline.shared.setWallpaper(url: videoURL)
-                showToastMessage("动态壁纸设置成功")
             } else {
-                // 静态壁纸：通过 WallpaperSetter 设置系统壁纸
-                if let remoteURL = URL(string: wallpaper.filePath), remoteURL.scheme?.hasPrefix("http") == true {
-                    let imageURL = remoteURL
-                    let tempDir = FileManager.default.temporaryDirectory
-                    let filename = "\(wallpaper.id.uuidString).jpg"
-                    let localURL = tempDir.appendingPathComponent(filename)
-
-                    if !FileManager.default.fileExists(atPath: localURL.path) {
-                        let (data, _) = try await URLSession.shared.data(from: imageURL)
-                        try data.write(to: localURL)
-                    }
-
-                    try await MainActor.run {
-                        try WallpaperSetter.shared.setWallpaper(imageURL: localURL)
-                    }
-                } else {
-                    let localURL = URL(fileURLWithPath: wallpaper.filePath)
-                    try await MainActor.run {
-                        try WallpaperSetter.shared.setWallpaper(imageURL: localURL)
-                    }
-                }
-
-                showToastMessage("壁纸设置成功")
+                let imageURL = URL(string: wallpaper.filePath)?.scheme != nil ? try await downloadTemp(URL(string: wallpaper.filePath)!) : URL(fileURLWithPath: wallpaper.filePath)
+                try await MainActor.run { try WallpaperSetter.shared.setWallpaper(imageURL: imageURL) }
             }
-        } catch {
-            showToastMessage("设置失败: \(error.localizedDescription)")
-        }
+            showToastMessage("设置成功")
+        } catch { showToastMessage("失败: \(error.localizedDescription)") }
     }
 
-    private var highQualityVideoPathForApply: String? {
-        guard let value = wallpaper.downloadQuality,
-              let url = URL(string: value),
-              url.scheme?.hasPrefix("http") == true else {
-            return nil
+    private func downloadTemp(_ url: URL) async throws -> URL {
+        let local = FileManager.default.temporaryDirectory.appendingPathComponent("\(wallpaper.id.uuidString).\(url.pathExtension)")
+        if !FileManager.default.fileExists(atPath: local.path) {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            try data.write(to: local)
         }
-        return value
+        return local
     }
+
+    private var highQualityVideoPathForApply: String? { (wallpaper.downloadQuality != nil && URL(string: wallpaper.downloadQuality!)?.scheme != nil) ? wallpaper.downloadQuality : nil }
 
     private func downloadWallpaper() async {
-        guard let remoteURL = URL(string: wallpaper.filePath), remoteURL.scheme?.hasPrefix("http") == true else {
-            showToastMessage("此壁纸已在本地")
-            return
-        }
-
-        // 检查是否已下载
-        if let remoteId = wallpaper.remoteId,
-           DownloadManager.shared.isAlreadyDownloaded(remoteId: remoteId, context: modelContext) != nil {
-            showToastMessage("已下载过此壁纸")
-            return
-        }
-
-        isDownloading = true
-        defer { isDownloading = false }
-
+        guard let remoteURL = URL(string: wallpaper.filePath), remoteURL.scheme != nil else { showToastMessage("此壁纸已在本地"); return }
+        isDownloading = true; defer { isDownloading = false }
         do {
-            // 优先使用原图下载，而非缩略图
-            let imageURL = remoteURL
-            let downloadsDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-                .appendingPathComponent("PlumWallPaper/Downloads", isDirectory: true)
+            let downloadsDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!.appendingPathComponent("PlumWallPaper/Downloads", isDirectory: true)
             try FileManager.default.createDirectory(at: downloadsDir, withIntermediateDirectories: true)
-
-            let ext = wallpaper.type == .video ? "mp4" : "jpg"
-            let sanitizedName = wallpaper.name.replacingOccurrences(of: "[^a-zA-Z0-9]", with: "_", options: .regularExpression).prefix(50)
-            let filename = "\(sanitizedName)_\(wallpaper.id.uuidString.prefix(8)).\(ext)"
-            let localURL = downloadsDir.appendingPathComponent(filename)
-
-            let (data, _) = try await URLSession.shared.data(from: imageURL)
+            let localURL = downloadsDir.appendingPathComponent("\(wallpaper.name)_\(wallpaper.id.uuidString.prefix(8)).\(wallpaper.type == .video ? "mp4" : "jpg")")
+            let (data, _) = try await URLSession.shared.data(from: remoteURL)
             try data.write(to: localURL)
-
-            // 持久化到 SwiftData
-            let newWallpaper = Wallpaper(
-                name: wallpaper.name,
-                filePath: localURL.path,
-                type: wallpaper.type,
-                resolution: wallpaper.resolution,
-                fileSize: Int64(data.count),
-                thumbnailPath: wallpaper.thumbnailPath,
-                source: .downloaded,
-                remoteId: wallpaper.remoteId,
-                remoteSource: wallpaper.remoteSource,
-                remoteMetadata: wallpaper.remoteMetadata
-            )
-            modelContext.insert(newWallpaper)
-            try modelContext.save()
-
-            wallpaper.filePath = localURL.path
-            wallpaper.source = .downloaded
-
-            onDownload?(wallpaper)
-            showToastMessage("下载完成")
-        } catch {
-            showToastMessage("下载失败: \(error.localizedDescription)")
-        }
+            let newWp = Wallpaper(name: wallpaper.name, filePath: localURL.path, type: wallpaper.type, resolution: wallpaper.resolution, fileSize: Int64(data.count), thumbnailPath: wallpaper.thumbnailPath, source: .downloaded, remoteId: wallpaper.remoteId, remoteSource: wallpaper.remoteSource, remoteMetadata: wallpaper.remoteMetadata)
+            modelContext.insert(newWp); try modelContext.save()
+            wallpaper.filePath = localURL.path; wallpaper.source = .downloaded
+            onDownload?(wallpaper); showToastMessage("下载完成")
+        } catch { showToastMessage("失败: \(error.localizedDescription)") }
     }
 
     private func applyCurrentPreset() {
-        if wallpaper.shaderPreset == nil {
-            wallpaper.shaderPreset = ShaderPreset(name: currentPresetName)
-        } else {
-            wallpaper.shaderPreset?.name = currentPresetName
-        }
-        do {
-            if wallpaper.modelContext != nil {
-                try modelContext.save()
-            }
-            showToastMessage("已保存预设: \(currentPresetName)")
-        } catch {
-            showToastMessage("保存预设失败: \(error.localizedDescription)")
-        }
+        if wallpaper.shaderPreset == nil { wallpaper.shaderPreset = ShaderPreset(name: currentPresetName) }
+        else { wallpaper.shaderPreset?.name = currentPresetName }
+        try? modelContext.save(); showToastMessage("已保存预设")
     }
 
     private func showToastMessage(_ message: String) {
-        toastMessage = message
-        showToast = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-            withAnimation { showToast = false }
+        toastMessage = message; showToast = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { withAnimation { showToast = false } }
+    }
+}
+
+// MARK: - Weather Engine Layers
+
+private struct ArtisanRainLayer: View {
+    let intensity: Double
+    let wind: Double
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            Canvas { context, size in
+                let now = timeline.date.timeIntervalSinceReferenceDate
+                let bgCount = Int(intensity * 3)
+                for i in 0..<bgCount { drawRainLine(into: context, seed: Double(i) * 0.7, now: now, size: size, opacity: 0.15, width: 0.5, speedMult: 0.8) }
+                let fgCount = Int(intensity * 4)
+                for i in 0..<fgCount { drawRainLine(into: context, seed: Double(i) * 1.3, now: now, size: size, opacity: 0.4, width: 1.2, speedMult: 1.2) }
+            }
+        }.allowsHitTesting(false)
+    }
+    private func drawRainLine(into context: GraphicsContext, seed: Double, now: Double, size: CGSize, opacity: Double, width: CGFloat, speedMult: Double) {
+        let speed = (900.0 + (sin(seed * 123.4) * 300.0)) * speedMult
+        let life: Double = 1.2; let age = (now - seed * 0.08).truncatingRemainder(dividingBy: life)
+        let currentY = -150.0 + (speed * age); let currentX = (sin(seed * 456.7) * 0.5 + 0.5) * size.width + (wind * 350 * (age / life)) + (wind * 15 * age)
+        if currentY < size.height + 150 {
+            var path = Path(); path.move(to: CGPoint(x: currentX, y: currentY)); path.addLine(to: CGPoint(x: currentX + (wind * 3), y: currentY + speed * 0.045))
+            context.stroke(path, with: .color(.white.opacity(opacity)), lineWidth: width)
         }
     }
 }
 
-// MARK: - 性能优化子层级
-private struct ArtisanBackgroundLayer: View {
-    let wallpaper: Wallpaper
-    let contentURL: URL?
-    let posterURL: URL?
-    let blur: Double
-    let grayscale: Double
-    let contrast: Double
-    let saturation: Double
-    let exposure: Double
-    let hue: Double
-    let highlights: Double
-    let shadows: Double
-    let invert: Double
-    let grain: Double
-    let vignette: Double
-
+private struct ArtisanSnowLayer: View {
+    let intensity: Double
+    let wind: Double
     var body: some View {
-        ZStack {
-            // 原始素材
-            if wallpaper.type == .video, let videoURL = contentURL {
-                DetailVideoLayerContainer(url: videoURL)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
-            } else if let url = contentURL {
-                ArtisanSimpleImage(url: url)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
-            } else {
-                ArtisanSimplePoster(url: posterURL)
+        TimelineView(.animation) { timeline in
+            Canvas { context, size in
+                let now = timeline.date.timeIntervalSinceReferenceDate
+                let count = Int(intensity * 3.5)
+                for i in 0..<count {
+                    let seed = Double(i); let depth = (sin(seed * 99) * 0.5 + 0.5)
+                    let speed = (80.0 + depth * 120.0); let life: Double = 15.0; let age = (now - seed * 0.7).truncatingRemainder(dividingBy: life)
+                    let startX = (sin(seed * 321.0) * 0.5 + 0.5) * size.width + (wind * 80 * (age / life)) + sin(age * (1.0 + depth) + seed) * (15.0 + depth * 30.0)
+                    let currentY = -40.0 + (speed * age)
+                    if currentY < size.height + 40 {
+                        let rect = CGRect(x: startX, y: currentY, width: 1.5 + depth * 3.5, height: 1.5 + depth * 3.5)
+                        context.fill(Path(ellipseIn: rect), with: .color(.white.opacity(0.2 + depth * 0.5)))
+                    }
+                }
             }
-            
-            // 效果层
-            if invert > 50 { Color.white.blendMode(.difference) }
-            
-            if grain > 0 {
-                GrainTextureOverlay(opacity: grain / 100.0)
-                    .blendMode(.overlay)
-            }
-            
-            if vignette > 0 {
-                RadialGradient(
-                    colors: [.clear, .black.opacity(vignette / 100.0)],
-                    center: .center,
-                    startRadius: 300,
-                    endRadius: 1000
-                )
+        }.allowsHitTesting(false)
+    }
+}
+
+private struct ArtisanLightningLayer: View {
+    let frequency: Double
+    @Binding var flash: Double
+    @State private var bolts: [LightningBolt] = []
+    @State private var lastTriggerTime = Date()
+    @State private var nextTriggerDelay: TimeInterval = 1.0
+    struct LightningBolt: Identifiable { let id = UUID(); let path: Path; let opacity: Double; let width: CGFloat }
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            Canvas { context, size in
+                for bolt in bolts {
+                    context.stroke(bolt.path, with: .color(.white.opacity(bolt.opacity)), lineWidth: bolt.width)
+                    var glow = context; glow.addFilter(.blur(radius: 4)); glow.stroke(bolt.path, with: .color(.blue.opacity(bolt.opacity * 0.4)), lineWidth: bolt.width * 3)
+                }
+            }.onChange(of: timeline.date) { date in updateBolts(at: date, size: NSScreen.main?.frame.size ?? CGSize(width: 1920, height: 1080)) }
+        }.allowsHitTesting(false)
+    }
+    private func updateBolts(at now: Date, size: CGSize) {
+        if now.timeIntervalSince(lastTriggerTime) > nextTriggerDelay {
+            if Double.random(in: 0...1) < frequency / 100.0 {
+                let path = generateLightningPath(start: CGPoint(x: Double.random(in: 0...size.width), y: 0), size: size)
+                bolts.append(LightningBolt(path: path, opacity: 1.0, width: CGFloat.random(in: 1...3)))
+                lastTriggerTime = now; nextTriggerDelay = Double.random(in: 0.2...max(0.5, 10.0 - frequency/10.0))
+                withAnimation(.linear(duration: 0.05)) { flash = Double.random(in: 0.5...0.8) }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { withAnimation(.easeOut(duration: 0.5)) { flash = 0 } }
             }
         }
-        .blur(radius: CGFloat(blur))
-        .grayscale(grayscale / 100.0)
-        .contrast(contrast / 100.0)
-        .saturation(saturation / 100.0)
-        .brightness((exposure - 100) / 100.0)
-        .hueRotation(.degrees(hue))
-        .colorMultiply(Color(white: highlights / 100.0)) // 模拟高光控制
+        for i in (0..<bolts.count).reversed() {
+            let op = bolts[i].opacity - 0.15
+            if op <= 0 { bolts.remove(at: i) } else { bolts[i] = LightningBolt(path: bolts[i].path, opacity: op, width: bolts[i].width) }
+        }
+    }
+    private func generateLightningPath(start: CGPoint, size: CGSize) -> Path {
+        var path = Path(); path.move(to: start); var current = start; let segs = 20; let h = size.height / CGFloat(segs)
+        for _ in 0..<segs {
+            current = CGPoint(x: current.x + CGFloat.random(in: -50...50), y: current.y + h); path.addLine(to: current)
+            if Double.random(in: 0...1) < 0.2 {
+                var br = current; for _ in 0..<5 { br = CGPoint(x: br.x + CGFloat.random(in: -30...30), y: br.y + CGFloat.random(in: 5...20)); path.move(to: current); path.addLine(to: br) }
+                path.move(to: current)
+            }
+        }
+        return path
+    }
+}
+
+// MARK: - Core Rendering Subviews
+
+private struct ArtisanBackgroundLayer: View {
+    let wallpaper: Wallpaper; let contentURL, posterURL: URL?; let blur, grayscale, contrast, saturation, exposure, hue, highlights, shadows, invert, grain, vignette: Double
+    var body: some View {
+        ZStack {
+            if wallpaper.type == .video, let url = contentURL { DetailVideoLayerContainer(url: url).frame(maxWidth: .infinity, maxHeight: .infinity).clipped() }
+            else if let url = contentURL { ArtisanSimpleImage(url: url).frame(maxWidth: .infinity, maxHeight: .infinity).clipped() }
+            else { ArtisanSimplePoster(url: posterURL) }
+            if invert > 50 { Color.white.blendMode(.difference) }
+            if grain > 0 { GrainTextureOverlay(opacity: grain / 100.0).blendMode(.overlay) }
+            if vignette > 0 { RadialGradient(colors: [.clear, .black.opacity(vignette / 100.0)], center: .center, startRadius: 300, endRadius: 1000) }
+        }
+        .blur(radius: CGFloat(blur)).grayscale(grayscale / 100.0).contrast(contrast / 100.0).saturation(saturation / 100.0).brightness((exposure - 100) / 100.0).hueRotation(.degrees(hue)).colorMultiply(Color(white: highlights / 100.0))
     }
 }
 
 private struct ArtisanSimpleImage: View {
     let url: URL
     var body: some View {
-        if url.isFileURL {
-            if let nsImage = NSImage(contentsOf: url) {
-                Image(nsImage: nsImage).resizable().aspectRatio(contentMode: .fill)
-            } else { Color.black }
-        } else {
-            AsyncImage(url: url) { phase in
-                if let image = phase.image { image.resizable().aspectRatio(contentMode: .fill) }
-                else { Color.black }
-            }
-        }
+        if url.isFileURL { if let img = NSImage(contentsOf: url) { Image(nsImage: img).resizable().aspectRatio(contentMode: .fill) } else { Color.black } }
+        else { AsyncImage(url: url) { ph in if let img = ph.image { img.resizable().aspectRatio(contentMode: .fill) } else { Color.black } } }
     }
 }
 
 private struct ArtisanSimplePoster: View {
     let url: URL?
-    var body: some View {
-        ZStack {
-            Color.black
-            if let url = url {
-                ArtisanSimpleImage(url: url).blur(radius: 16).opacity(0.45)
-            }
-        }
-    }
+    var body: some View { ZStack { Color.black; if let url = url { ArtisanSimpleImage(url: url).blur(radius: 16).opacity(0.45) } } }
 }
 
 private struct DetailVideoLayerContainer: NSViewRepresentable {
     let url: URL
-
-    func makeNSView(context: Context) -> DetailVideoLayerView {
-        let view = DetailVideoLayerView()
-        view.configure(url: url)
-        return view
-    }
-
-    func updateNSView(_ nsView: DetailVideoLayerView, context: Context) {
-        nsView.configure(url: url)
-    }
-
-    static func dismantleNSView(_ nsView: DetailVideoLayerView, coordinator: ()) {
-        nsView.stop()
-    }
+    func makeNSView(context: Context) -> DetailVideoLayerView { let v = DetailVideoLayerView(); v.configure(url: url); return v }
+    func updateNSView(_ nsView: DetailVideoLayerView, context: Context) { nsView.configure(url: url) }
+    static func dismantleNSView(_ nsView: DetailVideoLayerView, coordinator: ()) { nsView.stop() }
 }
 
 private final class DetailVideoLayerView: NSView {
-    private let playerLayer = AVPlayerLayer()
-    private var player: AVPlayer?
-    private var currentURL: URL?
-    private var endObserver: NSObjectProtocol?
-
-    init() {
-        super.init(frame: .zero)
-        setup()
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    private func setup() {
-        wantsLayer = true
-        let rootLayer = CALayer()
-        rootLayer.backgroundColor = NSColor.black.cgColor
-        rootLayer.masksToBounds = true
-        layer = rootLayer
-
-        playerLayer.videoGravity = .resizeAspectFill
-        playerLayer.needsDisplayOnBoundsChange = true
-        rootLayer.addSublayer(playerLayer)
-    }
-
+    private let playerLayer = AVPlayerLayer(); private var player: AVPlayer?; private var currentURL: URL?; private var endObserver: NSObjectProtocol?
+    init() { super.init(frame: .zero); setup() }
+    required init?(coder: NSCoder) { fatalError("init") }
+    private func setup() { wantsLayer = true; let r = CALayer(); r.backgroundColor = NSColor.black.cgColor; r.masksToBounds = true; layer = r; playerLayer.videoGravity = .resizeAspectFill; r.addSublayer(playerLayer) }
     func configure(url: URL) {
-        guard currentURL != url else { return }
-        currentURL = url
-
-        if let endObserver {
-            NotificationCenter.default.removeObserver(endObserver)
-            self.endObserver = nil
-        }
-
-        player?.pause()
-        let playerItem = AVPlayerItem(url: url)
-        playerItem.preferredForwardBufferDuration = 3
-        playerItem.canUseNetworkResourcesForLiveStreamingWhilePaused = true
-
-        let nextPlayer = AVPlayer(playerItem: playerItem)
-        nextPlayer.isMuted = false
-        nextPlayer.volume = 1.0
-        nextPlayer.automaticallyWaitsToMinimizeStalling = false
-
-        player = nextPlayer
-        playerLayer.player = nextPlayer
-        nextPlayer.play()
-
-        endObserver = NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: playerItem,
-            queue: .main
-        ) { [weak self] _ in
-            guard self?.currentURL == url else { return }
-            nextPlayer.seek(to: .zero)
-            nextPlayer.play()
-        }
+        guard currentURL != url else { return }; currentURL = url
+        if let obs = endObserver { NotificationCenter.default.removeObserver(obs) }; player?.pause()
+        let item = AVPlayerItem(url: url); let p = AVPlayer(playerItem: item); p.isMuted = false; p.volume = 1.0; player = p; playerLayer.player = p; p.play()
+        endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in p.seek(to: .zero); p.play() }
     }
-
-    func stop() {
-        if let endObserver {
-            NotificationCenter.default.removeObserver(endObserver)
-            self.endObserver = nil
-        }
-        player?.pause()
-        playerLayer.player = nil
-        player = nil
-        currentURL = nil
-    }
-
-    override func layout() {
-        super.layout()
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        playerLayer.frame = bounds
-        CATransaction.commit()
-    }
+    func stop() { if let obs = endObserver { NotificationCenter.default.removeObserver(obs) }; player?.pause(); playerLayer.player = nil; player = nil; currentURL = nil }
+    override func layout() { super.layout(); CATransaction.begin(); CATransaction.setDisableActions(true); playerLayer.frame = bounds; CATransaction.commit() }
 }
 
 // MARK: - 内置预设
 enum BuiltInPreset: String, CaseIterable, Identifiable {
     case original, vivid, warm, cool, noir, vintage, cinematic, fade
     var id: Self { self }
-
     var name: String {
         switch self {
         case .original: return "原图"
@@ -1079,121 +758,13 @@ enum BuiltInPreset: String, CaseIterable, Identifiable {
         case .fade: return "褪色"
         }
     }
-
-    var exposure: Double {
-        switch self {
-        case .original: return 100
-        case .vivid: return 110
-        case .warm: return 105
-        case .cool: return 95
-        case .noir: return 100
-        case .vintage: return 90
-        case .cinematic: return 85
-        case .fade: return 80
-        }
-    }
-
-    var contrast: Double {
-        switch self {
-        case .original: return 100
-        case .vivid: return 120
-        case .warm: return 105
-        case .cool: return 105
-        case .noir: return 130
-        case .vintage: return 90
-        case .cinematic: return 110
-        case .fade: return 70
-        }
-    }
-
-    var saturation: Double {
-        switch self {
-        case .original: return 100
-        case .vivid: return 150
-        case .warm: return 120
-        case .cool: return 90
-        case .noir: return 0
-        case .vintage: return 70
-        case .cinematic: return 80
-        case .fade: return 50
-        }
-    }
-
-    var hue: Double {
-        switch self {
-        case .original: return 0
-        case .vivid: return 0
-        case .warm: return 15
-        case .cool: return -15
-        case .noir: return 0
-        case .vintage: return 20
-        case .cinematic: return -10
-        case .fade: return 0
-        }
-    }
-
-    var blur: Double {
-        switch self {
-        case .original: return 0
-        case .vivid: return 0
-        case .warm: return 0
-        case .cool: return 0
-        case .noir: return 0
-        case .vintage: return 1
-        case .cinematic: return 0.5
-        case .fade: return 2
-        }
-    }
-
-    var grain: Double {
-        switch self {
-        case .original: return 0
-        case .vivid: return 0
-        case .warm: return 5
-        case .cool: return 0
-        case .noir: return 20
-        case .vintage: return 40
-        case .cinematic: return 15
-        case .fade: return 10
-        }
-    }
-
-    var vignette: Double {
-        switch self {
-        case .original: return 0
-        case .vivid: return 0
-        case .warm: return 10
-        case .cool: return 15
-        case .noir: return 30
-        case .vintage: return 40
-        case .cinematic: return 50
-        case .fade: return 20
-        }
-    }
-
-    var grayscale: Double {
-        switch self {
-        case .original: return 0
-        case .vivid: return 0
-        case .warm: return 0
-        case .cool: return 0
-        case .noir: return 100
-        case .vintage: return 0
-        case .cinematic: return 0
-        case .fade: return 30
-        }
-    }
-
-    var invert: Double {
-        switch self {
-        case .original: return 0
-        case .vivid: return 0
-        case .warm: return 0
-        case .cool: return 0
-        case .noir: return 0
-        case .vintage: return 0
-        case .cinematic: return 0
-        case .fade: return 0
-        }
-    }
+    var exposure: Double { [.original:100, .vivid:110, .warm:105, .cool:95, .noir:100, .vintage:90, .cinematic:85, .fade:80][self] ?? 100 }
+    var contrast: Double { [.original:100, .vivid:120, .warm:105, .cool:105, .noir:130, .vintage:90, .cinematic:110, .fade:70][self] ?? 100 }
+    var saturation: Double { [.original:100, .vivid:150, .warm:120, .cool:90, .noir:0, .vintage:70, .cinematic:80, .fade:50][self] ?? 100 }
+    var hue: Double { [.original:0, .vivid:0, .warm:15, .cool:-15, .noir:0, .vintage:20, .cinematic:-10, .fade:0][self] ?? 0 }
+    var blur: Double { [.original:0, .vivid:0, .warm:0, .cool:0, .noir:0, .vintage:1, .cinematic:0.5, .fade:2][self] ?? 0 }
+    var grain: Double { [.original:0, .vivid:0, .warm:5, .cool:0, .noir:20, .vintage:40, .cinematic:15, .fade:10][self] ?? 0 }
+    var vignette: Double { [.original:0, .vivid:0, .warm:10, .cool:15, .noir:30, .vintage:40, .cinematic:50, .fade:20][self] ?? 0 }
+    var grayscale: Double { [.original:0, .vivid:0, .warm:0, .cool:0, .noir:100, .vintage:0, .cinematic:0, .fade:30][self] ?? 0 }
+    var invert: Double { 0 }
 }

@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 
 // MARK: - 业务逻辑
+@MainActor
 extension AppRulesTabV2 {
 
     // MARK: - 应用规则逻辑（已实现）
@@ -106,5 +107,30 @@ extension AppRulesTabV2 {
 
     func isRuleActive(_ id: String) -> Bool {
         false
+    }
+
+    func setSlideshowEnabled(_ enabled: Bool) {
+        viewModel.settings?.slideshowEnabled = enabled
+        viewModel.save()
+    }
+
+    func setSlideshowInterval(_ seconds: Double) {
+        viewModel.settings?.slideshowInterval = seconds
+        viewModel.save()
+    }
+
+    func setSlideshowOrder(_ order: SlideshowOrder) {
+        viewModel.settings?.slideshowOrder = order
+        viewModel.save()
+    }
+
+    func setSlideshowSource(_ source: SlideshowSource) {
+        viewModel.settings?.slideshowSource = source
+        viewModel.save()
+    }
+
+    func setSlideshowTagId(_ id: String) {
+        viewModel.settings?.slideshowTagId = id.isEmpty ? nil : id
+        viewModel.save()
     }
 }

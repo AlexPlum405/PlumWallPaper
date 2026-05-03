@@ -101,8 +101,9 @@ struct SettingsView: View {
         case .general: GeneralSettingsTab(viewModel: viewModel)
         case .playback: PlaybackTab(viewModel: viewModel)
         case .performance: PerformanceTab(viewModel: viewModel)
-        case .appRules: AppRulesTabV2(viewModel: viewModel, toast: $toast)
+        case .automation: AppRulesTabV2(viewModel: viewModel, toast: $toast)
         case .display: DisplayTab(viewModel: viewModel)
+        case .advanced: AdvancedSettingsTab(viewModel: viewModel)
         case .about: AboutSettingsTab()
         }
     }
@@ -110,15 +111,16 @@ struct SettingsView: View {
 
 // MARK: - 设置标签枚举 (重构精简版)
 private enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, playback, performance, appRules, display, about
+    case general, playback, display, performance, automation, advanced, about
     var id: Self { self }
     var title: String {
         switch self {
         case .general: return "通用"
-        case .playback: return "播放"
+        case .playback: return "播放与音频"
+        case .display: return "显示与多屏"
         case .performance: return "性能"
-        case .appRules: return "应用规则"
-        case .display: return "显示"
+        case .automation: return "自动化"
+        case .advanced: return "高级"
         case .about: return "关于"
         }
     }
@@ -126,9 +128,10 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "command"
         case .playback: return "play.circle.fill"
-        case .performance: return "gauge.medium"
-        case .appRules: return "bolt.shield.fill"
         case .display: return "display.2"
+        case .performance: return "gauge.medium"
+        case .automation: return "bolt.shield.fill"
+        case .advanced: return "slider.horizontal.3"
         case .about: return "info.circle.fill"
         }
     }
@@ -172,6 +175,129 @@ func artisanToggle(isOn: Binding<Bool>) -> some View {
             Circle().fill(Color.white).frame(width: 16, height: 16).shadow(color: .black.opacity(0.2), radius: 2).offset(x: isOn.wrappedValue ? 8 : -8)
         }
     }.buttonStyle(.plain)
+}
+
+// MARK: - 高级子页
+private struct AdvancedSettingsTab: View {
+    var viewModel: SettingsViewModel
+
+    private let mockScreens = [
+        (id: "system", name: "跟随系统默认输出"),
+        (id: "built-in", name: "内建显示器通道"),
+        (id: "external-1", name: "外接显示器通道")
+    ]
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 32) {
+                artisanSettingsSection(header: "渲染实验室 (RENDERING LAB)") {
+                    artisanSettingsRow(title: "垂直同步 V-Sync", subtitle: "将动态壁纸输出与显示刷新节奏对齐") {
+                        artisanToggle(isOn: Binding(
+                            get: { viewModel.settings?.vSyncEnabled ?? true },
+                            set: { setVSyncEnabled($0) }
+                        ))
+                    }
+
+                    artisanSettingsRow(title: "高负载自动降级", subtitle: "CPU/GPU 占用过高时自动暂停或降低帧率", showDivider: false) {
+                        artisanToggle(isOn: Binding(
+                            get: { viewModel.settings?.pauseOnHighLoad ?? true },
+                            set: { setPauseOnHighLoad($0) }
+                        ))
+                    }
+                }
+
+                artisanSettingsSection(header: "深度暂停策略 (DEEP PAUSE STRATEGIES)") {
+                    artisanSettingsRow(title: "失焦暂停", subtitle: "桌面不处于交互焦点时暂停渲染") {
+                        artisanToggle(isOn: Binding(
+                            get: { viewModel.settings?.pauseOnLostFocus ?? false },
+                            set: { setPauseOnLostFocus($0) }
+                        ))
+                    }
+
+                    artisanSettingsRow(title: "合盖暂停", subtitle: "笔记本合盖或外接模式切换时停止壁纸播放") {
+                        artisanToggle(isOn: Binding(
+                            get: { viewModel.settings?.pauseOnLidClosed ?? true },
+                            set: { setPauseOnLidClosed($0) }
+                        ))
+                    }
+
+                    artisanSettingsRow(title: "睡眠前暂停", subtitle: "系统进入睡眠前释放视频解码与渲染资源") {
+                        artisanToggle(isOn: Binding(
+                            get: { viewModel.settings?.pauseBeforeSleep ?? true },
+                            set: { setPauseBeforeSleep($0) }
+                        ))
+                    }
+
+                    artisanSettingsRow(title: "被遮挡时暂停", subtitle: "桌面被窗口完全覆盖时降低后台渲染消耗", showDivider: false) {
+                        artisanToggle(isOn: Binding(
+                            get: { viewModel.settings?.pauseOnOcclusion ?? false },
+                            set: { setPauseOnOcclusion($0) }
+                        ))
+                    }
+                }
+
+                artisanSettingsSection(header: "专业音频路由 (PRO AUDIO ROUTING)") {
+                    artisanSettingsRow(title: "主音频输出源", subtitle: "为多屏或演示场景指定壁纸音频输出策略", showDivider: false) {
+                        Picker("", selection: Binding(
+                            get: { viewModel.settings?.audioScreenId ?? "system" },
+                            set: { setAudioScreenId($0) }
+                        )) {
+                            ForEach(mockScreens, id: \.id) { screen in
+                                Text(screen.name).tag(screen.id)
+                            }
+                        }
+                        .frame(width: 180)
+                    }
+                }
+
+                artisanSettingsSection(header: "界面实验项 (INTERFACE EXPERIMENTS)") {
+                    artisanSettingsRow(title: "实验功能入口", subtitle: "为后续 Metal 渲染器、音频路由与多屏调度保留专业开关位", showDivider: false) {
+                        Image(systemName: "testtube.2")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(LiquidGlassColors.primaryPink)
+                    }
+                }
+            }
+            .padding(.top, 32)
+            .padding(.horizontal, 40)
+            .padding(.bottom, 40)
+        }
+    }
+
+    private func setVSyncEnabled(_ enabled: Bool) {
+        viewModel.settings?.vSyncEnabled = enabled
+        viewModel.save()
+    }
+
+    private func setPauseOnHighLoad(_ enabled: Bool) {
+        viewModel.settings?.pauseOnHighLoad = enabled
+        viewModel.save()
+    }
+
+    private func setPauseOnLostFocus(_ enabled: Bool) {
+        viewModel.settings?.pauseOnLostFocus = enabled
+        viewModel.save()
+    }
+
+    private func setPauseOnLidClosed(_ enabled: Bool) {
+        viewModel.settings?.pauseOnLidClosed = enabled
+        viewModel.save()
+    }
+
+    private func setPauseBeforeSleep(_ enabled: Bool) {
+        viewModel.settings?.pauseBeforeSleep = enabled
+        viewModel.save()
+    }
+
+    private func setPauseOnOcclusion(_ enabled: Bool) {
+        viewModel.settings?.pauseOnOcclusion = enabled
+        viewModel.save()
+    }
+
+    private func setAudioScreenId(_ id: String) {
+        viewModel.settings?.audioScreenId = id
+        viewModel.save()
+    }
 }
 
 // MARK: - About 子页

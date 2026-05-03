@@ -40,11 +40,10 @@ struct PerformanceTab: View {
                         .frame(width: 140)
                     }
 
-                    artisanSettingsRow(title: "垂直同步 V-Sync", subtitle: "与显示器刷新率严格同步，消除画面撕裂", showDivider: false) {
-                        artisanToggle(isOn: Binding(
-                            get: { viewModel.settings?.vSyncEnabled ?? true },
-                            set: { setVSyncEnabled($0) }
-                        ))
+                    artisanSettingsRow(title: "自动降帧策略", subtitle: "进入省电或高压场景时优先降低渲染成本", showDivider: false) {
+                        Image(systemName: "bolt.badge.clock.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(LiquidGlassColors.warningOrange)
                     }
                 }
 
@@ -77,22 +76,6 @@ struct PerformanceTab: View {
                         pauseStrategyCard(icon: "cpu", title: "高负载", 
                                         isOn: Binding(get: { viewModel.settings?.pauseOnHighLoad ?? true }, 
                                                     set: { setPauseOnHighLoad($0) }))
-
-                        pauseStrategyCard(icon: "eye.slash", title: "失去焦点", 
-                                        isOn: Binding(get: { viewModel.settings?.pauseOnLostFocus ?? false }, 
-                                                    set: { setPauseOnLostFocus($0) }))
-
-                        pauseStrategyCard(icon: "laptopcomputer", title: "合盖暂停", 
-                                        isOn: Binding(get: { viewModel.settings?.pauseOnLidClosed ?? true }, 
-                                                    set: { setPauseOnLidClosed($0) }))
-
-                        pauseStrategyCard(icon: "moon.zzz", title: "睡眠前夕", 
-                                        isOn: Binding(get: { viewModel.settings?.pauseBeforeSleep ?? true }, 
-                                                    set: { setPauseBeforeSleep($0) }))
-
-                        pauseStrategyCard(icon: "square.stack", title: "被遮挡时", 
-                                        isOn: Binding(get: { viewModel.settings?.pauseOnOcclusion ?? false }, 
-                                                    set: { setPauseOnOcclusion($0) }))
                     }
                 }
             }

@@ -53,7 +53,21 @@ struct MyLibraryView: View {
         }
         .sheet(isPresented: $showImportSheet) { ImportWallpaperSheet(viewModel: viewModel, toast: $toast) }
         .sheet(item: $detailWallpaper) { wallpaper in
-            WallpaperDetailView(wallpaper: wallpaper)
+            WallpaperDetailView(
+                wallpaper: wallpaper,
+                onPrevious: { current, callback in
+                    callback(getNavigateWallpaper(current: current, direction: -1))
+                },
+                onNext: { current, callback in
+                    callback(getNavigateWallpaper(current: current, direction: 1))
+                },
+                onFavorite: { _ in
+                    viewModel.loadWallpapers()
+                },
+                onDownload: { _ in
+                    viewModel.loadWallpapers()
+                }
+            )
         }
         .alert("确认删除", isPresented: $showDeleteConfirm) {
             Button("取消", role: .cancel) {}
@@ -247,6 +261,18 @@ struct MyLibraryView: View {
     // MARK: - Computed Properties
     private var filteredWallpapers: [Wallpaper] {
         viewModel.filteredWallpapers
+    }
+
+    private func getNavigateWallpaper(current: Wallpaper, direction: Int) -> Wallpaper {
+        let wallpapers = filteredWallpapers
+        guard !wallpapers.isEmpty else { return current }
+
+        guard let currentIndex = wallpapers.firstIndex(where: { $0.id == current.id }) else {
+            return wallpapers.first ?? current
+        }
+
+        let newIndex = (currentIndex + direction + wallpapers.count) % wallpapers.count
+        return wallpapers[newIndex]
     }
 
     // MARK: - Actions

@@ -124,13 +124,6 @@ struct DisplayTab: View {
                             .frame(width: 140)
                         }
                     }
-
-                    artisanSettingsRow(title: "胶片颗粒效果", subtitle: "为用户界面注入怀旧的胶片呼吸感", showDivider: false) {
-                        artisanToggle(isOn: Binding(
-                            get: { false }, // Settings 模型中暂无此字段，设为 constant false
-                            set: { _ in print("filmGrainEnabled not implemented in model") }
-                        ))
-                    }
                 }
             }
             .padding(.top, 32)

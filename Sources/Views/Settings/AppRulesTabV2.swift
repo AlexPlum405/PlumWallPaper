@@ -10,9 +10,11 @@ struct AppRulesTabV2: View {
 
     @State private var searchText = ""
     @State private var selectedCategory: String = "全部"
+    @State private var isSlideshowExpanded = true
     
     // 推荐分类 (维持原样)
     private let categories = ["全部", "视频编辑", "3D 渲染", "开发工具", "音频制作"]
+    private let mockTags = ["全量作品", "收藏精选", "4K UHD", "视觉诗篇", "极简空间"]
 
     // 推荐应用列表 (禁止修改内容)
     let recommendedApps: [(bundleId: String, name: String, action: RuleAction, category: String)] = [
@@ -56,6 +58,7 @@ struct AppRulesTabV2: View {
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 48) {
+                    slideshowAutomationSection
                     
                     // 2. 活跃逻辑单元
                     VStack(alignment: .leading, spacing: 20) {
@@ -121,6 +124,111 @@ struct AppRulesTabV2: View {
     }
 
     // MARK: - 原有 UI 组件
+    private var slideshowAutomationSection: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(alignment: .firstTextBaseline) {
+                LiquidGlassSectionHeader(title: "自动轮播", icon: "shuffle", color: LiquidGlassColors.primaryPink)
+                Text("SLIDESHOW AUTOMATION").font(.system(size: 10, weight: .black)).kerning(2).foregroundStyle(LiquidGlassColors.textQuaternary)
+                Spacer()
+            }
+            .padding(.horizontal, 32)
+
+            VStack(spacing: 0) {
+                artisanSettingsRow(title: "启用自动轮播", subtitle: "按规则自动切换桌面动态壁纸", showDivider: viewModel.settings?.slideshowEnabled ?? false) {
+                    artisanToggle(isOn: Binding(
+                        get: { viewModel.settings?.slideshowEnabled ?? false },
+                        set: { setSlideshowEnabled($0) }
+                    ))
+                }
+
+                if viewModel.settings?.slideshowEnabled ?? false {
+                    Button {
+                        withAnimation(.gallerySpring) { isSlideshowExpanded.toggle() }
+                    } label: {
+                        HStack {
+                            Label("轮播规则", systemImage: "slider.horizontal.3")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(LiquidGlassColors.textSecondary)
+                            Spacer()
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10, weight: .bold))
+                                .rotationEffect(.degrees(isSlideshowExpanded ? 180 : 0))
+                                .foregroundStyle(LiquidGlassColors.textQuaternary)
+                        }
+                        .padding(.horizontal, 24)
+                        .frame(height: 44)
+                        .background(Color.white.opacity(0.02))
+                    }
+                    .buttonStyle(.plain)
+
+                    if isSlideshowExpanded {
+                        VStack(spacing: 0) {
+                            artisanSettingsRow(title: "轮播间隔", subtitle: "每次切换之间的时间跨度") {
+                                HStack(spacing: 12) {
+                                    Text(formatInterval(viewModel.settings?.slideshowInterval ?? 3600))
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(LiquidGlassColors.primaryPink)
+                                        .frame(width: 60)
+                                    Slider(value: Binding(
+                                        get: { viewModel.settings?.slideshowInterval ?? 3600 },
+                                        set: { setSlideshowInterval($0) }
+                                    ), in: 60...7200, step: 60)
+                                    .tint(LiquidGlassColors.primaryPink)
+                                    .frame(width: 110)
+                                }
+                            }
+
+                            artisanSettingsRow(title: "播放顺序", subtitle: "决定作品出现逻辑") {
+                                Picker("", selection: Binding(
+                                    get: { viewModel.settings?.slideshowOrder ?? .random },
+                                    set: { setSlideshowOrder($0) }
+                                )) {
+                                    Text("顺序").tag(SlideshowOrder.sequential)
+                                    Text("随机").tag(SlideshowOrder.random)
+                                    Text("收藏优先").tag(SlideshowOrder.favoritesFirst)
+                                }
+                                .pickerStyle(.segmented)
+                                .frame(width: 190)
+                            }
+
+                            artisanSettingsRow(title: "资源来源", subtitle: "限定自动轮播范围", showDivider: viewModel.settings?.slideshowSource == .tag) {
+                                Picker("", selection: Binding(
+                                    get: { viewModel.settings?.slideshowSource ?? .all },
+                                    set: { setSlideshowSource($0) }
+                                )) {
+                                    Text("全部").tag(SlideshowSource.all)
+                                    Text("收藏").tag(SlideshowSource.favorites)
+                                    Text("标签").tag(SlideshowSource.tag)
+                                }
+                                .pickerStyle(.segmented)
+                                .frame(width: 170)
+                            }
+
+                            if viewModel.settings?.slideshowSource == .tag {
+                                artisanSettingsRow(title: "目标标签", subtitle: "从选定分类中挑选", showDivider: false) {
+                                    Picker("", selection: Binding(
+                                        get: { viewModel.settings?.slideshowTagId ?? "" },
+                                        set: { setSlideshowTagId($0) }
+                                    )) {
+                                        ForEach(mockTags, id: \.self) { Text($0).tag($0) }
+                                    }
+                                    .frame(width: 150)
+                                }
+                            }
+                        }
+                        .background(Color.black.opacity(0.1))
+                    }
+                }
+            }
+            .galleryCardStyle(radius: 20, padding: 0)
+            .padding(.horizontal, 32)
+        }
+    }
+
+    private func formatInterval(_ seconds: Double) -> String {
+        let minutes = Int(seconds / 60)
+        return minutes < 60 ? "\(minutes) 分钟" : "\(minutes / 60) 小时"
+    }
     
     private var artisanHeaderSection: some View {
         VStack(alignment: .leading, spacing: 20) {
