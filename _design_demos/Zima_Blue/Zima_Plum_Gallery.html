@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Plum x Zima Blue - Curated Gallery</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; background: #050505; color: #fff; overflow: hidden; font-family: -apple-system, sans-serif; }
+        #root { width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
+
+        /* 齐马蓝专属滚动条 */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #36a9e1; border-radius: 2px; }
+
+        .zima-card {
+            position: relative; aspect-ratio: 16/9; background: #111;
+            border-radius: 2px; cursor: pointer; overflow: hidden;
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .zima-card:hover {
+            transform: scale(1.05);
+            border-color: #36a9e1;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 20px rgba(54, 169, 225, 0.3);
+            z-index: 10;
+        }
+        .zima-card img {
+            width: 100%; height: 100%; object-fit: cover;
+            opacity: 0.6; transition: 0.6s;
+        }
+        .zima-card:hover img { opacity: 1; filter: saturate(1.2); }
+
+        .zima-id {
+            position: absolute; top: 10px; right: 10px;
+            font-size: 10px; font-weight: 800; color: #36a9e1;
+            opacity: 0; transition: 0.4s;
+        }
+        .zima-card:hover .zima-id { opacity: 1; transform: translateX(-5px); }
+
+        .nav-item {
+            padding: 8px 16px; font-size: 12px; letter-spacing: 2px;
+            color: #666; cursor: pointer; transition: 0.3s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .nav-item.active { color: #36a9e1; font-weight: 600; }
+        .nav-item:hover { color: #fff; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState } = React;
+
+        const WALLPAPERS = [
+            { id: "ZM-001", name: "Deep Void", artist: "Alastair", img: "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=800" },
+            { id: "ZM-002", name: "The Blue Fragment", artist: "Zima", img: "https://images.unsplash.com/photo-1502691876148-a84978f5d81b?w=800" },
+            { id: "ZM-003", name: "Beyond the Rift", artist: "K. Dick", img: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=800" },
+            { id: "ZM-004", name: "Synthesized Mind", artist: "Robot 01", img: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=800" },
+            { id: "ZM-005", name: "Pool Horizon", artist: "Tile Master", img: "https://images.unsplash.com/photo-1518066000714-58c45f1a2c0a?w=800" },
+            { id: "ZM-006", name: "Infinite Edge", artist: "Geometry", img: "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=800" }
+        ];
+
+        function MacosWindow({ children }) {
+            return (
+                <div style={{
+                    width: 1000, height: 700, background: '#080808',
+                    borderRadius: 12, overflow: 'hidden', position: 'relative',
+                    boxShadow: '0 50px 100px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.1)'
+                }}>
+                    {/* Traffic Lights */}
+                    <div style={{ height: 40, display: 'flex', alignItems: 'center', padding: '0 15px', gap: 8 }}>
+                        <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#ff5f57' }} />
+                        <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#febc2e' }} />
+                        <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#28c840' }} />
+                        <div style={{ marginLeft: 'auto', fontSize: 10, color: '#444', letterSpacing: '2px' }}>PLUM // ZIMA_GALLERY</div>
+                    </div>
+                    {children}
+                </div>
+            );
+        }
+
+        function GalleryApp() {
+            const [view, setView] = useState('curated');
+
+            return (
+                <MacosWindow>
+                    {/* 顶部导航 */}
+                    <div style={{ display: 'flex', padding: '0 40px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div className={`nav-item ${view === 'curated' ? 'active' : ''}`} onClick={() => setView('curated')}>
+                            <span>❤️</span> 精选
+                        </div>
+                        <div className={`nav-item ${view === 'categories' ? 'active' : ''}`} onClick={() => setView('categories')}>
+                            <span>❌</span> 分类
+                        </div>
+                        <div className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')}>
+                            <span>🤖</span> 设置
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', height: 'calc(100% - 81px)' }}>
+                        {/* 左侧侧边栏 (叙事摘要) */}
+                        <div style={{ width: 240, padding: '40px', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
+                            <div style={{ fontFamily: 'Newsreader', fontSize: 28, fontStyle: 'italic', marginBottom: 20 }}>The Search for Truth</div>
+                            <p style={{ fontSize: 11, color: '#888', lineHeight: 1.8, marginBottom: 30 }}>
+                                在这些几何碎片中，我们寻找的不仅是背景，而是每一次开机时的视觉觉醒。每一张选中的壁纸都是通往本质的阶梯。
+                            </p>
+                            <div style={{ fontSize: 9, color: '#36a9e1', letterSpacing: '1px' }}>
+                                CURRENT PROTOCOL:<br/>ZIMA_BLUE_1.0.4
+                            </div>
+                        </div>
+
+                        {/* 右侧壁纸网格 (精选内容区) */}
+                        <div style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                                {WALLPAPERS.map(wp => (
+                                    <div key={wp.id} className="zima-card">
+                                        <div className="zima-id">{wp.id}</div>
+                                        <img src={wp.img} />
+                                        <div style={{
+                                            position: 'absolute', bottom: 0, left: 0, right: 0,
+                                            padding: '15px', background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
+                                            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end'
+                                        }}>
+                                            <div>
+                                                <div style={{ fontSize: 12, fontWeight: 500 }}>{wp.name}</div>
+                                                <div style={{ fontSize: 9, color: '#666', marginTop: 4 }}>{wp.artist}</div>
+                                            </div>
+                                            <div style={{ width: 20, height: 20, background: '#36a9e1', display: 'flex', justifyContent: 'center', alignItems: 'center', borderRadius: 2 }}>
+                                                <div style={{ width: 8, height: 8, border: '1.5px solid white' }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 底部状态栏 */}
+                    <div style={{
+                        position: 'absolute', bottom: 0, left: 0, right: 0, height: 24,
+                        background: '#36a9e1', display: 'flex', alignItems: 'center', padding: '0 15px',
+                        fontSize: 9, color: '#fff', fontWeight: 600, letterSpacing: '1px'
+                    }}>
+                        SYNCED // 4K_ENGINE_ACTIVE // READY TO DIVE
+                    </div>
+                </MacosWindow>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<GalleryApp />);
+    </script>
+</body>
+</html>
