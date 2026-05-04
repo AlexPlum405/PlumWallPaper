@@ -490,6 +490,7 @@ struct WallpaperExploreView: View {
                             }
                     }
                     .buttonStyle(.plain)
+                    .contentShape(Capsule())
                 }
             }
         }

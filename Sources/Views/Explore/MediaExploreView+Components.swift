@@ -236,6 +236,7 @@ extension MediaExploreView {
                             }
                     }
                     .buttonStyle(.plain)
+                    .contentShape(Capsule())
                 }
             }
         }

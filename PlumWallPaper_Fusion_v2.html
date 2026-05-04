@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlumWallPaper · Fusion Pro (v12.1 Expert)</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        :root {
+            --window-bg: #121212;
+            --plum-accent: #BB8FCE;
+            --plum-deep: #4A235A;
+            --glass-thick: rgba(30, 30, 30, 0.7);
+            --glass-thin: rgba(255, 255, 255, 0.05);
+            --sidebar-width: 68px;
+            --sidebar-width-expanded: 220px;
+        }
+
+        body, html {
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            background: #000;
+            font-family: -apple-system, "SF Pro Display", sans-serif;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+            color: #fff;
+        }
+
+        #root {
+            width: 1160px; height: 780px;
+            background: var(--window-bg);
+            border-radius: 20px;
+            display: flex;
+            position: relative;
+            box-shadow: 0 100px 200px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.1);
+            overflow: hidden;
+        }
+
+        /* --- FUSION STYLE A: Cinematic Background --- */
+        .window-bg-mesh {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                radial-gradient(circle at 80% 20%, var(--plum-deep) 0%, transparent 40%),
+                radial-gradient(circle at 20% 80%, #1a1a1a 0%, transparent 40%);
+            opacity: 0.5; z-index: 0; pointer-events: none;
+        }
+
+        /* --- FUSION STYLE B: Spatial Scene --- */
+        .spatial-container {
+            perspective: 1500px;
+            flex: 1; display: flex; z-index: 1;
+        }
+
+        /* Traffic Lights */
+        .traffic-lights {
+            position: absolute; top: 18px; left: 20px;
+            display: flex; gap: 8px; z-index: 100;
+        }
+        .light { width: 12px; height: 12px; border-radius: 50%; opacity: 0.8; }
+        .close { background: #FF5F57; }
+        .min { background: #FEBC2E; }
+        .max { background: #28C840; }
+
+        ::-webkit-scrollbar { width: 0px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- FUSION CONCEPT ---
+        // A: Cinematic Icon Rail (Left)
+        // B: Spatial 3D Grid (Center)
+        // C: High-Density Metadata (Hover Overlay)
+
+        const WALLPAPERS = [
+            { id: 1, title: "Luminescent Flux", author: "Zima", res: "8K", fps: 120, tech: "Metal", color: "linear-gradient(45deg, #4A235A, #BB8FCE)" },
+            { id: 2, title: "Sequoia Deep", author: "Apple", res: "6K", fps: 60, tech: "ProRes", color: "linear-gradient(45deg, #1B4F72, #5DADE2)" },
+            { id: 3, title: "Cyber Glitch", author: "Neon", res: "4K", fps: 144, tech: "Shader", color: "linear-gradient(45deg, #145A32, #52BE80)" },
+            { id: 4, title: "Ethereal Drift", author: "Aura", res: "8K", fps: 90, tech: "Metal", color: "linear-gradient(45deg, #78281F, #EC7063)" },
+            { id: 5, title: "Geometric Voids", author: "Vector", res: "5K", fps: 60, tech: "GLSL", color: "linear-gradient(45deg, #641E16, #C0392B)" },
+            { id: 6, title: "Solar Winds", author: "Cosmos", res: "4K", fps: 120, tech: "Metal", color: "linear-gradient(45deg, #7D6608, #F4D03F)" },
+        ];
+
+        const Sidebar = () => {
+            const [isExpanded, setIsExpanded] = useState(false);
+            const items = [
+                { icon: '⌘', label: 'Explore' },
+                { icon: '✦', label: 'Featured' },
+                { icon: '◎', label: 'Live Metal' },
+                { icon: '♥', label: 'Vault' },
+                { icon: '⚙', label: 'Core' }
+            ];
+
+            return (
+                <div 
+                    onMouseEnter={() => setIsExpanded(true)}
+                    onMouseLeave={() => setIsExpanded(false)}
+                    style={{
+                        width: isExpanded ? 200 : 68,
+                        background: 'rgba(0,0,0,0.3)',
+                        backdropFilter: 'blur(30px) saturate(150%)',
+                        borderRight: '1px solid rgba(255,255,255,0.05)',
+                        transition: 'width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)',
+                        display: 'flex', flexDirection: 'column', padding: '70px 12px 20px 12px',
+                        zIndex: 10
+                    }}
+                >
+                    {items.map((item, i) => (
+                        <div key={i} style={{
+                            height: 44, borderRadius: 12, display: 'flex', alignItems: 'center',
+                            padding: '0 14px', marginBottom: 8, cursor: 'pointer',
+                            background: i === 0 ? 'rgba(255,255,255,0.1)' : 'transparent',
+                            color: i === 0 ? 'var(--plum-accent)' : '#888',
+                            overflow: 'hidden', whiteSpace: 'nowrap'
+
+                        }}>
+                            <span style={{ fontSize: 20, minWidth: 32 }}>{item.icon}</span>
+                            <span style={{ 
+                                marginLeft: 12, fontSize: 13, fontWeight: 500,
+                                opacity: isExpanded ? 1 : 0, transform: `translateX(${isExpanded ? 0 : -10}px)`,
+                                transition: 'all 0.3s ease'
+                            }}>{item.label}</span>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        const WallpaperCard = ({ wp }) => {
+            const [isHovered, setIsHovered] = useState(false);
+
+            return (
+                <div 
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
+                    style={{
+                        position: 'relative',
+                        height: 280, borderRadius: 24, overflow: 'hidden',
+                        background: wp.color, cursor: 'pointer',
+                        transform: `translateZ(${isHovered ? '60px' : '0px'}) scale(${isHovered ? 1.05 : 1})`,
+                        boxShadow: isHovered ? '0 50px 100px rgba(0,0,0,0.6)' : '0 10px 30px rgba(0,0,0,0.2)',
+                        transition: 'all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)',
+                        transformStyle: 'preserve-3d'
+                    }}
+                >
+                    {/* Mirror Highlight (Spatial) */}
+                    <div style={{
+                        position: 'absolute', top: 0, left: 0, right: 0, height: '40%',
+                        background: 'linear-gradient(to bottom, rgba(255,255,255,0.15), transparent)',
+                        pointerEvents: 'none'
+                    }} />
+
+                    {/* Meta Overlay (High-Density) */}
+                    <div style={{
+                        position: 'absolute', bottom: 0, left: 0, right: 0,
+                        padding: '24px 20px',
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
+                        transform: `translateZ(20px)`,
+                        display: 'flex', flexDirection: 'column', gap: 4
+                    }}>
+                        <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em' }}>{wp.title}</div>
+                        
+                        <div style={{ 
+                            display: 'flex', alignItems: 'center', gap: 8, 
+                            opacity: isHovered ? 1 : 0.6,
+                            transition: 'opacity 0.3s ease'
+                        }}>
+                            <span style={{ 
+                                fontSize: 10, fontWeight: 800, padding: '2px 6px',
+                                borderRadius: 4, background: '#fff', color: '#000'
+                            }}>{wp.res}</span>
+                            <span style={{ fontSize: 11, color: '#aaa' }}>{wp.fps} FPS • {wp.tech} Core</span>
+                        </div>
+
+                        {/* Extended Details (Revealed on Hover) */}
+                        <div style={{
+                            height: isHovered ? 40 : 0, opacity: isHovered ? 1 : 0,
+                            overflow: 'hidden', transition: 'all 0.4s ease',
+                            display: 'flex', alignItems: 'center', marginTop: 8
+                        }}>
+                            <button style={{
+                                background: '#fff', color: '#000', border: 'none',
+                                borderRadius: 100, padding: '6px 16px', fontSize: 12,
+                                fontWeight: 700, cursor: 'pointer'
+                            }}>Activate Metal Preview</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const MainApp = () => {
+            return (
+                <div style={{ display: 'flex', width: '100%', height: '100%', position: 'relative' }}>
+                    <div className="window-bg-mesh" />
+                    
+                    <div className="traffic-lights">
+                        <div className="light close" />
+                        <div className="light min" />
+                        <div className="light max" />
+                    </div>
+
+                    <Sidebar />
+
+                    <div className="spatial-container" style={{ transformStyle: 'preserve-3d' }}>
+                        <div style={{ 
+                            flex: 1, padding: '60px 40px', overflowY: 'auto',
+                            transformStyle: 'preserve-3d'
+                        }}>
+                            {/* Header Section */}
+                            <div style={{ 
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
+                                marginBottom: 40, transform: 'translateZ(30px)'
+                            }}>
+                                <div>
+                                    <h1 style={{ fontSize: 42, fontWeight: 900, margin: 0, letterSpacing: '-0.04em' }}>
+                                        Plum<span style={{ color: '#BB8FCE' }}>WallPaper</span>
+                                    </h1>
+                                    <p style={{ color: '#888', margin: '4px 0 0 0', fontSize: 14 }}>Production Grade Dynamic Engine · v12.1.4</p>
+                                </div>
+                                <div style={{ display: 'flex', gap: 12 }}>
+                                    <div style={{ 
+                                        padding: '10px 20px', borderRadius: 12, background: 'rgba(255,255,255,0.05)',
+                                        fontSize: 13, color: '#aaa', border: '1px solid rgba(255,255,255,0.05)'
+                                    }}>
+                                        GPU Load: <span style={{ color: '#28C840' }}>4.2%</span>
+                                    </div>
+                                    <div style={{ 
+                                        padding: '10px 20px', borderRadius: 12, background: '#BB8FCE',
+                                        fontSize: 13, color: '#000', fontWeight: 700
+                                    }}>
+                                        Upload Artifact
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Grid (Fusion B & C) */}
+                            <div style={{ 
+                                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32,
+                                transformStyle: 'preserve-3d', paddingBottom: 100
+                            }}>
+                                {WALLPAPERS.map(wp => <WallpaperCard key={wp.id} wp={wp} />)}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Bottom Status Bar (High-Density) */}
+                    <div style={{
+                        position: 'absolute', bottom: 0, left: 0, right: 0, height: 28,
+                        background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)',
+                        borderTop: '1px solid rgba(255,255,255,0.05)',
+                        display: 'flex', alignItems: 'center', padding: '0 20px',
+                        fontSize: 10, color: '#666', gap: 20, zIndex: 20
+                    }}>
+                        <span>● ENGINE: METAL_STABLE_V2</span>
+                        <span>● SESSION: PRO_DEVELOPER_0405</span>
+                        <span>● MEMORY: 1.4GB / 32GB</span>
+                        <span style={{ marginLeft: 'auto' }}>SEQUOIA ARCHITECTURE OPTIMIZED</span>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<MainApp />);
+    </script>
+</body>
+</html>

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlumWallPaper · Engine Pro Fusion (v14 Expert)</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        :root {
+            --window-bg: #121212;
+            --plum-accent: #BB8FCE;
+            --plum-deep: #4A235A;
+            --glass-thick: rgba(30, 30, 30, 0.7);
+            --sidebar-expanded: 280px;
+        }
+
+        body, html {
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            background: #000;
+            font-family: -apple-system, "SF Pro Display", sans-serif;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+            color: #fff;
+        }
+
+        #root {
+            width: 1200px; height: 800px;
+            background: var(--window-bg);
+            border-radius: 20px;
+            display: flex;
+            position: relative;
+            box-shadow: 0 100px 200px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.1);
+            overflow: hidden;
+        }
+
+        /* --- V3 STYLE: Cinematic Mesh --- */
+        .window-bg-mesh {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                radial-gradient(circle at 80% 20%, var(--plum-deep) 0%, transparent 40%),
+                radial-gradient(circle at 20% 80%, #1a1a1a 0%, transparent 40%);
+            opacity: 0.5; z-index: 0; pointer-events: none;
+        }
+
+        /* Traffic Lights (Precision Aligned) */
+        .traffic-lights {
+            position: absolute; top: 18px; left: 20px;
+            display: flex; gap: 8px; z-index: 100;
+        }
+        .light { width: 12px; height: 12px; border-radius: 50%; opacity: 0.8; }
+        .close { background: #FF5F57; } .min { background: #FEBC2E; } .max { background: #28C840; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+        section { margin-bottom: 24px; }
+        .section-title { fontSize: 10px; fontWeight: 800; color: #666; marginBottom: 16px; letterSpacing: 0.1em; textTransform: uppercase; }
+
+        input[type=range] { width: 100%; height: 4px; border-radius: 2px; background: #333; appearance: none; outline: none; margin: 12px 0; }
+        input[type=range]::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--plum-accent); cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        const MainApp = () => {
+            // --- ENGINE STATE ---
+            const [params, setParams] = useState({ brightness: 100, saturation: 100, hue: 0, contrast: 100 });
+            const [fx, setFx] = useState({ glow: true, noise: false });
+            const [particles, setParticles] = useState({ count: 40, size: 2 });
+            const [audio, setAudio] = useState({ volume: 40, track: 'Midnight Ambient' });
+            const [activeMonitor, setActiveMonitor] = useState(1);
+
+            const monitors = [
+                { id: 1, name: 'Studio Display', res: '5K' },
+                { id: 2, name: 'Pro Display XDR', res: '6K' },
+                { id: 3, name: 'iPad Sidecar', res: '2K' }
+            ];
+
+            return (
+                <div style={{ display: 'flex', width: '100%', height: '100%', position: 'relative', zIndex: 1 }}>
+                    <div className="window-bg-mesh" />
+                    
+                    <div className="traffic-lights">
+                        <div className="light close" /> <div className="light min" /> <div className="light max" />
+                    </div>
+
+                    {/* --- PREVIEW PANE (Fusion B: Spatial feel) --- */}
+                    <div style={{ flex: 1, position: 'relative', padding: 40, display: 'flex', flexDirection: 'column', transformStyle: 'preserve-3d', perspective: 1500 }}>
+                        
+                        {/* Monitor Topology Map */}
+                        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 40, transform: 'translateZ(40px)' }}>
+                            {monitors.map(m => (
+                                <div 
+                                    key={m.id} onClick={() => setActiveMonitor(m.id)}
+                                    style={{
+                                        padding: '14px 24px', borderRadius: 14,
+                                        background: activeMonitor === m.id ? 'var(--plum-accent)' : 'rgba(255,255,255,0.05)',
+                                        color: activeMonitor === m.id ? '#000' : '#888',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s ease',
+                                        boxShadow: activeMonitor === m.id ? '0 10px 30px rgba(187, 143, 206, 0.3)' : 'none'
+                                    }}
+                                >
+                                    <div style={{ fontSize: 10, fontWeight: 900 }}>MONITOR {m.id}</div>
+                                    <div style={{ fontSize: 14, fontWeight: 700 }}>{m.res}</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Live Canvas Area */}
+                        <div style={{
+                            flex: 1, borderRadius: 24, position: 'relative', overflow: 'hidden',
+                            background: `linear-gradient(${params.hue}deg, var(--plum-deep), var(--plum-accent))`,
+                            filter: `brightness(${params.brightness}%) saturate(${params.saturation}%) contrast(${params.contrast}%) ${fx.glow ? 'drop-shadow(0 0 40px var(--plum-accent))' : ''}`,
+                            transform: 'translateZ(20px)',
+                            boxShadow: '0 40px 80px rgba(0,0,0,0.5)'
+                        }}>
+                            {/* Particles Simulation */}
+                            {Array.from({ length: particles.count }).map((_, i) => (
+                                <div key={i} style={{
+                                    position: 'absolute',
+                                    top: `${Math.random() * 100}%`, left: `${Math.random() * 100}%`,
+                                    width: particles.size, height: particles.size,
+                                    background: '#fff', borderRadius: '50%', opacity: 0.3
+                                }} />
+                            ))}
+                            
+                            <div style={{ position: 'absolute', bottom: 24, left: 24, padding: '8px 16px', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)', borderRadius: 100, fontSize: 11, color: '#aaa', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                <span style={{ color: 'var(--plum-accent)', marginRight: 8 }}>●</span>
+                                RENDER ENGINE: METAL_STABLE_V4_FUSION
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* --- EDITOR SIDEBAR (v3 Glass Architecture) --- */}
+                    <div style={{
+                        width: 'var(--sidebar-expanded)',
+                        background: 'rgba(0,0,0,0.2)',
+                        backdropFilter: 'blur(40px) saturate(150%)',
+                        borderLeft: '1px solid rgba(255,255,255,0.05)',
+                        padding: '70px 24px 24px 24px',
+                        display: 'flex', flexDirection: 'column',
+                        zIndex: 10
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+                            <h2 style={{ fontSize: 20, fontWeight: 900, margin: 0, letterSpacing: '-0.03em' }}>Engine Editor</h2>
+                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#28C840', boxShadow: '0 0 10px #28C840' }} />
+                        </div>
+
+                        {/* Color Grade */}
+                        <section>
+                            <div className="section-title">Color Grade</div>
+                            {[
+                                { k: 'brightness', label: 'Exposure', min: 50, max: 150 },
+                                { k: 'saturation', label: 'Saturation', min: 0, max: 200 },
+                                { k: 'hue', label: 'Hue Rotate', min: 0, max: 360 },
+                            ].map(item => (
+                                <div key={item.k} style={{ marginBottom: 18 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#aaa' }}>
+                                        <span>{item.label}</span>
+                                        <span style={{ color: '#fff' }}>{params[item.k]}%</span>
+                                    </div>
+                                    <input type="range" min={item.min} max={item.max} value={params[item.k]} onChange={e => setParams({...params, [item.k]: e.target.value})} />
+                                </div>
+                            ))}
+                        </section>
+
+                        {/* Effects & Particles */}
+                        <section>
+                            <div className="section-title">Post-Processing</div>
+                            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+                                <div 
+                                    onClick={() => setFx({...fx, glow: !fx.glow})}
+                                    style={{
+                                        flex: 1, padding: '10px', borderRadius: 10, background: fx.glow ? 'var(--plum-accent)' : 'rgba(255,255,255,0.05)',
+                                        color: fx.glow ? '#000' : '#888', fontSize: 11, fontWeight: 700, textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s'
+                                    }}
+                                >Bloom</div>
+                                <div 
+                                    onClick={() => setFx({...fx, noise: !fx.noise})}
+                                    style={{
+                                        flex: 1, padding: '10px', borderRadius: 10, background: fx.noise ? 'var(--plum-accent)' : 'rgba(255,255,255,0.05)',
+                                        color: fx.noise ? '#000' : '#888', fontSize: 11, fontWeight: 700, textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s'
+                                    }}
+                                >Grain</div>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#aaa' }}>
+                                <span>Particle Density</span>
+                                <span style={{ color: '#fff' }}>{particles.count}</span>
+                            </div>
+                            <input type="range" min="0" max="150" value={particles.count} onChange={e => setParticles({...particles, count: parseInt(e.target.value)})} />
+                        </section>
+
+                        {/* Audio Mastery */}
+                        <section>
+                            <div className="section-title">Audio Mastering</div>
+                            <div style={{ padding: '14px', background: 'rgba(255,255,255,0.03)', borderRadius: 14, display: 'flex', alignItems: 'center', gap: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--plum-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}>♫</div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: 12, fontWeight: 700 }}>{audio.track}</div>
+                                    <div style={{ fontSize: 10, color: '#666' }}>Attached Layer</div>
+                                </div>
+                            </div>
+                            <input type="range" min="0" max="100" value={audio.volume} onChange={e => setAudio({...audio, volume: e.target.value})} />
+                        </section>
+
+                        <button style={{
+                            marginTop: 'auto', padding: '16px', background: '#fff', color: '#000',
+                            border: 'none', borderRadius: 14, fontWeight: 800, fontSize: 13, cursor: 'pointer',
+                            boxShadow: '0 20px 40px rgba(255,255,255,0.15)', transition: 'all 0.2s'
+                        }}>
+                            Apply to Display {activeMonitor}
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<MainApp />);
+    </script>
+</body>
+</html>
