@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlumWallPaper - macOS Sequoia Pro Prototype</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #root {
+            width: 1080px;
+            height: 720px;
+            box-shadow: 0 50px 100px rgba(0,0,0,0.3);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            background: #fff;
+            position: relative;
+        }
+
+        /* macOS Traffic Lights */
+        .traffic-lights {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            display: flex;
+            gap: 8px;
+            z-index: 100;
+        }
+        .light {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .close { background: #FF5F57; }
+        .minimize { background: #FEBC2E; }
+        .maximize { background: #28C840; }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Brand Spec Data (v12.1 Expert) ---
+        const brandSpec = {
+            name: "PlumWallPaper",
+            primary: "#8E44AD",
+            accent: "#007AFF",
+            sidebarBg: "rgba(255, 255, 255, 0.5)",
+            contentBg: "#FFFFFF",
+            inspectorBg: "#F9F9F9"
+        };
+
+        // --- Mock Data ---
+        const WALLPAPERS = [
+            { id: 1, title: "Abstract Plum", author: "Zima", res: "6K", tags: ["Minimal", "Fluid"], color: "#9B59B6" },
+            { id: 2, title: "Sequoia Morning", author: "Apple", res: "8K", tags: ["Nature", "System"], color: "#AED6F1" },
+            { id: 3, title: "Neon Cyber", author: "DevX", res: "4K", tags: ["Sci-Fi", "Dark"], color: "#2E4053" },
+            { id: 4, title: "Organic Flow", author: "Studio Loft", res: "5K", tags: ["Abstract", "Art"], color: "#FAD7A0" },
+            { id: 5, title: "Mountain Peak", author: "Alpha", res: "6K", tags: ["Nature", "Photography"], color: "#A9DFBF" },
+            { id: 6, title: "Deep Sea", author: "Oceanic", res: "8K", tags: ["Nature", "Live"], color: "#21618C" },
+        ];
+
+        // --- Components ---
+
+        const Sidebar = ({ activeTab, onSelect }) => {
+            const tabs = [
+                { id: 'explore', label: '发现', icon: '◈' },
+                { id: 'daily', label: '今日精选', icon: '★' },
+                { id: 'library', label: '我的库', icon: '📂' },
+                { id: 'favorite', label: '收藏夹', icon: '♥' },
+            ];
+
+            return (
+                <div style={{
+                    width: 220,
+                    background: brandSpec.sidebarBg,
+                    backdropFilter: 'blur(40px) saturate(180%) contrast(80%)',
+                    borderRight: '0.5px solid rgba(0,0,0,0.1)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    padding: '60px 12px 12px 12px'
+                }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#888', marginBottom: 8, paddingLeft: 8 }}>浏览</div>
+                    {tabs.map(tab => (
+                        <div 
+                            key={tab.id}
+                            onClick={() => onSelect(tab.id)}
+                            style={{
+                                padding: '8px 12px',
+                                borderRadius: 8,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 10,
+                                fontSize: 13,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                background: activeTab === tab.id ? brandSpec.accent : 'transparent',
+                                color: activeTab === tab.id ? '#fff' : '#444',
+                                fontWeight: activeTab === tab.id ? 600 : 400,
+                            }}
+                        >
+                            <span style={{ fontSize: 16 }}>{tab.icon}</span>
+                            {tab.label}
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        const WallpaperCard = ({ wallpaper, isSelected, onSelect }) => {
+            return (
+                <div 
+                    onClick={() => onSelect(wallpaper)}
+                    style={{
+                        borderRadius: 10,
+                        overflow: 'hidden',
+                        background: '#fff',
+                        boxShadow: isSelected ? `0 0 0 3px ${brandSpec.accent}` : '0 4px 12px rgba(0,0,0,0.05)',
+                        transition: 'transform 0.2s ease',
+                        cursor: 'pointer',
+                        transform: isSelected ? 'scale(0.98)' : 'scale(1)',
+                    }}
+                >
+                    <div style={{
+                        height: 120,
+                        background: wallpaper.color,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 40,
+                        color: 'rgba(255,255,255,0.3)'
+                    }}>
+                        {wallpaper.res}
+                    </div>
+                    <div style={{ padding: 10 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#333' }}>{wallpaper.title}</div>
+                        <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>{wallpaper.author}</div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ContentArea = ({ activeTab, selectedWallpaper, onSelectWallpaper }) => {
+            return (
+                <div style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    background: brandSpec.contentBg
+                }}>
+                    {/* Merged Toolbar */}
+                    <div style={{
+                        height: 52,
+                        padding: '0 24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        borderBottom: '0.5px solid rgba(0,0,0,0.05)'
+                    }}>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: '#222' }}>
+                            {activeTab === 'explore' ? '发现新壁纸' : '今日精选'}
+                        </div>
+                        <div style={{
+                            width: 240,
+                            height: 28,
+                            background: '#f1f1f1',
+                            borderRadius: 6,
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '0 10px',
+                            color: '#888',
+                            fontSize: 13
+                        }}>
+                            🔍 搜索壁纸、作者或标签...
+                        </div>
+                    </div>
+
+                    {/* Grid */}
+                    <div style={{
+                        flex: 1,
+                        padding: 24,
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                        gap: 20,
+                        overflowY: 'auto'
+                    }}>
+                        {WALLPAPERS.map(wp => (
+                            <WallpaperCard 
+                                key={wp.id} 
+                                wallpaper={wp} 
+                                isSelected={selectedWallpaper?.id === wp.id}
+                                onSelect={onSelectWallpaper}
+                            />
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const Inspector = ({ wallpaper }) => {
+            if (!wallpaper) return (
+                <div style={{ width: 280, background: brandSpec.inspectorBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: 13 }}>
+                    选中一张壁纸查看详情
+                </div>
+            );
+
+            return (
+                <div style={{
+                    width: 280,
+                    background: brandSpec.inspectorBg,
+                    borderLeft: '0.5px solid rgba(0,0,0,0.1)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    padding: 20
+                }}>
+                    <div style={{
+                        height: 160,
+                        background: wallpaper.color,
+                        borderRadius: 12,
+                        marginBottom: 20,
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+                    }} />
+                    
+                    <div style={{ fontSize: 20, fontWeight: 700, color: '#222' }}>{wallpaper.title}</div>
+                    <div style={{ fontSize: 13, color: '#666', marginTop: 4 }}>作者: {wallpaper.author}</div>
+
+                    <div style={{ marginTop: 24, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {wallpaper.tags.map(tag => (
+                            <span key={tag} style={{
+                                padding: '4px 10px',
+                                background: 'rgba(0,0,0,0.05)',
+                                borderRadius: 100,
+                                fontSize: 11,
+                                color: '#555'
+                            }}>
+                                {tag}
+                            </span>
+                        ))}
+                    </div>
+
+                    <div style={{ marginTop: 'auto' }}>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            fontSize: 12,
+                            color: '#888',
+                            marginBottom: 16,
+                            padding: '0 4px'
+                        }}>
+                            <span>分辨率: {wallpaper.res}</span>
+                            <span>类型: 动态(Metal)</span>
+                        </div>
+                        <button style={{
+                            width: '100%',
+                            padding: '12px 0',
+                            background: brandSpec.accent,
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: 10,
+                            fontSize: 14,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            boxShadow: `0 4px 12px ${brandSpec.accent}44`
+                        }}>
+                            设为桌面壁纸
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('explore');
+            const [selectedWallpaper, setSelectedWallpaper] = useState(WALLPAPERS[0]);
+
+            return (
+                <React.Fragment>
+                    <div className="traffic-lights">
+                        <div className="light close"></div>
+                        <div className="light minimize"></div>
+                        <div className="light maximize"></div>
+                    </div>
+                    <Sidebar activeTab={activeTab} onSelect={setActiveTab} />
+                    <ContentArea 
+                        activeTab={activeTab} 
+                        selectedWallpaper={selectedWallpaper}
+                        onSelectWallpaper={setSelectedWallpaper}
+                    />
+                    <Inspector wallpaper={selectedWallpaper} />
+                </React.Fragment>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

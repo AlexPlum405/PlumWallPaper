@@ -416,9 +416,39 @@ struct WallpaperDetailView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("精选画廊").font(.system(size: 12, weight: .black)).kerning(5).foregroundStyle(LiquidGlassColors.primaryPink)
             Text(wallpaper.name).artisanTitleStyle(size: 48, kerning: 1).shadow(color: .black.opacity(0.5), radius: 20)
-            HStack(spacing: 20) {
-                metadataTag(icon: "ruler", text: wallpaper.resolution ?? "8K 超清")
-                metadataTag(icon: "cpu", text: "全动态渲染")
+
+            // 元信息标签组
+            HStack(spacing: 12) {
+                if let resolution = wallpaper.resolution {
+                    metadataTag(icon: "square.resize", text: resolution)
+                }
+
+                if wallpaper.fileSize > 0 {
+                    metadataTag(icon: "doc", text: formatFileSize(wallpaper.fileSize))
+                }
+
+                if wallpaper.type == .video, let duration = wallpaper.duration {
+                    metadataTag(icon: "clock", text: formatDuration(duration))
+                }
+
+                if let frameRate = wallpaper.frameRate {
+                    metadataTag(icon: "film", text: "\(Int(frameRate))fps")
+                }
+            }
+
+            // 统计信息（如果有）
+            if let metadata = wallpaper.remoteMetadata {
+                HStack(spacing: 16) {
+                    if let views = metadata.views {
+                        metadataTag(icon: "eye", text: formatCount(views))
+                    }
+                    if let favorites = metadata.favorites {
+                        metadataTag(icon: "heart", text: formatCount(favorites))
+                    }
+                    if let author = metadata.author {
+                        metadataTag(icon: "person", text: author)
+                    }
+                }
             }
         }
     }
@@ -431,6 +461,32 @@ struct WallpaperDetailView: View {
         .foregroundStyle(.white.opacity(0.6))
         .padding(.horizontal, 12).padding(.vertical, 6)
         .background(Capsule().fill(Color.white.opacity(0.1)))
+    }
+
+    private func formatFileSize(_ bytes: Int64) -> String {
+        let mb = Double(bytes) / 1024.0 / 1024.0
+        if mb >= 1000 {
+            return String(format: "%.1fGB", mb / 1024.0)
+        }
+        return String(format: "%.0fMB", mb)
+    }
+
+    private func formatDuration(_ seconds: Double) -> String {
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = [.minute, .second]
+        formatter.unitsStyle = .positional
+        formatter.zeroFormattingBehavior = .pad
+        return formatter.string(from: seconds) ?? "0:00"
+    }
+
+    private func formatCount(_ count: Int) -> String {
+        if count >= 1_000_000 {
+            return String(format: "%.1fM", Double(count) / 1_000_000)
+        }
+        if count >= 1_000 {
+            return String(format: "%.1fk", Double(count) / 1_000)
+        }
+        return "\(count)"
     }
 
     private var closeButtonHUD: some View {
@@ -1279,6 +1335,7 @@ struct WallpaperDetailView: View {
 
     private func url(from path: String) -> URL? {
         let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
         if let url = URL(string: trimmed), url.scheme != nil { return url }
         return URL(fileURLWithPath: trimmed)
     }

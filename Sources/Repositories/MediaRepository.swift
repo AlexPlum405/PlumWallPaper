@@ -8,8 +8,9 @@ final class MediaRepository: ObservableObject {
 
     // MARK: - Services
     private let mediaService = MediaService.shared
-    // Workshop service 将在 agent 完成后可用
-    // private let workshopService = WorkshopService.shared
+    private let pexelsService = PexelsService.shared
+    private let pixabayService = PixabayService.shared
+    private let desktopHutService = DesktopHutService.shared
 
     // MARK: - Cache
     private var heroCache: (data: [MediaItem], timestamp: Date)?
@@ -21,39 +22,38 @@ final class MediaRepository: ObservableObject {
     // MARK: - Hero Items (动态壁纸轮播)
 
     /// 获取 Hero 动态壁纸（多维度加权算法）
-    /// 数据源权重：MotionBG 50% + Workshop 50%
     func fetchHeroItems() async throws -> [MediaItem] {
         NSLog("[MediaRepository] fetchHeroItems() 开始")
 
-        // 检查缓存
         if let cache = heroCache,
            Date().timeIntervalSince(cache.timestamp) < cacheExpiration {
             NSLog("[MediaRepository] 使用缓存的 Hero 数据: \(cache.data.count) 项")
             return cache.data
         }
 
-        NSLog("[MediaRepository] 获取 MotionBG 候选项...")
-        // 获取候选池
-        let motionBGCandidates = try await fetchMotionBGCandidates()
-        NSLog("[MediaRepository] ✅ 获取到 \(motionBGCandidates.count) 个 MotionBG 候选项")
+        async let motionBGCandidates = fetchMotionBGCandidates()
+        async let pexelsCandidates = fetchPexelsHeroCandidates()
+        async let pixabayCandidates = fetchPixabayHeroCandidates()
+        async let desktopCandidates = fetchDesktopHutHeroCandidates()
 
-        // 计算得分
-        let scoredMotionBG = motionBGCandidates.map { item -> (MediaItem, Double) in
-            let score = calculateQualityScore(item, sourceWeight: 0.5)
-            return (item, score)
+        let sources = try await [
+            (motionBGCandidates, 0.35),
+            (pexelsCandidates, 0.25),
+            (pixabayCandidates, 0.25),
+            (desktopCandidates, 0.15)
+        ]
+
+        let allCandidates = sources.flatMap { items, weight in
+            items.map { item in
+                (item, calculateQualityScore(item, sourceWeight: weight))
+            }
         }
 
-        let allCandidates = scoredMotionBG
-
-        // 排序并应用多样性规则
         let sorted = allCandidates.sorted { $0.1 > $1.1 }
         let final = applyDiversityRules(sorted, count: 8)
 
         NSLog("[MediaRepository] 最终返回 \(final.count) 个 Hero 项")
-
-        // 更新缓存
         heroCache = (final, Date())
-
         return final
     }
 
@@ -123,6 +123,33 @@ final class MediaRepository: ObservableObject {
     private func fetchMotionBGPopularCandidates() async throws -> [MediaItem] {
         let items = try await mediaService.fetchHomePage()
         return Array(items.prefix(10))
+    }
+
+    private func fetchPexelsHeroCandidates() async throws -> [MediaItem] {
+        do {
+            return try await pexelsService.fetchPopularVideos(page: 1, perPage: 12)
+        } catch {
+            NSLog("[MediaRepository] Pexels Hero 获取失败: \(error.localizedDescription)")
+            return []
+        }
+    }
+
+    private func fetchPixabayHeroCandidates() async throws -> [MediaItem] {
+        do {
+            return try await pixabayService.fetchPopularVideos(page: 1, perPage: 12)
+        } catch {
+            NSLog("[MediaRepository] Pixabay Hero 获取失败: \(error.localizedDescription)")
+            return []
+        }
+    }
+
+    private func fetchDesktopHutHeroCandidates() async throws -> [MediaItem] {
+        do {
+            return try await desktopHutService.fetchLatest(page: 1)
+        } catch {
+            NSLog("[MediaRepository] DesktopHut Hero 获取失败: \(error.localizedDescription)")
+            return []
+        }
     }
 
     /// 计算质量得分

@@ -141,7 +141,7 @@ struct WallpaperCard: View {
     
     // MARK: - 信息区域 (Gallery Tag)
     private var infoSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             // 衬线体标题
             Text(wallpaper.name.isEmpty ? "Untitled Art" : wallpaper.name)
                 .font(.custom("Georgia", size: 15).bold())
@@ -149,6 +149,22 @@ struct WallpaperCard: View {
                 .lineLimit(1)
                 .kerning(0.5)
 
+            // 元信息行1：分辨率 + 文件大小
+            HStack(spacing: 8) {
+                if let resolution = wallpaper.resolution {
+                    metaChip(icon: "square.resize", text: resolution, color: LiquidGlassColors.primaryPink)
+                }
+
+                if wallpaper.fileSize > 0 {
+                    metaChip(icon: "doc", text: formatFileSize(wallpaper.fileSize), color: LiquidGlassColors.accentGold)
+                }
+
+                if wallpaper.type == .video, let duration = wallpaper.duration {
+                    metaChip(icon: "clock", text: formatDuration(duration), color: LiquidGlassColors.accentGold)
+                }
+            }
+
+            // 元信息行2：统计数据
             HStack(spacing: 12) {
                 if let views = wallpaper.remoteMetadata?.views {
                     Label(formatCount(views), systemImage: "eye")
@@ -168,6 +184,18 @@ struct WallpaperCard: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+    }
+
+    private func metaChip(icon: String, text: String, color: Color) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon).font(.system(size: 7, weight: .bold))
+            Text(text).font(.system(size: 9, weight: .bold))
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(color.opacity(0.1))
+        .clipShape(Capsule())
     }
 
     // MARK: - 辅助子视图
@@ -247,5 +275,13 @@ struct WallpaperCard: View {
         formatter.unitsStyle = .positional
         formatter.zeroFormattingBehavior = .pad
         return formatter.string(from: seconds) ?? "0:00"
+    }
+
+    private func formatFileSize(_ bytes: Int64) -> String {
+        let mb = Double(bytes) / 1024.0 / 1024.0
+        if mb >= 1000 {
+            return String(format: "%.1fGB", mb / 1024.0)
+        }
+        return String(format: "%.0fMB", mb)
     }
 }

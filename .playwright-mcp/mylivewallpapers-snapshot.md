@@ -1,0 +1,187 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - text: Download the MyLiveWallpaper Software and play live wallpapers AND screensavers on your Windows PC
+      - link "Download Now!" [ref=e5] [cursor=pointer]:
+        - /url: https://mylivewallpapers.com/how-to-set-live-wallpaper-for-your-desktop-using-mlwapp/
+    - button "Close" [ref=e6] [cursor=pointer]: ✕
+  - text: "-->"
+  - link "Skip to the content" [ref=e9] [cursor=pointer]:
+    - /url: "#site-content"
+  - generic [ref=e10]:
+    - generic [ref=e11]:
+      - link [ref=e12] [cursor=pointer]:
+        - /url: https://mylivewallpapers.com
+        - img [ref=e13]
+      - list [ref=e14]:
+        - listitem [ref=e15]:
+          - link "Home" [ref=e16] [cursor=pointer]:
+            - /url: https://mylivewallpapers.com/
+        - listitem [ref=e17]:
+          - text: /
+          - link "Live Wallpapers" [ref=e18] [cursor=pointer]:
+            - /url: https://mylivewallpapers.com/
+          - list [ref=e19]:
+            - listitem [ref=e20]:
+              - link "Anime" [ref=e21] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/anime/
+            - listitem [ref=e22]:
+              - link "Games" [ref=e23] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/games/
+            - listitem [ref=e24]:
+              - link "Fantasy" [ref=e25] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/fantasy/
+            - listitem [ref=e26]:
+              - link "Nature" [ref=e27] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/nature/
+            - listitem [ref=e28]:
+              - link "Cute" [ref=e29] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/cute/
+            - listitem [ref=e30]:
+              - link "Sci-Fi" [ref=e31] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/sci-fi/
+            - listitem [ref=e32]:
+              - link "Abstract" [ref=e33] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/abstract/
+            - listitem [ref=e34]:
+              - link "Animals" [ref=e35] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/animals/
+            - listitem [ref=e36]:
+              - link "City" [ref=e37] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/city/
+            - listitem [ref=e38]:
+              - link "Comics" [ref=e39] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/comics/
+            - listitem [ref=e40]:
+              - link "TV & Movies" [ref=e41] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/movies/
+            - listitem [ref=e42]:
+              - link "Cars" [ref=e43] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/cars/
+            - listitem [ref=e44]:
+              - link "Lifestyle" [ref=e45] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/lifestyle/
+            - listitem [ref=e46]:
+              - link "Scary" [ref=e47] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/scary/
+        - listitem [ref=e48]:
+          - text: /
+          - link "Resolutions" [ref=e49] [cursor=pointer]:
+            - /url: https://mylivewallpapers.com/
+          - list [ref=e50]:
+            - listitem [ref=e51]:
+              - link "Full HD-1920×1080" [ref=e52] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/full-hd-1920x1080/
+            - listitem [ref=e53]:
+              - link "4K-3840 x 2160" [ref=e54] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/4k-3840x2160/
+            - listitem [ref=e55]:
+              - link "QHD-2560×1440" [ref=e56] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/qhd-2560x1440/
+            - listitem [ref=e57]:
+              - link "HD-1280×720" [ref=e58] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/hd-1280x720/
+            - listitem [ref=e59]:
+              - link "1366×768" [ref=e60] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/1366x768/
+            - listitem [ref=e61]:
+              - link "Ultrawide Standard" [ref=e62] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/ultrawide-standard/
+            - listitem [ref=e63]:
+              - link "Ultrawide-3440×1440" [ref=e64] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/ultrawide-3440x1440/
+            - listitem [ref=e65]:
+              - link "Mobile Resolution" [ref=e66] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/mobile-resolution/
+            - listitem [ref=e67]:
+              - link "Other Resolution" [ref=e68] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/category/other-resolution/
+        - listitem [ref=e69]:
+          - text: /
+          - link "MLW Software" [ref=e70] [cursor=pointer]:
+            - /url: https://mylivewallpapers.com/
+          - list [ref=e71]:
+            - listitem [ref=e72]:
+              - link "MLW Software Download" [ref=e73] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/how-to-set-live-wallpaper-for-your-desktop-using-mlwapp/
+            - listitem [ref=e74]:
+              - link "MLW Live Wallpaper Bug Fixes" [ref=e75] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/mlw-live-wallpaper-bug-fixes/
+        - listitem [ref=e76]:
+          - text: /
+          - link "Other" [ref=e77] [cursor=pointer]:
+            - /url: "#"
+          - list [ref=e78]:
+            - listitem [ref=e79]:
+              - link "Live Wallpaper App for Android" [ref=e80] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/how-to-add-a-live-wallpaper-on-your-android-phone/
+            - listitem [ref=e81]:
+              - link "Uninstall MLW Software" [ref=e82] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/how-do-i-uninstall-the-mlwapp/
+            - listitem [ref=e83]:
+              - link "Contact" [ref=e84] [cursor=pointer]:
+                - /url: https://mylivewallpapers.com/contact/
+        - listitem:
+          - text: /
+          - generic [ref=e85]:
+            - searchbox "Search Form"
+            - button "Search " [ref=e86] [cursor=pointer]:
+              - generic [ref=e87]: Search
+              - generic [ref=e88]: 
+    - text: 
+  - generic [ref=e91]:
+    - text: Free Live wallpapers for your PC and mobile phone!
+    - text: Download our free software and apply live wallpapers to your PC monitor easily!
+    - link "Learn more!" [ref=e92] [cursor=pointer]:
+      - /url: https://mylivewallpapers.com/how-to-set-live-wallpaper-for-your-desktop-using-mlwapp/
+  - main [ref=e93]:
+    - generic [ref=e94]:
+      - generic [ref=e95]:
+        - link [ref=e96] [cursor=pointer]:
+          - /url: https://mylivewallpapers.com/anime/zenitsu-forest-wind-live-wallpaper/
+        - link [ref=e98] [cursor=pointer]:
+          - /url: https://mylivewallpapers.com/cars/speeding-white-porsche-live-wallpaper/
+        - link [ref=e100] [cursor=pointer]:
+          - /url: https://mylivewallpapers.com/anime/gaara-the-golden-child-live-wallpaper/
+        - link [ref=e103] [cursor=pointer]:
+          - /url: https://mylivewallpapers.com/fantasy/black-dragon-warrior-live-wallpaper/
+        - link [ref=e105] [cursor=pointer]:
+          - /url: https://mylivewallpapers.com/fantasy/red-blade-samurai-live-wallpaper/
+        - link [ref=e107] [cursor=pointer]:
+          - /url: https://mylivewallpapers.com/fantasy/masked-warrior-live-wallpaper/
+        - link [ref=e109] [cursor=pointer]:
+          - /url: https://mylivewallpapers.com/scary/forest-squid-monster-live-wallpaper/
+        - link [ref=e112] [cursor=pointer]:
+          - /url: https://mylivewallpapers.com/fantasy/forest-fairy-live-wallpaper/
+        - link [ref=e114] [cursor=pointer]:
+          - /url: https://mylivewallpapers.com/fantasy/zen-kois-live-wallpaper/
+        - link [ref=e116] [cursor=pointer]:
+          - /url: https://mylivewallpapers.com/anime/sunset-glow-naruto-live-wallpaper/
+        - link [ref=e119] [cursor=pointer]:
+          - /url: https://mylivewallpapers.com/anime/sasuke-by-a-stream-live-wallpaper/
+        - link [ref=e121] [cursor=pointer]:
+          - /url: https://mylivewallpapers.com/cars/neon-pink-smoke-burnout-live-wallpaper/
+        - link [ref=e123] [cursor=pointer]:
+          - /url: https://mylivewallpapers.com/games/kyo-kusanagi-kof-live-wallpaper/
+        - link [ref=e125] [cursor=pointer]:
+          - /url: https://mylivewallpapers.com/anime/gouki-akuma-live-wallpaper/
+        - generic [ref=e129]:
+          - generic [ref=e130]: "1"
+          - link "2" [ref=e131] [cursor=pointer]:
+            - /url: https://mylivewallpapers.com/page/2/
+          - link "3" [ref=e132] [cursor=pointer]:
+            - /url: https://mylivewallpapers.com/page/3/
+          - generic [ref=e133]: …
+          - link "803" [ref=e134] [cursor=pointer]:
+            - /url: https://mylivewallpapers.com/page/803/
+          - link "Next »" [ref=e135] [cursor=pointer]:
+            - /url: https://mylivewallpapers.com/page/2/
+      - text:  
+  - paragraph [ref=e137]:
+    - text: © 2026
+    - link "MyLiveWallpapers.com" [ref=e138] [cursor=pointer]:
+      - /url: https://mylivewallpapers.com
+    - link "Cookie Settings" [ref=e139] [cursor=pointer]:
+      - /url: javascript:void(0);
+  - img [ref=e143] [cursor=pointer]: X
+  - button "Continue after ad" [ref=e154] [cursor=pointer]

@@ -48,44 +48,32 @@ extension MediaExploreView {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 16) {
                 ForEach(MediaExploreViewModel.MediaSource.allCases, id: \.self) { source in
+                    let isAvailable = source.isAvailable
                     FilterChip(
                         title: source.displayName,
                         isSelected: viewModel.selectedSource == source
                     ) {
+                        guard isAvailable else { return }
                         withAnimation(.gallerySpring) {
                             viewModel.selectSource(source)
                         }
                         Task { await viewModel.applyFilters() }
                     }
+                    .opacity(isAvailable ? 1.0 : 0.4)
+                    .overlay(
+                        Group {
+                            if !isAvailable {
+                                Text("即将推出")
+                                    .font(.system(size: 9, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                                    .offset(y: 24)
+                                    .allowsHitTesting(false)
+                            }
+                        }
+                    )
                 }
             }
         }
-    }
-
-    // MARK: - 分辨率筛选
-    var resolutionFilters: some View {
-        artisanFilterGroup(
-            title: "分辨率",
-            options: resolutionOptions,
-            selected: Binding(
-                get: { viewModel.selectedResolution ?? "全部" },
-                set: { viewModel.selectedResolution = $0 == "全部" ? nil : $0 }
-            )
-        )
-    }
-
-    // MARK: - 音轨筛选
-    var audioTrackFilters: some View {
-        artisanFilterGroup(
-            title: "音轨",
-            options: audioTrackOptions,
-            selected: Binding(
-                get: { viewModel.selectedAudioTrack.displayName },
-                set: { value in
-                    viewModel.selectedAudioTrack = MediaExploreViewModel.AudioTrackFilter(rawValue: value) ?? .all
-                }
-            )
-        )
     }
 
     // MARK: - 排序筛选
@@ -97,50 +85,25 @@ extension MediaExploreView {
         )
     }
 
-    // MARK: - 高级筛选按钮
-    var advancedFiltersButton: some View {
-        Button {
-            withAnimation(.gallerySpring) {
-                showFilters.toggle()
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Text("高级筛选")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(LiquidGlassColors.textSecondary)
-                Image(systemName: showFilters ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(LiquidGlassColors.textTertiary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(LiquidGlassColors.surfaceBackground.opacity(0.4))
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(LiquidGlassColors.glassBorder, lineWidth: 0.5)
-            }
-        }
-        .buttonStyle(.plain)
+    // MARK: - 分辨率筛选
+    var resolutionFilters: some View {
+        artisanFilterGroup(
+            title: "分辨率",
+            options: viewModel.resolutionFilterOptions,
+            selected: Binding(
+                get: { viewModel.selectedResolution ?? "全部" },
+                set: { viewModel.selectedResolution = $0 == "全部" ? nil : $0 }
+            )
+        )
     }
 
-    // MARK: - 高级筛选区域
-    var advancedFiltersSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Divider()
-                .background(LiquidGlassColors.glassBorder)
-
-            HStack(spacing: 32) {
-                if viewModel.showResolutionFilter {
-                    resolutionFilters
-                }
-                audioTrackFilters
-                Spacer()
-            }
-        }
-        .padding(.top, 8)
+    // MARK: - 时长筛选
+    var durationFilters: some View {
+        artisanFilterGroup(
+            title: "时长",
+            options: viewModel.durationFilterOptions,
+            selected: $viewModel.selectedDuration
+        )
     }
 
     // MARK: - 媒体网格
@@ -208,72 +171,73 @@ extension MediaExploreView {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
         .background {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color.red.opacity(0.1))
-                .background(.ultraThinMaterial)
         }
         .overlay {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                .stroke(Color.red.opacity(0.3), lineWidth: 0.5)
         }
     }
 
     // MARK: - 空状态视图
     var emptyStateView: some View {
         VStack(spacing: 24) {
-            Image(systemName: "film.stack")
+            Image(systemName: "photo.on.rectangle.angled")
                 .font(.system(size: 64, weight: .thin))
                 .foregroundStyle(LiquidGlassColors.textQuaternary)
             
-            VStack(spacing: 8) {
-                Text("暂无媒体内容")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(LiquidGlassColors.textPrimary)
-                
-                Text("尝试调整筛选条件或稍后再试")
-                    .font(.system(size: 13))
-                    .foregroundStyle(LiquidGlassColors.textSecondary)
-            }
+            Text("暂无媒体内容")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(LiquidGlassColors.textSecondary)
+            
+            Text("尝试切换数据源或调整筛选条件")
+                .font(.system(size: 13))
+                .foregroundStyle(LiquidGlassColors.textTertiary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 120)
     }
 
-    // MARK: - Helper: Filter Group
+    // MARK: - Artisan Filter Group
     func artisanFilterGroup(title: String, options: [String], selected: Binding<String>) -> some View {
-        HStack(spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             Text(title)
-                .font(.system(size: 11, weight: .black))
-                .kerning(1.5)
-                .foregroundStyle(LiquidGlassColors.textQuaternary)
-            
-            HStack(spacing: 8) {
+                .font(.system(size: 11, weight: .bold))
+                .kerning(1.2)
+                .foregroundStyle(LiquidGlassColors.textTertiary)
+                .textCase(.uppercase)
+
+            FlowLayout(spacing: 12) {
                 ForEach(options, id: \.self) { option in
-                    FilterChip(
-                        title: option,
-                        isSelected: selected.wrappedValue == option
-                    ) {
+                    Button {
                         withAnimation(.gallerySpring) {
                             selected.wrappedValue = option
                         }
-                        Task {
-                            await viewModel.applyFilters()
-                        }
+                        Task { await viewModel.applyFilters() }
+                    } label: {
+                        Text(option)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(selected.wrappedValue == option ? LiquidGlassColors.primaryPink : LiquidGlassColors.textSecondary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background {
+                                if selected.wrappedValue == option {
+                                    Capsule()
+                                        .fill(LiquidGlassColors.primaryPink.opacity(0.1))
+                                        .overlay(Capsule().stroke(LiquidGlassColors.primaryPink.opacity(0.3), lineWidth: 0.5))
+                                } else {
+                                    Capsule()
+                                        .fill(Color.white.opacity(0.02))
+                                }
+                            }
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }
-    }
-
-    // MARK: - Filter Options Data
-    var resolutionOptions: [String] {
-        ["全部", "4K", "2K", "1080P"]
-    }
-
-    var audioTrackOptions: [String] {
-        MediaExploreViewModel.AudioTrackFilter.allCases.map(\.displayName)
     }
 }

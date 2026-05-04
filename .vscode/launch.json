@@ -1,24 +1,29 @@
 {
-    "configurations": [
-        {
-            "type": "swift",
-            "request": "launch",
-            "args": [],
-            "cwd": "${workspaceFolder:PlumWallPaper}",
-            "name": "Debug PlumWallPaper",
-            "target": "PlumWallPaper",
-            "configuration": "debug",
-            "preLaunchTask": "swift: Build Debug PlumWallPaper"
-        },
-        {
-            "type": "swift",
-            "request": "launch",
-            "args": [],
-            "cwd": "${workspaceFolder:PlumWallPaper}",
-            "name": "Release PlumWallPaper",
-            "target": "PlumWallPaper",
-            "configuration": "release",
-            "preLaunchTask": "swift: Build Release PlumWallPaper"
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "swift",
+      "request": "launch",
+      "name": "Debug PlumWallPaper.app",
+      "program": "${workspaceFolder}/Build/DerivedData/Build/Products/Debug/PlumWallPaper.app/Contents/MacOS/PlumWallPaper",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "xcodebuild: Debug PlumWallPaper",
+      "sourceLanguages": [
+        "swift"
+      ]
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "name": "Release PlumWallPaper.app",
+      "program": "${workspaceFolder}/Build/DerivedData/Build/Products/Release/PlumWallPaper.app/Contents/MacOS/PlumWallPaper",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "xcodebuild: Release PlumWallPaper",
+      "sourceLanguages": [
+        "swift"
+      ]
+    }
+  ]
 }

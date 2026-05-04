@@ -2,6 +2,7 @@
 
 > **更新时间**: 2026-05-02 03:30  
 > **当前分支**: feature/phase1-swiftui-metal-rewrite
+> **说明**: 本文是 2026-05-02 的阶段性快照。其中文件未接入 Xcode、AppDelegate 仍注释 RenderPipeline、PerformanceMonitor 待迁移等说法，已不再代表 2026-05-04 的仓库现状；当前事实请以源码、README 和 `CLAUDE.md` 为准。
 
 ---
 

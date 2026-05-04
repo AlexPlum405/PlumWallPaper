@@ -79,21 +79,61 @@ struct WallpaperExploreView: View {
             // 搜索栏
             searchBar
 
-            // 分类筛选
-            categoryFilters
+            // 来源筛选
+            sourceFilters
 
-            // 高级筛选按钮和选项
-            HStack(spacing: 32) {
-                purityFilters
-                Rectangle().fill(LiquidGlassColors.glassBorder).frame(width: 1, height: 20)
-                sortingFilters
-                Spacer()
-                advancedFiltersButton
+            // Wallhaven 专属筛选（分类、纯度、排序）
+            if viewModel.showWallhavenFilters {
+                // 分类筛选
+                categoryFilters
+
+                // 高级筛选按钮和选项
+                VStack(alignment: .leading, spacing: 20) {
+                    purityFilters
+                    sortingFilters
+                    HStack {
+                        Spacer()
+                        advancedFiltersButton
+                    }
+                }
+
+                // 展开的高级筛选
+                if showFilters {
+                    advancedFiltersSection
+                }
+            } else {
+                // 其他源的简化筛选
+                VStack(alignment: .leading, spacing: 20) {
+                    sortingFilters
+                    resolutionFilters
+                }
             }
 
-            // 展开的高级筛选
-            if showFilters {
-                advancedFiltersSection
+            // API Key 提示（未配置或配置后加载失败时显示）
+            if let keyService = viewModel.selectedSource.apiKeyService,
+               (!APIKeyManager.shared.hasKey(for: keyService) || viewModel.errorMessage != nil) {
+                APIKeyInputBanner(service: keyService) {
+                    Task { await viewModel.applyFilters() }
+                }
+            }
+        }
+    }
+
+    // MARK: - 来源筛选
+    private var sourceFilters: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 16) {
+                ForEach(WallpaperExploreViewModel.WallpaperSource.allCases, id: \.self) { source in
+                    FilterChip(
+                        title: source.displayName,
+                        isSelected: viewModel.selectedSource == source
+                    ) {
+                        withAnimation(.gallerySpring) {
+                            viewModel.selectSource(source)
+                        }
+                        Task { await viewModel.applyFilters() }
+                    }
+                }
             }
         }
     }
@@ -147,10 +187,20 @@ struct WallpaperExploreView: View {
                         title: category.label,
                         isSelected: viewModel.selectedCategory == category.value
                     ) {
+                        let previousCategory = viewModel.selectedCategory
                         withAnimation(.gallerySpring) {
                             viewModel.selectedCategory = category.value
                         }
-                        Task { await viewModel.applyFilters() }
+                        Task {
+                            do {
+                                await viewModel.applyFilters()
+                            } catch {
+                                // 恢复之前的选择
+                                withAnimation(.gallerySpring) {
+                                    viewModel.selectedCategory = previousCategory
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -159,19 +209,48 @@ struct WallpaperExploreView: View {
 
     // MARK: - 纯度筛选
     private var purityFilters: some View {
-        artisanFilterGroup(
-            title: "内容分级",
-            options: purityOptions,
-            selected: $viewModel.selectedPurity
-        )
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 16) {
+                ForEach(purityOptions, id: \.value) { option in
+                    FilterChip(
+                        title: option.label,
+                        isSelected: viewModel.selectedPurity == option.value
+                    ) {
+                        withAnimation(.gallerySpring) {
+                            viewModel.selectedPurity = option.value
+                        }
+                        Task { await viewModel.applyFilters() }
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - 排序筛选
     private var sortingFilters: some View {
-        artisanFilterGroup(
-            title: "排序方式",
-            options: sortingOptions,
+        simpleFilterGroup(
+            title: "排序",
+            options: viewModel.sortingOptionsForCurrentSource,
             selected: $viewModel.selectedSorting
+        )
+    }
+
+    // MARK: - 分辨率筛选（简化版）
+    private var resolutionFilters: some View {
+        simpleFilterGroup(
+            title: "分辨率",
+            options: viewModel.resolutionFilterOptions,
+            selected: Binding(
+                get: { viewModel.selectedResolutions.first ?? "全部" },
+                set: { value in
+                    if value == "全部" {
+                        viewModel.selectedResolutions = []
+                    } else {
+                        viewModel.selectedResolutions = [value]
+                    }
+                    Task { await viewModel.applyFilters() }
+                }
+            )
         )
     }
 
@@ -369,6 +448,48 @@ struct WallpaperExploreView: View {
                         }
                         Task { await viewModel.applyFilters() }
                     }
+                }
+            }
+        }
+    }
+
+    private func simpleFilterGroup(
+        title: String,
+        options: [String],
+        selected: Binding<String>
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.system(size: 11, weight: .bold))
+                .kerning(1.2)
+                .foregroundStyle(LiquidGlassColors.textTertiary)
+                .textCase(.uppercase)
+
+            FlowLayout(spacing: 12) {
+                ForEach(options, id: \.self) { option in
+                    Button {
+                        withAnimation(.gallerySpring) {
+                            selected.wrappedValue = option
+                        }
+                        Task { await viewModel.applyFilters() }
+                    } label: {
+                        Text(option)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(selected.wrappedValue == option ? LiquidGlassColors.primaryPink : LiquidGlassColors.textSecondary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background {
+                                if selected.wrappedValue == option {
+                                    Capsule()
+                                        .fill(LiquidGlassColors.primaryPink.opacity(0.1))
+                                        .overlay(Capsule().stroke(LiquidGlassColors.primaryPink.opacity(0.3), lineWidth: 0.5))
+                                } else {
+                                    Capsule()
+                                        .fill(Color.white.opacity(0.02))
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }

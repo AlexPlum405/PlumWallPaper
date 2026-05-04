@@ -1,5 +1,7 @@
 # 添加 SwiftSoup 依赖
 
+> **说明**: 本文中的手动添加步骤主要适用于早期未纳入 XcodeGen 的阶段。当前仓库已经在 `project.yml` 中声明了 SwiftSoup 依赖，优先做法是运行 `xcodegen generate` 并直接用项目构建，而不是手动改 `project.pbxproj`。
+
 MediaService 需要 SwiftSoup 来解析 HTML。请按以下步骤添加：
 
 ## 方法 1：通过 Xcode（推荐）

@@ -1,0 +1,18 @@
+{
+  "brand": "PlumWallPaper",
+  "persona": "Elegant Efficiency",
+  "colors": {
+    "primary": "#8E44AD",
+    "accent": "#007AFF",
+    "background": "rgba(255, 255, 255, 0.4)",
+    "text": "#1A1A1A"
+  },
+  "fonts": {
+    "display": "-apple-system, BlinkMacSystemFont, 'SF Pro Display'",
+    "body": "-apple-system, BlinkMacSystemFont, 'SF Pro Text'"
+  },
+  "assets": {
+    "logo": "●",
+    "placeholder_style": "glass"
+  }
+}

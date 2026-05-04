@@ -87,7 +87,7 @@ struct RemoteWallpaperCard: View {
 
     // MARK: - 信息区域
     private var infoSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             // 标题
             Text(wallpaper.tags?.first?.name ?? "Wallpaper \(wallpaper.id)")
                 .font(.custom("Georgia", size: 15).bold())
@@ -95,6 +95,16 @@ struct RemoteWallpaperCard: View {
                 .lineLimit(1)
                 .kerning(0.5)
 
+            // 元信息行1：分辨率 + 文件大小
+            HStack(spacing: 8) {
+                metaChip(icon: "square.resize", text: wallpaper.resolution, color: LiquidGlassColors.primaryPink)
+
+                if wallpaper.fileSize > 0 {
+                    metaChip(icon: "doc", text: formatFileSize(wallpaper.fileSize), color: LiquidGlassColors.accentGold)
+                }
+            }
+
+            // 元信息行2：统计数据
             HStack(spacing: 12) {
                 Label("\(formatNumber(wallpaper.views))", systemImage: "eye")
                 Label("\(formatNumber(wallpaper.favorites))", systemImage: "heart")
@@ -110,6 +120,18 @@ struct RemoteWallpaperCard: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+    }
+
+    private func metaChip(icon: String, text: String, color: Color) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon).font(.system(size: 7, weight: .bold))
+            Text(text).font(.system(size: 9, weight: .bold))
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(color.opacity(0.1))
+        .clipShape(Capsule())
     }
 
     // MARK: - 辅助子视图
@@ -165,5 +187,13 @@ struct RemoteWallpaperCard: View {
             return String(format: "%.1fk", Double(number) / 1000.0)
         }
         return "\(number)"
+    }
+
+    private func formatFileSize(_ bytes: Int64) -> String {
+        let mb = Double(bytes) / 1024.0 / 1024.0
+        if mb >= 1000 {
+            return String(format: "%.1fGB", mb / 1024.0)
+        }
+        return String(format: "%.0fMB", mb)
     }
 }

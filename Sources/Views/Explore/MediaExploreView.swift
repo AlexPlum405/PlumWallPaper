@@ -94,16 +94,19 @@ struct MediaExploreView: View {
             // 来源筛选
             sourceFilters
 
-            // 高级筛选按钮和选项
-            HStack(spacing: 32) {
-                sortingFilters
-                Spacer()
-                advancedFiltersButton
+            // API Key 提示（未配置或配置后加载失败时显示）
+            if let keyService = viewModel.selectedSource.apiKeyService,
+               (!APIKeyManager.shared.hasKey(for: keyService) || viewModel.errorMessage != nil) {
+                APIKeyInputBanner(service: keyService) {
+                    Task { await viewModel.applyFilters() }
+                }
             }
 
-            // 展开的高级筛选
-            if showFilters {
-                advancedFiltersSection
+            // 筛选和排序
+            VStack(alignment: .leading, spacing: 20) {
+                sortingFilters
+                resolutionFilters
+                durationFilters
             }
         }
     }

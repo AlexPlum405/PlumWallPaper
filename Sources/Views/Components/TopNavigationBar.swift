@@ -75,7 +75,7 @@ struct TopNavigationBar: View {
                             Text(tab.title).font(.system(size: 13, weight: .bold)).kerning(1.5)
                         }
                         .foregroundStyle(selectedTab == tab ? LiquidGlassColors.textPrimary : LiquidGlassColors.textQuaternary)
-                        
+
                         if selectedTab == tab {
                             Capsule().fill(LiquidGlassColors.primaryPink).frame(width: 14, height: 2)
                                 .transition(.scale.combined(with: .opacity))
@@ -83,17 +83,19 @@ struct TopNavigationBar: View {
                             Capsule().fill(Color.clear).frame(width: 14, height: 2)
                         }
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
                 }
                 .buttonStyle(.plain)
+                .contentShape(Rectangle())
             }
         }
         .padding(.horizontal, 28)
         .padding(.vertical, 8)
-        // 修复：强制剪裁与材质同步，消除硬边
         .background(.ultraThinMaterial, in: Capsule())
         .background(Capsule().fill(Color.white.opacity(0.02)))
         .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
-        .clipShape(Capsule()) 
+        .clipShape(Capsule())
     }
 }
 

@@ -1,6 +1,6 @@
-# PlumWallPaper Assistant 项目约束
+# PlumWallPaper Codex 项目约束
 
-先看项目根目录的 `CLAUDE.md` 和 `README.md`，这里仅保留高频红线，避免与主文档分叉。
+先看项目根目录的 `CLAUDE.md` 和 `README.md`，这里仅保留高频红线。
 
 ## 当前主线
 - 当前应用主线是 **SwiftUI + AppKit + Metal**。

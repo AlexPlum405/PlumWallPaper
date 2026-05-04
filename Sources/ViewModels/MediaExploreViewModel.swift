@@ -17,25 +17,52 @@ final class MediaExploreViewModel: ObservableObject {
     @Published var searchQuery = ""
     @Published var selectedSource: MediaSource = .motionBG
     @Published var selectedResolution: String? = nil
-    @Published var selectedAudioTrack = AudioTrackFilter.all
-    @Published var selectedSorting = "默认"
+    @Published var selectedSorting = "热门"
+    @Published var selectedDuration = "全部"
 
     // MARK: - Repository
     private let repository = MediaRepository.shared
     private let mediaService = MediaService.shared
     private let workshopService = WorkshopService.shared
-    private let audioTrackDetector = MediaAudioTrackDetector.shared
+    private let pexelsService = PexelsService.shared
+    private let pixabayService = PixabayService.shared
+    private let desktopHutService = DesktopHutService.shared
 
     enum MediaSource: String, CaseIterable {
         case motionBG = "MotionBG"
         case workshop = "Steam Workshop"
+        case pexelsVideo = "Pexels"
+        case pixabayVideo = "Pixabay"
+        case desktopHut = "DesktopHut"
 
         var displayName: String { rawValue }
+
+        var isAvailable: Bool {
+            switch self {
+            case .workshop: return false  // 即将推出
+            default: return true
+            }
+        }
+
+        var requiresAPIKey: Bool {
+            switch self {
+            case .pexelsVideo, .pixabayVideo: return true
+            default: return false
+            }
+        }
+
+        var apiKeyService: APIKeyManager.Service? {
+            switch self {
+            case .pexelsVideo: return .pexels
+            case .pixabayVideo: return .pixabay
+            default: return nil
+            }
+        }
     }
 
     enum AudioTrackFilter: String, CaseIterable {
         case all = "全部"
-        case withAudio = "有音轨"
+        case withAudio = "有声音"
 
         var displayName: String { rawValue }
     }
@@ -43,25 +70,39 @@ final class MediaExploreViewModel: ObservableObject {
     var sortingOptionsForCurrentSource: [String] {
         switch selectedSource {
         case .motionBG:
-            return ["默认"]
+            return ["热门", "最新", "随机", "最多浏览", "最多收藏"]
         case .workshop:
-            return ["热门", "最新", "趋势"]
+            return ["热门", "最新", "最高评分", "最多订阅"]
+        case .pexelsVideo, .pixabayVideo:
+            return ["热门", "最新"]
+        case .desktopHut:
+            return ["热门", "最新", "随机", "最多下载"]
         }
     }
 
-    var showResolutionFilter: Bool {
-        selectedSource == .workshop
+    var resolutionFilterOptions: [String] {
+        switch selectedSource {
+        case .motionBG, .desktopHut:
+            return ["全部", "4K", "2K", "1080P", "720P"]
+        case .workshop:
+            return ["全部", "3840x2160", "2560x1440", "1920x1080", "1280x720"]
+        case .pexelsVideo, .pixabayVideo:
+            return ["全部", "4K", "Full HD", "HD"]
+        }
+    }
+
+    var durationFilterOptions: [String] {
+        ["全部", "短视频 (<30s)", "中等 (30s-2m)", "长视频 (>2m)"]
     }
 
     func selectSource(_ source: MediaSource) {
         selectedSource = source
         let options = sortingOptionsForCurrentSource
         if !options.contains(selectedSorting) {
-            selectedSorting = options.first ?? "默认"
+            selectedSorting = options.first ?? "热门"
         }
-        if source == .motionBG {
-            selectedResolution = nil
-        }
+        selectedResolution = nil
+        selectedDuration = "全部"
     }
 
     // MARK: - Public Methods
@@ -117,6 +158,12 @@ final class MediaExploreViewModel: ObservableObject {
             return try await fetchMotionBGItems()
         case .workshop:
             return try await fetchWorkshopItems(query: searchQuery)
+        case .pexelsVideo:
+            return try await fetchPexelsVideos()
+        case .pixabayVideo:
+            return try await fetchPixabayVideos()
+        case .desktopHut:
+            return try await fetchDesktopHutItems()
         }
     }
 
@@ -127,7 +174,8 @@ final class MediaExploreViewModel: ObservableObject {
         let items = trimmedQuery.isEmpty
             ? try await mediaService.fetchHomePage()
             : try await repository.search(query: trimmedQuery, page: currentPage)
-        return await applyClientFilters(to: items)
+        let filtered = await applyClientFilters(to: items)
+        return orderItems(filtered, for: selectedSorting)
     }
 
     private func fetchWorkshopItems(query: String) async throws -> [MediaItem] {
@@ -145,22 +193,21 @@ final class MediaExploreViewModel: ObservableObject {
 
         let response = try await workshopService.search(params: params)
         let items = workshopService.convertToMediaItems(response.items)
-        return await applyClientFilters(to: items)
+        let filtered = await applyClientFilters(to: items)
+        return orderItems(filtered, for: selectedSorting)
     }
 
     private var workshopSortOption: WorkshopSearchParams.SortOption {
         switch selectedSorting {
         case "最新":
             return .created
-        case "趋势":
-            return .ranked
         default:
             return .ranked
         }
     }
 
     private var workshopTrendDays: Int? {
-        selectedSorting == "趋势" ? 7 : nil
+        nil
     }
 
     private var workshopResolutionTag: String? {
@@ -176,107 +223,148 @@ final class MediaExploreViewModel: ObservableObject {
         }
     }
 
-    private func applyClientFilters(to items: [MediaItem]) async -> [MediaItem] {
-        var filtered = items
+    // MARK: - New Source Fetchers
 
-        if selectedAudioTrack == .withAudio {
-            filtered = await withTaskGroup(of: (Int, Bool).self) { group in
-                for (index, item) in filtered.enumerated() {
-                    group.addTask {
-                        let hasAudio = await MediaAudioTrackDetector.shared.hasAudioTrack(in: item)
-                        return (index, hasAudio)
-                    }
+    private func fetchPexelsVideos() async throws -> [MediaItem] {
+        let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        let items: [MediaItem]
+        if !trimmed.isEmpty {
+            items = try await pexelsService.searchVideos(query: trimmed, page: currentPage, perPage: 20)
+        } else {
+            items = try await pexelsService.fetchPopularVideos(page: currentPage, perPage: 20)
+        }
+        let filtered = await applyClientFilters(to: items)
+        return orderItems(filtered, for: selectedSorting)
+    }
+
+    private func fetchPixabayVideos() async throws -> [MediaItem] {
+        let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        // 使用固定查询词，避免排序选项改变搜索内容
+        let query = trimmed.isEmpty ? "wallpaper" : trimmed
+
+        // 根据用户选择的分辨率动态调整 API 参数
+        let (minWidth, minHeight) = pixabayMinResolution
+
+        let items = try await pixabayService.searchVideos(
+            query: query,
+            page: currentPage,
+            perPage: 20,
+            minWidth: minWidth,
+            minHeight: minHeight
+        )
+        let filtered = await applyClientFilters(to: items)
+
+        // 客户端排序（Pixabay API 不支持服务端排序参数）
+        return orderItems(filtered, for: selectedSorting)
+    }
+
+    private var pixabayMinResolution: (width: Int, height: Int) {
+        guard let selectedResolution else {
+            return (1920, 1080) // 默认 1080P
+        }
+
+        switch selectedResolution {
+        case "4K", "4K+", "3840x2160":
+            return (3840, 2160)
+        case "2K", "2K+", "2560x1440":
+            return (2560, 1440)
+        case "Full HD", "1080P", "1080P+", "1920x1080":
+            return (1920, 1080)
+        case "HD", "720P", "1280x720":
+            return (1280, 720)
+        default:
+            return (1920, 1080)
+        }
+    }
+
+    private func fetchDesktopHutItems() async throws -> [MediaItem] {
+        let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        let items: [MediaItem]
+        if trimmed.isEmpty {
+            items = try await desktopHutService.fetchLatest(page: currentPage)
+        } else {
+            items = try await desktopHutService.search(query: trimmed, page: currentPage)
+        }
+        let filtered = await applyClientFilters(to: items)
+        return orderItems(filtered, for: selectedSorting)
+    }
+
+    private func orderItems(_ items: [MediaItem], for sorting: String) -> [MediaItem] {
+        switch sorting {
+        case "最新":
+            if items.contains(where: { $0.createdAt != nil }) {
+                return items.sorted { lhs, rhs in
+                    (lhs.createdAt ?? .distantPast) > (rhs.createdAt ?? .distantPast)
                 }
-
-                var indexesWithAudio = Set<Int>()
-                for await (index, hasAudio) in group where hasAudio {
-                    indexesWithAudio.insert(index)
-                }
-
-                return filtered.enumerated()
-                    .filter { indexesWithAudio.contains($0.offset) }
-                    .map { $0.element.withAudioTrack(true) }
             }
+            return Array(items.reversed())
+        case "随机":
+            return items.shuffled()
+        case "最多浏览":
+            return items.sorted { ($0.viewCount ?? 0) > ($1.viewCount ?? 0) }
+        case "最多收藏":
+            return items.sorted { ($0.favoriteCount ?? 0) > ($1.favoriteCount ?? 0) }
+        case "最高评分":
+            return items.sorted { ($0.ratingScore ?? 0) > ($1.ratingScore ?? 0) }
+        case "最多订阅":
+            return items.sorted { ($0.subscriptionCount ?? 0) > ($1.subscriptionCount ?? 0) }
+        default:
+            if items.contains(where: { ($0.viewCount ?? 0) + ($0.favoriteCount ?? 0) + ($0.subscriptionCount ?? 0) > 0 }) {
+                return items.sorted { lhs, rhs in
+                    let leftScore = (lhs.viewCount ?? 0) + (lhs.favoriteCount ?? 0) + (lhs.subscriptionCount ?? 0)
+                    let rightScore = (rhs.viewCount ?? 0) + (rhs.favoriteCount ?? 0) + (rhs.subscriptionCount ?? 0)
+                    return leftScore > rightScore
+                }
+            }
+            return items
+        }
+    }
+
+    private func applyClientFilters(to items: [MediaItem]) async -> [MediaItem] {
+        let filtered = items.filter { item in
+            matchesResolution(item) && matchesDuration(item)
+        }
+
+        // 如果过滤后结果太少，记录警告
+        if filtered.count < 3 && items.count > 10 {
+            NSLog("[MediaExploreViewModel] 警告：过滤后仅剩 \(filtered.count)/\(items.count) 个结果（源：\(selectedSource.displayName)，分辨率：\(selectedResolution ?? "全部")，时长：\(selectedDuration)）")
         }
 
         return filtered
     }
-}
 
-actor MediaAudioTrackDetector {
-    static let shared = MediaAudioTrackDetector()
+    private func matchesResolution(_ item: MediaItem) -> Bool {
+        guard let selectedResolution, selectedResolution != "全部" else { return true }
+        let resolutionText = (item.exactResolution ?? item.resolutionLabel).uppercased()
 
-    private var cache: [URL: Bool] = [:]
-
-    private init() {}
-
-    func hasAudioTrack(in item: MediaItem) async -> Bool {
-        if let hasAudioTrack = item.hasAudioTrack {
-            return hasAudioTrack
+        switch selectedResolution {
+        case "4K", "4K+", "3840x2160":
+            return resolutionText.contains("3840") || resolutionText.contains("4096") || resolutionText.contains("4K")
+        case "2K", "2K+", "2560x1440":
+            return resolutionText.contains("2560") || resolutionText.contains("2K")
+        case "1080P", "1080P+", "1920x1080", "Full HD":
+            return resolutionText.contains("1920") || resolutionText.contains("1080") || resolutionText.contains("FULL HD")
+        case "720P", "1280x720", "HD":
+            return resolutionText.contains("1280") || resolutionText.contains("720") || resolutionText == "HD"
+        default:
+            return resolutionText.contains(selectedResolution.uppercased())
         }
-
-        if item.sourceName.localizedCaseInsensitiveContains("Workshop")
-            || item.sourceName.localizedCaseInsensitiveContains("Wallpaper Engine") {
-            return workshopAudioHeuristic(for: item)
-        }
-
-        let candidateURLs = [item.fullVideoURL, item.previewVideoURL].compactMap { $0 }
-        guard !candidateURLs.isEmpty else {
-            return false
-        }
-
-        for url in candidateURLs {
-            if await hasAudioTrack(at: url) {
-                return true
-            }
-        }
-
-        return false
     }
 
-    func hasAudioTrack(at url: URL) async -> Bool {
-        if let cached = cache[url] {
-            return cached
+    private func matchesDuration(_ item: MediaItem) -> Bool {
+        guard selectedDuration != "全部" else { return true }
+        guard let duration = item.durationSeconds else { return false }
+
+        switch selectedDuration {
+        case "短视频 (<30s)":
+            return duration < 30
+        case "中等 (30s-2m)":
+            return duration >= 30 && duration <= 120
+        case "长视频 (>2m)":
+            return duration > 120
+        default:
+            return true
         }
-
-        let asset = AVURLAsset(url: url, options: [
-            "AVURLAssetHTTPHeaderFieldsKey": [
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-            ]
-        ])
-
-        let result = await withTaskGroup(of: Bool?.self) { group in
-            group.addTask {
-                do {
-                    let tracks = try await asset.loadTracks(withMediaType: .audio)
-                    return !tracks.isEmpty
-                } catch {
-                    NSLog("[MediaAudioTrackDetector] 音轨探测失败: \(url.lastPathComponent), \(error.localizedDescription)")
-                    return false
-                }
-            }
-
-            group.addTask {
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
-                NSLog("[MediaAudioTrackDetector] 音轨探测超时: \(url.lastPathComponent)")
-                return nil
-            }
-
-            let first = await group.next() ?? false
-            group.cancelAll()
-            return first ?? false
-        }
-
-        cache[url] = result
-        return result
-    }
-
-    private func workshopAudioHeuristic(for item: MediaItem) -> Bool {
-        let searchableText = ([item.title, item.summary ?? "", item.collectionTitle ?? ""] + item.tags)
-            .joined(separator: " ")
-            .lowercased()
-
-        return ["audio", "music", "sound", "speaker", "visualizer", "音频", "音乐", "声音", "音轨"]
-            .contains { searchableText.contains($0) }
     }
 }
+

@@ -1,118 +1,69 @@
-# PlumWallPaper v2.0
+# PlumWallPaper
 
-> macOS 动态壁纸引擎 — SwiftUI + Metal 原生实现，支持视频/HEIC 壁纸、多显示器、实时着色器、GPU 粒子系统
+> macOS 动态壁纸应用；当前仓库以 SwiftUI + Metal 原生主线为准，处于持续迭代中。
 
----
+## 当前仓库状态
 
-## 功能
+- 原生应用壳：AppKit 窗口管理 + SwiftUI 主界面、设置窗口、菜单栏入口
+- 数据层：SwiftData 模型与本地存储（Wallpaper / Tag / ShaderPreset / Settings）
+- 渲染层：Metal 渲染管线、ShaderGraph、粒子系统、视频解码器源码
+- 内容层：本地壁纸库 + 在线探索（Wallhaven / 4K Wallpapers / Workshop）
+- 系统集成：显示器管理、轮播、恢复、导入、下载、缓存、快捷键、开机启动
+- 设计参考：`Sources/Resources/Web/plumwallpaper.html` 为历史原型资源，不是当前 UI 源码
 
-| 功能 | 状态 |
-|------|------|
-| 视频壁纸（MP4/MOV） | ✅ |
-| HEIC 动态壁纸 | ✅ |
-| 多显示器独立控制 | ✅ |
-| 智能显示器检测 | ✅ |
-| 文件导入 + 重复检测 | ✅ |
-| 缩略图自动生成 | ✅ |
-| 7 参数实时着色器 Pass | ✅ |
-| GPU 粒子系统（百万级） | ✅ |
-| 启动自动恢复壁纸 | ✅ |
-| 壁纸库管理 + 收藏/标签 | ✅ |
-| 轮播调度 | ✅ |
-| 智能暂停策略（7 种条件 + 应用黑名单） | ✅ |
-| 实时性能监控（Metal FPS / GPU / 内存） | ✅ |
-| FPS 上限（动态检测屏幕刷新率） | ✅ |
-| 视频帧率自动检测 + 库内筛选 | ✅ |
-| 全局快捷键 | ✅ |
-| 开机启动 | ✅ |
-| 媒体播放音频闪避 | ✅ |
+## 当前注意事项
 
-## 着色器 Pass
-
-曝光 · 对比度 · 饱和度 · 色调 · 灰度 · 反转 · 暗角
+- 主 UI 修改入口在 `Sources/Views/` 与 `Sources/ViewModels/`
+- `Sources/Core/PerformanceMonitor.swift` 目前将 `NSScreen.maximumFramesPerSecond` 作为 FPS 代理值展示，不能直接视为真实渲染 FPS
+- `docs/` 目录中的进度报告、执行记录、计划文档是阶段性快照；项目根目录下的历史总结已收拢到 `docs/archive/`
+- 判断当前实现时请以源码、`CLAUDE.md` 和本 README 为准
+- 验证主界面时请使用 Xcode / DerivedData 的 app bundle，不要用旧的 SwiftPM `.build` 可执行文件
 
 ## 技术栈
 
-- SwiftUI（UI 层）
-- SwiftData（@Model 持久化）
-- Metal + MetalKit（渲染引擎，CVPixelBuffer 零拷贝）
-- AVFoundation（视频解码 + 帧率检测）
-- AppKit（桌面窗口 + NSWorkspace 监控）
-- IOKit（GPU 利用率 + 电源状态）
-
-## 系统要求
-
-- macOS 14.0+
-- Xcode 16.0+
-- Apple Silicon / Intel
+- SwiftUI
+- AppKit
+- SwiftData
+- Metal + MetalKit
+- AVFoundation
+- IOKit
+- XcodeGen
 
 ## 工程结构
 
-```
-PlumWallPaper/Sources/
-├── App/
-│   ├── PlumWallPaperApp.swift         # 入口 + SwiftData 容器
-│   └── AppDelegate.swift              # 启动渲染 + 恢复会话
-│
-├── Engine/                            # ── Metal 渲染引擎 ──
-│   ├── RenderPipeline.swift           # @MainActor 单例，管理 ScreenRenderer
-│   ├── ScreenRenderer.swift           # 每屏一个 MTKViewDelegate
-│   ├── DesktopWindow.swift            # NSWindow + MTKView
-│   ├── VideoDecoder.swift             # AVAssetReader + CVPixelBuffer
-│   ├── ShaderGraph.swift              # 串行 Pass 执行
-│   ├── ShaderPass.swift               # ComputeShaderPass + 参数
-│   ├── Shaders.metal                  # 滤镜 + 粒子 Metal kernel
-│   ├── ParticleSystem.swift           # 粒子 ShaderPass
-│   └── ParticleEmitter.swift          # 粒子发射器配置
-│
-├── Core/                              # ── Service 层 ──
-│   ├── PauseStrategyManager.swift     # 智能暂停
-│   ├── PerformanceMonitor.swift       # 实测 Metal FPS
-│   ├── SlideshowScheduler.swift       # 轮播
-│   ├── AudioDuckingMonitor.swift      # 音频闪避
-│   ├── FileImporter.swift             # 导入
-│   ├── ThumbnailGenerator.swift       # 缩略图
-│   ├── FrameRateBackfiller.swift      # 帧率回填
-│   ├── DisplayManager.swift           # 显示器
-│   ├── ScreenInfo.swift
-│   ├── GlobalShortcutManager.swift    # 全局快捷键
-│   ├── LaunchAtLoginManager.swift     # 开机启动
-│   └── RestoreManager.swift           # 启动恢复
-│
-├── ViewModels/                        # @Observable @MainActor
-│   ├── LibraryViewModel.swift
-│   ├── PreviewViewModel.swift
-│   ├── ShaderEditorViewModel.swift
-│   ├── SettingsViewModel.swift
-│   └── MenuBarViewModel.swift
-│
-├── Views/                             # SwiftUI 层
-│   ├── ContentView.swift
-│   ├── Library/
-│   ├── Preview/
-│   ├── ShaderEditor/                  # 含 ShaderPreviewView (MTKView)
-│   ├── Settings/
-│   ├── MenuBar/
-│   └── Components/
-│
-└── Storage/
-    ├── Models/
-    │   ├── Wallpaper.swift
-    │   ├── Tag.swift
-    │   ├── ShaderPreset.swift
-    │   ├── Settings.swift
-    │   └── Enums.swift
-    └── PreferencesStore.swift
+```text
+Sources/
+├── App/                 # 入口、应用代理、窗口装配
+├── Views/               # SwiftUI 页面与组件
+├── ViewModels/          # 页面状态与交互逻辑
+├── Engine/              # Metal 渲染、解码、粒子、ShaderGraph
+├── Core/                # 显示器、轮播、导入、性能监控等核心服务
+├── Network/             # 在线数据源接入与抓取逻辑
+├── Repositories/        # 聚合仓储层
+├── OnlineModels/        # 在线内容模型
+├── Services/            # 下载、缓存、壁纸设置等系统服务
+├── Storage/             # SwiftData 模型与本地存储
+└── Resources/           # 资源、字符串、本地 Web 原型
 ```
 
 ## 构建
 
 ```bash
-cd PlumWallPaper
-xcodebuild -project PlumWallPaper.xcodeproj -scheme PlumWallPaper -configuration Debug build
+# 修改 project.yml 后重新生成 Xcode 项目
+xcodegen generate
+
+# 构建 Debug app
+xcodebuild -project PlumWallPaper.xcodeproj -scheme PlumWallPaper -configuration Debug -derivedDataPath Build/DerivedData build
+
+# 启动 Debug app
+open Build/DerivedData/Build/Products/Debug/PlumWallPaper.app
 ```
 
-或在 Xcode 中打开 `PlumWallPaper/PlumWallPaper.xcodeproj`，按 Cmd+R 运行。
+或直接运行：
+
+```bash
+./run.sh
+```
 
 ## 许可
 

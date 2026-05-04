@@ -7,17 +7,22 @@ struct FilterChip: View {
     let title: String
     var isSelected: Bool
     let action: () -> Void
-    
+
     @State private var isHovered = false
-    
+
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            // 添加触觉反馈
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+            action()
+        }) {
             Text(title)
                 .font(.system(size: 13, weight: .bold))
-                .kerning(1.0) // 增加字间距，提升画廊感
+                .kerning(1.0)
                 .foregroundStyle(isSelected ? LiquidGlassColors.primaryPink : (isHovered ? LiquidGlassColors.textPrimary : LiquidGlassColors.textSecondary))
                 .padding(.horizontal, 18)
-                .frame(height: 32)
+                .padding(.vertical, 8)
+                .frame(minHeight: 32)
                 .background {
                     if isSelected {
                         Capsule()
@@ -30,6 +35,7 @@ struct FilterChip: View {
                 }
         }
         .buttonStyle(.plain)
+        .contentShape(Capsule())
         .onHover { isHovered = $0 }
         .animation(.galleryEase, value: isHovered)
         .animation(.gallerySpring, value: isSelected)
@@ -43,31 +49,36 @@ struct CategoryChip: View {
     let colors: [Color]
     let isSelected: Bool
     let action: () -> Void
-    
+
     @State private var isHovered = false
-    
+
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            // 添加触觉反馈
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+            action()
+        }) {
             HStack(spacing: 10) {
                 // 极简圆形图标
                 ZStack {
                     Circle()
                         .fill(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing))
                         .opacity(isSelected ? 0.9 : 0.3)
-                    
+
                     Image(systemName: icon)
                         .font(.system(size: 9, weight: .black))
                         .foregroundStyle(.white)
                 }
                 .frame(width: 22, height: 22)
-                
+
                 Text(title)
                     .font(.system(size: 13, weight: .bold))
                     .kerning(0.8)
                     .foregroundStyle(isSelected ? LiquidGlassColors.textPrimary : LiquidGlassColors.textSecondary)
             }
             .padding(.horizontal, 14)
-            .frame(height: 40)
+            .padding(.vertical, 8)
+            .frame(minHeight: 40)
             .background {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color.white.opacity(isSelected ? 0.08 : (isHovered ? 0.04 : 0.02)))
@@ -80,6 +91,7 @@ struct CategoryChip: View {
             }
         }
         .buttonStyle(.plain)
+        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .onHover { isHovered = $0 }
         .scaleEffect(isHovered ? 1.03 : 1.0)
         .animation(.gallerySpring, value: isHovered)

@@ -1,5 +1,7 @@
 # Project Instructions
 
+> 先看 `CLAUDE.md` 与 `README.md`：当前主线是 SwiftUI + AppKit + Metal，本文件只保留 huashu 设计模式与构建/启动红线，避免与主文档分叉。
+
 ## Huashu-Design Execution Contract
 
 When the user invokes `huashu-design` or references `/Users/Alex/.codex/skills/huashu-design/SKILL.md`, do not treat it as a writing style or a suggestion mode.
