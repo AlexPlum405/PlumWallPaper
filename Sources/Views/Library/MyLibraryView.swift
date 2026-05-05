@@ -23,7 +23,7 @@ struct MyLibraryView: View {
     let mainPadding: CGFloat = 88
 
     var body: some View {
-        ScrollView(showsIndicators: true) {
+        ArtisanVerticalScrollView {
             VStack(alignment: .leading, spacing: 40) {
                 // 1. 双层筛选工具栏
                 artisanLibraryToolbar

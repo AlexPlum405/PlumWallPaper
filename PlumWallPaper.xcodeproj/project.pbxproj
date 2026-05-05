@@ -76,6 +76,7 @@
 		77465C423A7C265169B18EB3 /* ShaderGraph.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C5A3CA75CA8EC09B895C4DD /* ShaderGraph.swift */; };
 		7C5822DC85BE2561CEB3C8D2 /* ParticleEmitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F609805545C3F3F9D9EF365 /* ParticleEmitter.swift */; };
 		7C942EB363F08E741764BDF4 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3C45F20443BCB03E98AD8CC /* MenuBarView.swift */; };
+		803EA4E15C6D1B172B06B762 /* ArtisanVerticalScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8271C6E9BFB9D8460071F487 /* ArtisanVerticalScrollView.swift */; };
 		8482287FCFDC5050E7C137B8 /* UnsplashService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 366699535402002A6C3540C8 /* UnsplashService.swift */; };
 		848947AC49DC566E2D11AEE6 /* PauseStrategyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C278572F63B6F734A214D0AB /* PauseStrategyManager.swift */; };
 		857DECCEC62AD8C6A317B96D /* DownloadProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DAFC1CBE45AB84A45DFCFDB /* DownloadProgressView.swift */; };
@@ -199,6 +200,7 @@
 		77B36A977D47EB12A731869A /* WallpaperPreviewItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperPreviewItem.swift; sourceTree = "<group>"; };
 		7BFC070EB9E6FC67ECF0A30E /* LiquidGlassExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlassExtensions.swift; sourceTree = "<group>"; };
 		825C861E208F1D5B9389B3B0 /* VideoPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayer.swift; sourceTree = "<group>"; };
+		8271C6E9BFB9D8460071F487 /* ArtisanVerticalScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtisanVerticalScrollView.swift; sourceTree = "<group>"; };
 		8465DED63AC93FCEE4BB7139 /* LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryViewModel.swift; sourceTree = "<group>"; };
 		84EC64F53E57F607F4AF499D /* MediaItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaItem.swift; sourceTree = "<group>"; };
 		8C5A3CA75CA8EC09B895C4DD /* ShaderGraph.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShaderGraph.swift; sourceTree = "<group>"; };
@@ -577,6 +579,7 @@
 			children = (
 				085E73B7B1C71EDB9ECA4128 /* APIKeyInputBanner.swift */,
 				A4680AAA704D394B2CEB19DE /* ArtisanControls.swift */,
+				8271C6E9BFB9D8460071F487 /* ArtisanVerticalScrollView.swift */,
 				1DAFC1CBE45AB84A45DFCFDB /* DownloadProgressView.swift */,
 				63AB7C972CC7EB8B5701124C /* FilterChips.swift */,
 				1E8478CD9D21B050F8C10944 /* GrainTextureOverlay.swift */,
@@ -698,6 +701,7 @@
 				37853525449F49EE48F4CC88 /* APIKeyManager.swift in Sources */,
 				71C8AA4D4B1AFEE11F38BE9A /* AppDelegate.swift in Sources */,
 				D06D925443CBE243273D240F /* ArtisanControls.swift in Sources */,
+				803EA4E15C6D1B172B06B762 /* ArtisanVerticalScrollView.swift in Sources */,
 				B33AF5C86CC98FA91C3CEBC0 /* AudioDuckingMonitor.swift in Sources */,
 				F0F26B61DA741E9E9BBCC3A9 /* BingDailyService.swift in Sources */,
 				DADAEEA8C23E84117FFEAC95 /* CacheService.swift in Sources */,
