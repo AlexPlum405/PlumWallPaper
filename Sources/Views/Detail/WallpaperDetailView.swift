@@ -20,7 +20,6 @@ struct WallpaperDetailView: View {
     @State internal var isStudioActive = false      
     @State internal var studioTab = 0               
     @State internal var isApplying = false           
-    @State private var isDownloading = false
     @State private var toastMessage: String?
     @State private var showToast = false
     @State private var isNavigatingWallpaper = false
@@ -389,7 +388,7 @@ struct WallpaperDetailView: View {
             isFavorite: viewModel.isFavoriteDisplayed,
             isApplying: isApplying,
             isStudioActive: isStudioActive,
-            isDownloading: isDownloading,
+            isDownloading: viewModel.isDownloading,
             onFavorite: toggleFavorite,
             onApply: { Task { await applyWallpaper() } },
             onToggleStudio: {
@@ -885,25 +884,18 @@ struct WallpaperDetailView: View {
     }
 
     private func downloadWallpaper() async {
-        guard let remoteURL = URL(string: wallpaper.filePath), remoteURL.scheme != nil else { showToastMessage("此壁纸已在本地"); return }
-        if let remoteId = wallpaper.remoteId,
-           DownloadManager.shared.isAlreadyDownloaded(remoteId: remoteId, context: modelContext) != nil {
-            showToastMessage("此壁纸已在本地")
-            return
-        }
-
-        isDownloading = true; defer { isDownloading = false }
         do {
-            let downloaded = try await DownloadManager.shared.downloadWallpaper(
-                item: .local(wallpaper),
-                quality: wallpaper.resolution ?? "Original",
-                downloadURL: remoteURL,
-                context: modelContext
-            )
-            wallpaper = downloaded
-            onDownload?(downloaded)
-            showToastMessage("下载完成")
-        } catch { showToastMessage("失败: \(error.localizedDescription)") }
+            switch try await viewModel.downloadWallpaper(wallpaper, in: modelContext) {
+            case .alreadyLocal:
+                showToastMessage("此壁纸已在本地")
+            case .downloaded(let downloaded):
+                wallpaper = downloaded
+                onDownload?(downloaded)
+                showToastMessage("下载完成")
+            }
+        } catch {
+            showToastMessage("失败: \(error.localizedDescription)")
+        }
     }
 
     private func applyCurrentPreset() {

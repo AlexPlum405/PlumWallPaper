@@ -6,6 +6,7 @@ import SwiftData
 final class WallpaperDetailViewModel: ObservableObject {
     @Published private(set) var fullResolutionContentURL: URL?
     @Published private(set) var isFavoriteDisplayed = false
+    @Published private(set) var isDownloading = false
 
     private var activePreviewTaskID: String?
 
@@ -100,4 +101,36 @@ final class WallpaperDetailViewModel: ObservableObject {
             NSLog("[WallpaperDetailViewModel] ⚠️ 收藏状态同步失败: \(error.localizedDescription)")
         }
     }
+
+    func downloadWallpaper(_ wallpaper: Wallpaper, in modelContext: ModelContext) async throws -> DetailDownloadResult {
+        guard let remoteURL = Self.downloadURL(from: wallpaper.filePath) else {
+            return .alreadyLocal
+        }
+
+        if let remoteId = wallpaper.remoteId,
+           DownloadManager.shared.isAlreadyDownloaded(remoteId: remoteId, context: modelContext) != nil {
+            return .alreadyLocal
+        }
+
+        isDownloading = true
+        defer { isDownloading = false }
+
+        let downloaded = try await DownloadManager.shared.downloadWallpaper(
+            item: .local(wallpaper),
+            quality: wallpaper.resolution ?? "Original",
+            downloadURL: remoteURL,
+            context: modelContext
+        )
+        return .downloaded(downloaded)
+    }
+
+    private static func downloadURL(from path: String) -> URL? {
+        guard let url = URL(string: path), url.scheme != nil else { return nil }
+        return url
+    }
+}
+
+enum DetailDownloadResult {
+    case alreadyLocal
+    case downloaded(Wallpaper)
 }
