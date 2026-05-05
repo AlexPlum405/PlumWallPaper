@@ -15,6 +15,9 @@ struct MyLibraryView: View {
     @State var showImportSheet = false
     @State var showTagManager = false
     @State var detailWallpaper: Wallpaper?
+    @State private var cardFrames: [UUID: CGRect] = [:]
+    @State private var isDragSelecting = false
+    @State private var dragSelectionShouldSelect = true
     let mainPadding: CGFloat = 88
 
     var body: some View {
@@ -45,6 +48,8 @@ struct MyLibraryView: View {
                                 }
                                 .scaleEffect(isEditMode ? 0.94 : 1.0)
                                 .animation(.gallerySpring, value: isEditMode)
+                                .background(cardFrameReader(for: wallpaper.id))
+                                .gesture(dragSelectionGesture(for: wallpaper.id), including: isEditMode ? .gesture : .none)
                                 .onHover { isHovering in
                                     // hover 时预加载视频
                                     if isHovering && wallpaper.type == .video {
@@ -66,6 +71,10 @@ struct MyLibraryView: View {
                 Color.clear.frame(height: 120)
             }
             .padding(.horizontal, mainPadding).padding(.bottom, 100)
+        }
+        .coordinateSpace(name: "libraryGrid")
+        .onPreferenceChange(LibraryCardFramePreferenceKey.self) { frames in
+            cardFrames = frames
         }
         .background(LiquidGlassColors.deepBackground)
         .onAppear {
@@ -186,6 +195,24 @@ struct MyLibraryView: View {
                     .buttonStyle(.plain)
 
                     // Batch Actions (visible in edit mode)
+                    if isEditMode {
+                        Button {
+                            toggleSelectAllVisible()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: areAllVisibleWallpapersSelected ? "checklist.unchecked" : "checklist.checked")
+                                Text(areAllVisibleWallpapersSelected ? "清空" : "全选")
+                            }
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(LiquidGlassColors.textSecondary)
+                            .padding(.horizontal, 16)
+                            .frame(height: 34)
+                            .galleryCardStyle(radius: 17, padding: 0)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(filteredWallpapers.isEmpty)
+                    }
+
                     if isEditMode && !selectedIDs.isEmpty {
                         Button {
                             batchRemoveFavorites()
@@ -379,6 +406,82 @@ struct MyLibraryView: View {
         }
     }
 
+    private var visibleWallpaperIDs: Set<UUID> {
+        Set(filteredWallpapers.map(\.id))
+    }
+
+    private var areAllVisibleWallpapersSelected: Bool {
+        let ids = visibleWallpaperIDs
+        return !ids.isEmpty && ids.isSubset(of: selectedIDs)
+    }
+
+    private func toggleSelectAllVisible() {
+        let ids = visibleWallpaperIDs
+        guard !ids.isEmpty else { return }
+
+        withAnimation(.gallerySpring) {
+            if ids.isSubset(of: selectedIDs) {
+                selectedIDs.subtract(ids)
+            } else {
+                selectedIDs.formUnion(ids)
+            }
+        }
+    }
+
+    private func cardFrameReader(for id: UUID) -> some View {
+        GeometryReader { proxy in
+            Color.clear.preference(
+                key: LibraryCardFramePreferenceKey.self,
+                value: [id: proxy.frame(in: .named("libraryGrid"))]
+            )
+        }
+    }
+
+    private func dragSelectionGesture(for id: UUID) -> some Gesture {
+        LongPressGesture(minimumDuration: 0.22, maximumDistance: 8)
+            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("libraryGrid")))
+            .onChanged { value in
+                switch value {
+                case .first(true):
+                    beginDragSelection(from: id)
+                case .second(true, let drag?):
+                    updateDragSelection(at: drag.location)
+                default:
+                    break
+                }
+            }
+            .onEnded { _ in
+                isDragSelecting = false
+            }
+    }
+
+    private func beginDragSelection(from id: UUID) {
+        guard isEditMode else { return }
+
+        if !isDragSelecting {
+            isDragSelecting = true
+            dragSelectionShouldSelect = !selectedIDs.contains(id)
+        }
+
+        applyDragSelection(to: id)
+    }
+
+    private func updateDragSelection(at location: CGPoint) {
+        guard isEditMode, isDragSelecting else { return }
+        let visibleIDs = visibleWallpaperIDs
+        for (id, frame) in cardFrames where visibleIDs.contains(id) && frame.insetBy(dx: -8, dy: -8).contains(location) {
+            applyDragSelection(to: id)
+        }
+    }
+
+    private func applyDragSelection(to id: UUID) {
+        if dragSelectionShouldSelect {
+            selectedIDs.insert(id)
+        } else {
+            selectedIDs.remove(id)
+        }
+    }
+
     private func batchDelete() {
         let wallpapersToDelete = viewModel.wallpapers.filter { selectedIDs.contains($0.id) }
         for wallpaper in wallpapersToDelete {
@@ -399,5 +502,13 @@ struct MyLibraryView: View {
         selectedIDs.removeAll()
         isEditMode = false
         toast = ToastConfig(message: "已取消 \(wallpapersToUpdate.count) 个收藏", type: .info)
+    }
+}
+
+private struct LibraryCardFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [UUID: CGRect] = [:]
+
+    static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
     }
 }
