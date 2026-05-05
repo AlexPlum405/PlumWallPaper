@@ -37,7 +37,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             PerformanceMonitor.shared.startMonitoring()
             // 清理旧的磁盘缓存
             Task {
-                await RemoteThumbnailImageCache.shared.cleanDiskCache(olderThan: 30)
+                RemoteThumbnailImageCache.shared.cleanDiskCache(olderThan: 30)
             }
         }
 

@@ -98,7 +98,7 @@ class VideoCacheManager {
         let request = URLRequest(url: url)
 
         // 检查是否已缓存
-        if let cachedResponse = urlCache.cachedResponse(for: request) {
+        if urlCache.cachedResponse(for: request) != nil {
             NSLog("[VideoCacheManager] ✅ 视频已缓存: \(url.lastPathComponent)")
             completion(true)
             return

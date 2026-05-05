@@ -1741,7 +1741,7 @@ private struct ArtisanLightningLayer: View {
                     context.stroke(bolt.path, with: .color(.white.opacity(bolt.opacity)), lineWidth: bolt.width)
                     var glow = context; glow.addFilter(.blur(radius: 4)); glow.stroke(bolt.path, with: .color(.blue.opacity(bolt.opacity * 0.4)), lineWidth: bolt.width * 3)
                 }
-            }.onChange(of: timeline.date) { date in updateBolts(at: date, size: NSScreen.main?.frame.size ?? CGSize(width: 1920, height: 1080)) }
+            }.onChange(of: timeline.date) { _, date in updateBolts(at: date, size: NSScreen.main?.frame.size ?? CGSize(width: 1920, height: 1080)) }
         }.allowsHitTesting(false)
     }
     private func updateBolts(at now: Date, size: CGSize) {
@@ -1857,80 +1857,6 @@ private struct ArtisanSimpleImage: View {
 private struct ArtisanSimplePoster: View {
     let url: URL?
     var body: some View { ZStack { Color.black; if let url = url { ArtisanSimpleImage(url: url).blur(radius: 16).opacity(0.45) } } }
-}
-
-private struct DetailVideoLayerContainer: NSViewRepresentable {
-    let url: URL
-    func makeNSView(context: Context) -> DetailVideoLayerView { let v = DetailVideoLayerView(); v.configure(url: url); return v }
-    func updateNSView(_ nsView: DetailVideoLayerView, context: Context) { nsView.configure(url: url) }
-    static func dismantleNSView(_ nsView: DetailVideoLayerView, coordinator: ()) { nsView.stop() }
-}
-
-private final class DetailVideoLayerView: NSView {
-    private let playerLayer = AVPlayerLayer(); private var player: AVPlayer?; private var currentURL: URL?; private var endObserver: NSObjectProtocol?
-    init() { super.init(frame: .zero); setup() }
-    required init?(coder: NSCoder) { fatalError("init") }
-    private func setup() { wantsLayer = true; let r = CALayer(); r.backgroundColor = NSColor.black.cgColor; r.masksToBounds = true; layer = r; playerLayer.videoGravity = .resizeAspectFill; r.addSublayer(playerLayer) }
-    func configure(url: URL) {
-        guard currentURL != url else { return }; currentURL = url
-        if let obs = endObserver { NotificationCenter.default.removeObserver(obs) }; player?.pause()
-
-        // 优先使用预加载的 player
-        if let preloadedPlayer = VideoPreloader.shared.getPreloadedPlayer(url: url) {
-            NSLog("[DetailVideoLayerView] 使用预加载播放器: \(url.lastPathComponent)")
-            player = preloadedPlayer
-            playerLayer.player = preloadedPlayer
-            preloadedPlayer.isMuted = false
-            preloadedPlayer.volume = 1.0
-            preloadedPlayer.play()
-
-            if let item = preloadedPlayer.currentItem {
-                endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
-                    preloadedPlayer.seek(to: .zero)
-                    preloadedPlayer.play()
-                }
-            }
-        } else {
-            // 降级：创建新 player，等待就绪后再播放
-            NSLog("[DetailVideoLayerView] 创建新播放器: \(url.lastPathComponent)")
-            let item = AVPlayerItem(url: url)
-            let p = AVPlayer(playerItem: item)
-            p.isMuted = false
-            p.volume = 1.0
-            player = p
-            playerLayer.player = p
-
-            // 等待就绪后再播放
-            Task { @MainActor in
-                await self.waitUntilReadyAndPlay(player: p, item: item)
-            }
-
-            endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
-                p.seek(to: .zero)
-                p.play()
-            }
-        }
-    }
-    func stop() { if let obs = endObserver { NotificationCenter.default.removeObserver(obs) }; player?.pause(); playerLayer.player = nil; player = nil; currentURL = nil }
-
-    private func waitUntilReadyAndPlay(player: AVPlayer, item: AVPlayerItem) async {
-        let maxAttempts = 50 // 5 秒超时
-        for _ in 0..<maxAttempts {
-            if item.status == .readyToPlay {
-                player.play()
-                NSLog("[DetailVideoLayerView] ✅ 播放器就绪，开始播放")
-                return
-            } else if item.status == .failed {
-                NSLog("[DetailVideoLayerView] ❌ 播放器加载失败: \(item.error?.localizedDescription ?? "unknown")")
-                return
-            }
-            try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
-        }
-        NSLog("[DetailVideoLayerView] ⚠️ 播放器超时，强制播放")
-        player.play()
-    }
-
-    override func layout() { super.layout(); CATransaction.begin(); CATransaction.setDisableActions(true); playerLayer.frame = bounds; CATransaction.commit() }
 }
 
 // MARK: - 内置预设

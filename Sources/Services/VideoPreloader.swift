@@ -4,7 +4,7 @@ import AVFoundation
 import AppKit
 
 /// 视频预加载管理器
-class VideoPreloader {
+final class VideoPreloader: @unchecked Sendable {
     static let shared = VideoPreloader()
 
     private var preloadedPlayers: [URL: AVPlayer] = [:]

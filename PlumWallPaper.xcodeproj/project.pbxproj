@@ -119,6 +119,7 @@
 		E435B10F19FF405210C17990 /* MyLiveWallpapersService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 008AD387C711921794DDBAC1 /* MyLiveWallpapersService.swift */; };
 		E6187A271617062249685C5B /* WallpaperExploreViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910DF81CBCBC753430F8DBDC /* WallpaperExploreViewModel.swift */; };
 		E8F24A044181FE439EE2C8B3 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AE9A8B0D16C1B5C1C8AB5E7 /* ContentView.swift */; };
+		EA42971B249EDD9451D146D9 /* DetailVideoLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F7DD91D4F47B2B5B1872E00 /* DetailVideoLayer.swift */; };
 		EAE5FD2850349E52095F03CE /* WallhavenAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8297452AB90904450BEEC5A /* WallhavenAPI.swift */; };
 		EAF06CCCD7105701DAA8BD05 /* WallhavenService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF0004BC9A5095910856C311 /* WallhavenService.swift */; };
 		EB2BB8B32350F50CAA0F6F1F /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 3866DB4C03EEDDB3ADAD0532 /* Localizable.strings */; };
@@ -169,6 +170,7 @@
 		47F88BE03FD7DA3EF9DEEE69 /* RemoteWallpaper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteWallpaper.swift; sourceTree = "<group>"; };
 		4D022204552427125F3076EC /* QualitySelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QualitySelector.swift; sourceTree = "<group>"; };
 		4D6C1C8C5DA869B2082E5B39 /* APIKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIKeyManager.swift; sourceTree = "<group>"; };
+		4F7DD91D4F47B2B5B1872E00 /* DetailVideoLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailVideoLayer.swift; sourceTree = "<group>"; };
 		580C5434AFDEE652971EF4AC /* PerformanceTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceTab.swift; sourceTree = "<group>"; };
 		5AE9A8B0D16C1B5C1C8AB5E7 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		5B7E7279C68DDCE2DC34C9D3 /* ShaderPass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShaderPass.swift; sourceTree = "<group>"; };
@@ -507,6 +509,7 @@
 		D0BAD37F313A282429C685F0 /* Detail */ = {
 			isa = PBXGroup;
 			children = (
+				4F7DD91D4F47B2B5B1872E00 /* DetailVideoLayer.swift */,
 				8E2CC8E793ADC24CDB9F14F7 /* MediaDetailView.swift */,
 				16431E5B65BB71E305CE1D26 /* WallpaperDetailView.swift */,
 				E6BF610ED27253866D5CBDBB /* WallpaperDetailView+Logic.swift */,
@@ -686,6 +689,7 @@
 				E8F24A044181FE439EE2C8B3 /* ContentView.swift in Sources */,
 				D38C00321DBA82F9454CBB4C /* DesktopHutService.swift in Sources */,
 				9BB73E2349C1459619E0FEAA /* DesktopWindow.swift in Sources */,
+				EA42971B249EDD9451D146D9 /* DetailVideoLayer.swift in Sources */,
 				5687B8A1B08F4830E74969FE /* DisplayManager.swift in Sources */,
 				5F0C177A0E3782CBBEC4EA72 /* DisplayTab+Logic.swift in Sources */,
 				30BF26C9C9ED63340EBCD5EA /* DisplayTab.swift in Sources */,
