@@ -163,7 +163,7 @@ final class DownloadManager: ObservableObject {
             if let localThumbnail = try? await ThumbnailGenerator.shared.generateThumbnail(for: localURL, type: item.type) {
                 existing.thumbnailPath = localThumbnail
             } else {
-                existing.thumbnailPath = item.thumbnailURL?.absoluteString
+                existing.thumbnailPath = item.thumbnailPathString
             }
             existing.source = .downloaded
             existing.remoteId = remoteId
@@ -192,7 +192,7 @@ final class DownloadManager: ObservableObject {
         if let localThumbnail = try? await ThumbnailGenerator.shared.generateThumbnail(for: localURL, type: item.type) {
             wallpaper.thumbnailPath = localThumbnail
         } else {
-            wallpaper.thumbnailPath = item.thumbnailURL?.absoluteString
+            wallpaper.thumbnailPath = item.thumbnailPathString
         }
 
         context.insert(wallpaper)

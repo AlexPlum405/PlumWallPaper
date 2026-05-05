@@ -36,6 +36,14 @@ enum WallpaperDisplayItem: Identifiable {
         }
     }
 
+    var thumbnailPathString: String? {
+        switch self {
+        case .remote(let w): return w.thumbURL?.absoluteString
+        case .media(let m): return m.thumbnailURL.absoluteString
+        case .local(let w): return w.thumbnailPath
+        }
+    }
+
     var resolution: String {
         switch self {
         case .remote(let w): return w.resolution

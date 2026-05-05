@@ -71,15 +71,13 @@ struct WallpaperCard: View {
             // 只显示缩略图，不显示视频预览
             Group {
                 if let thumbPath = item.thumbnailPath, !thumbPath.isEmpty {
-                    let thumbURL = thumbPath.hasPrefix("http") ? URL(string: thumbPath) : URL(fileURLWithPath: thumbPath)
-                    if let thumbURL = thumbURL {
+                    if let thumbURL = url(from: thumbPath) {
                         artisanAsyncImage(url: thumbURL)
                     } else {
                         fallbackPlaceholder
                     }
                 } else if !item.filePath.isEmpty {
-                    let fileURL = item.filePath.hasPrefix("http") ? URL(string: item.filePath) : URL(fileURLWithPath: item.filePath)
-                    if let fileURL = fileURL {
+                    if let fileURL = url(from: item.filePath) {
                         artisanAsyncImage(url: fileURL)
                     } else {
                         fallbackPlaceholder
@@ -276,5 +274,14 @@ struct WallpaperCard: View {
         Task {
             await PreviewResourcePipeline.shared.prefetchFullResolution(for: item)
         }
+    }
+
+    private func url(from path: String) -> URL? {
+        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        if let url = URL(string: trimmed), url.scheme != nil {
+            return url
+        }
+        return URL(fileURLWithPath: trimmed)
     }
 }
