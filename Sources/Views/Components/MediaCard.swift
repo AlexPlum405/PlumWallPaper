@@ -137,34 +137,7 @@ struct MediaCard: View {
 
     // MARK: - 辅助方法
     private func artisanAsyncImage(url: URL) -> some View {
-        AsyncImage(url: url) { phase in
-            switch phase {
-            case .success(let image):
-                image.resizable().aspectRatio(contentMode: .fill)
-                    .transition(.opacity.combined(with: .scale(scale: 1.05)))
-            case .failure:
-                fallbackPlaceholder
-            case .empty:
-                loadingPlaceholder
-            @unknown default:
-                fallbackPlaceholder
-            }
-        }
-    }
-
-    private var loadingPlaceholder: some View {
-        ZStack {
-            Rectangle().fill(LiquidGlassColors.surfaceBackground)
-            ProgressView().controlSize(.small).tint(LiquidGlassColors.textQuaternary)
-        }
-    }
-
-    private var fallbackPlaceholder: some View {
-        ZStack {
-            Rectangle().fill(LiquidGlassColors.surfaceBackground)
-            Image(systemName: "photo.on.rectangle.angled")
-                .foregroundStyle(LiquidGlassColors.textQuaternary)
-        }
+        RemoteThumbnailImage(urls: [url, mediaItem.posterURL].compactMap { $0 })
     }
 
     private func artisanChip(text: String, icon: String? = nil, color: Color) -> some View {

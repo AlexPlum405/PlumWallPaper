@@ -202,37 +202,7 @@ struct WallpaperCard: View {
     
     @ViewBuilder
     private func artisanAsyncImage(url: URL) -> some View {
-        if url.isFileURL {
-            if let nsImage = NSImage(contentsOf: url) {
-                Image(nsImage: nsImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .transition(.opacity.combined(with: .scale(scale: 1.05)))
-            } else {
-                fallbackPlaceholder
-            }
-        } else {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image.resizable().aspectRatio(contentMode: .fill)
-                        .transition(.opacity.combined(with: .scale(scale: 1.05)))
-                case .failure:
-                    fallbackPlaceholder
-                case .empty:
-                    loadingPlaceholder
-                @unknown default:
-                    fallbackPlaceholder
-                }
-            }
-        }
-    }
-
-    private var loadingPlaceholder: some View {
-        ZStack {
-            Rectangle().fill(LiquidGlassColors.surfaceBackground)
-            ProgressView().controlSize(.small).tint(LiquidGlassColors.textQuaternary)
-        }
+        RemoteThumbnailImage(urls: [url])
     }
 
     private var fallbackPlaceholder: some View {

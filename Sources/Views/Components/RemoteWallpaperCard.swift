@@ -136,26 +136,7 @@ struct RemoteWallpaperCard: View {
 
     // MARK: - 辅助子视图
     private func artisanAsyncImage(url: URL) -> some View {
-        AsyncImage(url: url) { phase in
-            switch phase {
-            case .success(let image):
-                image.resizable().aspectRatio(contentMode: .fill)
-                    .transition(.opacity.combined(with: .scale(scale: 1.05)))
-            case .failure:
-                fallbackPlaceholder
-            case .empty:
-                loadingPlaceholder
-            @unknown default:
-                fallbackPlaceholder
-            }
-        }
-    }
-
-    private var loadingPlaceholder: some View {
-        ZStack {
-            Rectangle().fill(LiquidGlassColors.surfaceBackground)
-            ProgressView().controlSize(.small).tint(LiquidGlassColors.textQuaternary)
-        }
+        RemoteThumbnailImage(urls: [url, wallpaper.fullImageURL].compactMap { $0 })
     }
 
     private var fallbackPlaceholder: some View {

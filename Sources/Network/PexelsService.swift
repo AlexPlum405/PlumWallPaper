@@ -78,7 +78,7 @@ actor PexelsService {
             headers: ["Authorization": apiKey]
         )
 
-        return response.videos.map { mapVideoToMediaItem($0) }
+        return response.videos.compactMap { mapVideoToMediaItem($0) }
     }
 
     func fetchPopularVideos(
@@ -100,7 +100,7 @@ actor PexelsService {
             headers: ["Authorization": apiKey]
         )
 
-        return response.videos.map { mapVideoToMediaItem($0) }
+        return response.videos.compactMap { mapVideoToMediaItem($0) }
     }
 
     // MARK: - Mapping
@@ -126,24 +126,42 @@ actor PexelsService {
         )
     }
 
-    private func mapVideoToMediaItem(_ video: PexelsVideo) -> MediaItem {
-        let bestFile = selectBestQualityFile(from: video.videoFiles)
-        let hdFile = selectHDFile(from: video.videoFiles)
+    private func mapVideoToMediaItem(_ video: PexelsVideo) -> MediaItem? {
+        let files = video.videoFiles ?? []
+        guard let bestFile = selectBestQualityFile(from: files),
+              let bestLink = bestFile.link,
+              let fullVideoURL = URL(string: bestLink) else {
+            return nil
+        }
+
+        let hdFile = selectHDFile(from: files) ?? bestFile
+        let previewVideoURL = hdFile.link.flatMap { URL(string: $0) } ?? fullVideoURL
+        let posterImageURL = video.image.flatMap { URL(string: $0) }
+        let pictureURL = (video.videoPictures?.first?.picture).flatMap { URL(string: $0) }
+        guard let thumbnailURL = optimizedCardThumbnailURL(from: posterImageURL)
+                ?? posterImageURL
+                ?? pictureURL else {
+            return nil
+        }
+        let posterURL = posterImageURL ?? thumbnailURL
+
+        let quality = bestFile.quality ?? "hd"
+        let exactResolution = resolvedVideoResolution(video: video, file: bestFile)
 
         return MediaItem(
             slug: "pexels_video_\(video.id)",
             title: "Pexels Video #\(video.id)",
             pageURL: URL(string: video.url)!,
-            thumbnailURL: URL(string: video.image)!,
-            resolutionLabel: bestFile.quality == "uhd" ? "4K" : bestFile.quality.uppercased(),
+            thumbnailURL: thumbnailURL,
+            resolutionLabel: quality == "uhd" ? "4K" : quality.uppercased(),
             collectionTitle: nil,
             summary: nil,
-            previewVideoURL: URL(string: hdFile?.link ?? ""),
-            fullVideoURL: URL(string: bestFile.link),
-            posterURL: URL(string: video.image),
+            previewVideoURL: previewVideoURL,
+            fullVideoURL: fullVideoURL,
+            posterURL: posterURL,
             tags: [],
-            exactResolution: "\(video.width)x\(video.height)",
-            durationSeconds: Double(video.duration),
+            exactResolution: exactResolution,
+            durationSeconds: video.duration.map(Double.init),
             downloadOptions: [],
             sourceName: "Pexels",
             isAnimatedImage: nil,
@@ -152,35 +170,60 @@ actor PexelsService {
             favoriteCount: nil,
             viewCount: nil,
             ratingScore: nil,
-            authorName: video.user.name,
+            authorName: video.user?.name ?? "Pexels",
             fileSize: Int64(bestFile.size ?? 0),
             createdAt: nil,
             updatedAt: nil
         )
     }
 
-    private func selectBestQualityFile(from files: [PexelsVideoFile]) -> PexelsVideoFile {
+    private func optimizedCardThumbnailURL(from url: URL?) -> URL? {
+        guard let url, var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return nil
+        }
+
+        var queryItems = components.queryItems ?? []
+        upsertQueryItem(name: "auto", value: "compress", in: &queryItems)
+        upsertQueryItem(name: "cs", value: "tinysrgb", in: &queryItems)
+        upsertQueryItem(name: "fit", value: "crop", in: &queryItems)
+        upsertQueryItem(name: "w", value: "440", in: &queryItems)
+        upsertQueryItem(name: "h", value: "280", in: &queryItems)
+        components.queryItems = queryItems
+        return components.url
+    }
+
+    private func upsertQueryItem(name: String, value: String, in queryItems: inout [URLQueryItem]) {
+        if let index = queryItems.firstIndex(where: { $0.name == name }) {
+            queryItems[index] = URLQueryItem(name: name, value: value)
+        } else {
+            queryItems.append(URLQueryItem(name: name, value: value))
+        }
+    }
+
+    private func selectBestQualityFile(from files: [PexelsVideoFile]) -> PexelsVideoFile? {
         // Prefer UHD, then HD, then SD
-        if let uhd = files.first(where: { $0.quality == "uhd" }) {
+        let usableFiles = files.filter { ($0.link?.isEmpty == false) }
+        if let uhd = usableFiles.first(where: { $0.quality == "uhd" }) {
             return uhd
         }
-        if let hd = files.first(where: { $0.quality == "hd" }) {
+        if let hd = usableFiles.first(where: { $0.quality == "hd" }) {
             return hd
         }
-        return files.first ?? PexelsVideoFile(
-            id: 0,
-            quality: "sd",
-            fileType: "video/mp4",
-            width: 0,
-            height: 0,
-            fps: 0,
-            link: "",
-            size: nil
-        )
+        return usableFiles.first
     }
 
     private func selectHDFile(from files: [PexelsVideoFile]) -> PexelsVideoFile? {
-        files.first(where: { $0.quality == "hd" })
+        files.first(where: { $0.quality == "hd" && $0.link?.isEmpty == false })
+    }
+
+    private func resolvedVideoResolution(video: PexelsVideo, file: PexelsVideoFile) -> String? {
+        if let width = video.width, let height = video.height {
+            return "\(width)x\(height)"
+        }
+        if let width = file.width, let height = file.height {
+            return "\(width)x\(height)"
+        }
+        return nil
     }
 }
 
@@ -234,7 +277,7 @@ private struct PexelsPhotoSrc: Codable {
 private struct PexelsVideoResponse: Codable {
     let page: Int
     let perPage: Int
-    let totalResults: Int
+    let totalResults: Int?
     let videos: [PexelsVideo]
 
     enum CodingKeys: String, CodingKey {
@@ -247,14 +290,14 @@ private struct PexelsVideoResponse: Codable {
 
 private struct PexelsVideo: Codable {
     let id: Int
-    let width: Int
-    let height: Int
-    let duration: Int
+    let width: Int?
+    let height: Int?
+    let duration: Int?
     let url: String
-    let image: String
-    let user: PexelsUser
-    let videoFiles: [PexelsVideoFile]
-    let videoPictures: [PexelsVideoPicture]
+    let image: String?
+    let user: PexelsUser?
+    let videoFiles: [PexelsVideoFile]?
+    let videoPictures: [PexelsVideoPicture]?
 
     enum CodingKeys: String, CodingKey {
         case id, width, height, duration, url, image, user
@@ -264,19 +307,19 @@ private struct PexelsVideo: Codable {
 }
 
 private struct PexelsUser: Codable {
-    let id: Int
-    let name: String
-    let url: String
+    let id: Int?
+    let name: String?
+    let url: String?
 }
 
 private struct PexelsVideoFile: Codable {
-    let id: Int
-    let quality: String
-    let fileType: String
-    let width: Int
-    let height: Int
-    let fps: Double
-    let link: String
+    let id: Int?
+    let quality: String?
+    let fileType: String?
+    let width: Int?
+    let height: Int?
+    let fps: Double?
+    let link: String?
     let size: Int?
 
     enum CodingKeys: String, CodingKey {
@@ -286,7 +329,7 @@ private struct PexelsVideoFile: Codable {
 }
 
 private struct PexelsVideoPicture: Codable {
-    let id: Int
-    let nr: Int
+    let id: Int?
+    let nr: Int?
     let picture: String
 }
