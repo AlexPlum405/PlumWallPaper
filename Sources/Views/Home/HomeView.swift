@@ -16,7 +16,7 @@ struct HomeView: View {
     @State private var isHeroDownloading = false
     @State private var isHeroFavoriteUpdating = false
     @State var currentDetailIndex: Int = 0
-    @State var detailWallpaper: Wallpaper?
+    @State var detailItem: WallpaperPreviewItem?
     @State private var isHeroLeftHovered = false
     @State private var isHeroRightHovered = false
     @State private var readyHeroVideoURL: URL?
@@ -99,9 +99,9 @@ struct HomeView: View {
             }
             return .handled
         }
-        .sheet(item: $detailWallpaper) { wallpaper in
+        .sheet(item: $detailItem) { item in
             WallpaperDetailView(
-                wallpaper: wallpaper,
+                wallpaper: item.makeWallpaper(),
                 onPrevious: { current, callback in
                     let newWallpaper = getNavigateWallpaper(current: current, direction: -1)
                     callback(newWallpaper)
@@ -529,9 +529,9 @@ struct HomeView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 32) {
                     ForEach(viewModel.latestStills) { remoteWallpaper in
-                        let wallpaper = Wallpaper.from(remote: remoteWallpaper)
-                        WallpaperCard(wallpaper: wallpaper, onTap: {
-                            detailWallpaper = wallpaper
+                        let item = WallpaperPreviewItem(remote: remoteWallpaper)
+                        WallpaperCard(previewItem: item, onTap: {
+                            detailItem = item
                         }, onDownload: {
                             Task {
                                 await downloadRemoteFromCard(remoteWallpaper)
@@ -539,8 +539,7 @@ struct HomeView: View {
                         })
                         .onHover { hovering in
                             if hovering {
-                                let wallpaper = Wallpaper.from(remote: remoteWallpaper)
-                                if let url = URL(string: wallpaper.filePath) {
+                                if let url = item.contentURL {
                                     Task {
                                         await PreviewResourcePipeline.shared.prefetchFullResolution(url: url)
                                     }
@@ -584,9 +583,9 @@ struct HomeView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 32) {
                     ForEach(viewModel.popularMotions) { mediaItem in
-                        let wallpaper = Wallpaper.from(media: mediaItem)
-                        WallpaperCard(wallpaper: wallpaper, onTap: {
-                            detailWallpaper = wallpaper
+                        let item = WallpaperPreviewItem(media: mediaItem)
+                        WallpaperCard(previewItem: item, onTap: {
+                            detailItem = item
                         }, onDownload: {
                             Task {
                                 await downloadMediaFromCard(mediaItem)
@@ -614,30 +613,29 @@ struct HomeView: View {
 
     /// Navigate to previous/next wallpaper in detail view
     private func getNavigateWallpaper(current: Wallpaper? = nil, direction: Int) -> Wallpaper {
-        let stillsWallpapers = viewModel.latestStills.map(Wallpaper.from)
-        let motionsWallpapers = viewModel.popularMotions.map(Wallpaper.from)
-        let activeWallpaper = current ?? detailWallpaper
+        let stillItems = viewModel.latestStills.map(WallpaperPreviewItem.init(remote:))
+        let motionItems = viewModel.popularMotions.map(WallpaperPreviewItem.init(media:))
+        let activeRemoteId = current?.remoteId ?? detailItem?.remoteId
+        let activeTitle = current?.name ?? detailItem?.title
         
-        let allWallpapers: [Wallpaper]
+        let allItems: [WallpaperPreviewItem]
         
-        if let activeWallpaper,
-           motionsWallpapers.contains(where: { $0.remoteId == activeWallpaper.remoteId || $0.name == activeWallpaper.name }) {
-            allWallpapers = motionsWallpapers
+        if motionItems.contains(where: { $0.remoteId == activeRemoteId || $0.title == activeTitle }) {
+            allItems = motionItems
         } else {
-            allWallpapers = stillsWallpapers
+            allItems = stillItems
         }
 
-        guard !allWallpapers.isEmpty else {
-            return activeWallpaper ?? Wallpaper(name: "Unknown", filePath: "", type: .image)
+        guard !allItems.isEmpty else {
+            return current ?? detailItem?.makeWallpaper() ?? Wallpaper(name: "Unknown", filePath: "", type: .image)
         }
 
-        if let activeWallpaper,
-           let currentIndex = allWallpapers.firstIndex(where: { $0.remoteId == activeWallpaper.remoteId || $0.name == activeWallpaper.name }) {
-            let newIndex = (currentIndex + direction + allWallpapers.count) % allWallpapers.count
-            return allWallpapers[newIndex]
+        if let currentIndex = allItems.firstIndex(where: { $0.remoteId == activeRemoteId || $0.title == activeTitle }) {
+            let newIndex = (currentIndex + direction + allItems.count) % allItems.count
+            return allItems[newIndex].makeWallpaper()
         }
 
-        return allWallpapers.first ?? Wallpaper(name: "Unknown", filePath: "", type: .image)
+        return allItems.first?.makeWallpaper() ?? Wallpaper(name: "Unknown", filePath: "", type: .image)
     }
 
     // MARK: - Hero Online Actions

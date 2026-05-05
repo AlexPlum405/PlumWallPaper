@@ -128,7 +128,7 @@ extension MediaExploreView {
                             await PreviewResourcePipeline.shared.prefetchFullResolution(url: url)
                         }
                     }
-                    detailWallpaper = Wallpaper.from(media: item)
+                    detailItem = WallpaperPreviewItem(media: item)
                 }
                 .onAppear {
                     if let videoURL = item.fullVideoURL ?? item.previewVideoURL {

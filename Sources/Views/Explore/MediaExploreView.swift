@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Artisan Media Explore (Scheme C: Pure Edition)
 struct MediaExploreView: View {
     @StateObject var viewModel = MediaExploreViewModel()
-    @State var detailWallpaper: Wallpaper?
+    @State var detailItem: WallpaperPreviewItem?
     @State var showFilters = false
     @State private var scrollOffset: CGFloat = 0
 
@@ -32,9 +32,9 @@ struct MediaExploreView: View {
             .padding(.bottom, 100)
         }
         .background(LiquidGlassColors.deepBackground)
-        .sheet(item: $detailWallpaper) { wallpaper in
+        .sheet(item: $detailItem) { item in
             WallpaperDetailView(
-                wallpaper: wallpaper,
+                wallpaper: item.makeWallpaper(),
                 onPrevious: { current, callback in
                     let newWallpaper = getNavigateWallpaper(current: current, direction: -1)
                     callback(newWallpaper)
@@ -69,20 +69,20 @@ struct MediaExploreView: View {
 
     // MARK: - Navigation Logic
     private func getNavigateWallpaper(current: Wallpaper? = nil, direction: Int) -> Wallpaper {
-        let allWallpapers = viewModel.mediaItems.map(Wallpaper.from)
-        let activeWallpaper = current ?? detailWallpaper
+        let allItems = viewModel.mediaItems.map(WallpaperPreviewItem.init(media:))
+        let activeRemoteId = current?.remoteId ?? detailItem?.remoteId
+        let activeTitle = current?.name ?? detailItem?.title
 
-        guard !allWallpapers.isEmpty else {
-            return activeWallpaper ?? Wallpaper(name: "Unknown", filePath: "", type: .video)
+        guard !allItems.isEmpty else {
+            return current ?? detailItem?.makeWallpaper() ?? Wallpaper(name: "Unknown", filePath: "", type: .video)
         }
 
-        if let activeWallpaper,
-           let currentIndex = allWallpapers.firstIndex(where: { $0.remoteId == activeWallpaper.remoteId || $0.name == activeWallpaper.name }) {
-            let newIndex = (currentIndex + direction + allWallpapers.count) % allWallpapers.count
-            return allWallpapers[newIndex]
+        if let currentIndex = allItems.firstIndex(where: { $0.remoteId == activeRemoteId || $0.title == activeTitle }) {
+            let newIndex = (currentIndex + direction + allItems.count) % allItems.count
+            return allItems[newIndex].makeWallpaper()
         }
 
-        return allWallpapers.first ?? Wallpaper(name: "Unknown", filePath: "", type: .video)
+        return allItems.first?.makeWallpaper() ?? Wallpaper(name: "Unknown", filePath: "", type: .video)
     }
 
     // MARK: - 筛选区域

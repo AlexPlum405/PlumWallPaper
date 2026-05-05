@@ -4,12 +4,24 @@ import SwiftUI
 // 这不仅仅是一个卡片，它是数字画廊中的一个精致展位。
 
 struct WallpaperCard: View {
-    let wallpaper: Wallpaper
+    private let item: WallpaperPreviewItem
     let onTap: () -> Void
     var onDownload: (() -> Void)? = nil
     
     @State private var isHovered = false
     private let cardCornerRadius: CGFloat = 24
+
+    init(wallpaper: Wallpaper, onTap: @escaping () -> Void, onDownload: (() -> Void)? = nil) {
+        self.item = WallpaperPreviewItem(wallpaper: wallpaper)
+        self.onTap = onTap
+        self.onDownload = onDownload
+    }
+
+    init(previewItem: WallpaperPreviewItem, onTap: @escaping () -> Void, onDownload: (() -> Void)? = nil) {
+        self.item = previewItem
+        self.onTap = onTap
+        self.onDownload = onDownload
+    }
 
     var body: some View {
         Button(action: onTap) {
@@ -58,15 +70,15 @@ struct WallpaperCard: View {
             // 壁纸渲染核心 (遵守 ASYNC IMAGE STANDARDS)
             // 只显示缩略图，不显示视频预览
             Group {
-                if let thumbPath = wallpaper.thumbnailPath, !thumbPath.isEmpty {
+                if let thumbPath = item.thumbnailPath, !thumbPath.isEmpty {
                     let thumbURL = thumbPath.hasPrefix("http") ? URL(string: thumbPath) : URL(fileURLWithPath: thumbPath)
                     if let thumbURL = thumbURL {
                         artisanAsyncImage(url: thumbURL)
                     } else {
                         fallbackPlaceholder
                     }
-                } else if !wallpaper.filePath.isEmpty {
-                    let fileURL = wallpaper.filePath.hasPrefix("http") ? URL(string: wallpaper.filePath) : URL(fileURLWithPath: wallpaper.filePath)
+                } else if !item.filePath.isEmpty {
+                    let fileURL = item.filePath.hasPrefix("http") ? URL(string: item.filePath) : URL(fileURLWithPath: item.filePath)
                     if let fileURL = fileURL {
                         artisanAsyncImage(url: fileURL)
                     } else {
@@ -81,7 +93,7 @@ struct WallpaperCard: View {
 
             // 艺术标签 (悬浮在画面之上)
             HStack(spacing: 8) {
-                if wallpaper.type == .video, let duration = wallpaper.duration {
+                if item.type == .video, let duration = item.duration {
                     artisanChip(text: formatDuration(duration), icon: "play.fill", color: LiquidGlassColors.accentGold)
                 }
                 
@@ -96,7 +108,7 @@ struct WallpaperCard: View {
                 Spacer()
                 HStack {
                     Spacer()
-                    Text(wallpaper.resolution ?? "N/A")
+                    Text(item.resolution ?? "N/A")
                         .font(.system(size: 9, weight: .black, design: .monospaced))
                         .foregroundStyle(Color.white.opacity(0.4))
                         .padding(.horizontal, 8)
@@ -109,7 +121,7 @@ struct WallpaperCard: View {
             .opacity(isHovered ? 1.0 : 0)
 
             // 收藏指示器 (右下角)
-            if wallpaper.isFavorite {
+            if item.isFavorite {
                 VStack {
                     Spacer()
                     HStack {
@@ -148,7 +160,7 @@ struct WallpaperCard: View {
     private var infoSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             // 衬线体标题
-            Text(wallpaper.name.isEmpty ? "Untitled Art" : wallpaper.name)
+            Text(item.title.isEmpty ? "Untitled Art" : item.title)
                 .font(.custom("Georgia", size: 15).bold())
                 .foregroundStyle(isHovered ? LiquidGlassColors.primaryPink : LiquidGlassColors.textPrimary)
                 .lineLimit(1)
@@ -156,25 +168,25 @@ struct WallpaperCard: View {
 
             // 元信息行1：分辨率 + 文件大小
             HStack(spacing: 8) {
-                if let resolution = wallpaper.resolution {
+                if let resolution = item.resolution {
                     metaChip(icon: "square.resize", text: resolution, color: LiquidGlassColors.primaryPink)
                 }
 
-                if wallpaper.fileSize > 0 {
-                    metaChip(icon: "doc", text: formatFileSize(wallpaper.fileSize), color: LiquidGlassColors.accentGold)
+                if item.fileSize > 0 {
+                    metaChip(icon: "doc", text: formatFileSize(item.fileSize), color: LiquidGlassColors.accentGold)
                 }
 
-                if wallpaper.type == .video, let duration = wallpaper.duration {
+                if item.type == .video, let duration = item.duration {
                     metaChip(icon: "clock", text: formatDuration(duration), color: LiquidGlassColors.accentGold)
                 }
             }
 
             // 元信息行2：统计数据
             HStack(spacing: 12) {
-                if let views = wallpaper.remoteMetadata?.views {
+                if let views = item.metadata?.views {
                     Label(formatCount(views), systemImage: "eye")
                 }
-                if let favorites = wallpaper.remoteMetadata?.favorites {
+                if let favorites = item.metadata?.favorites {
                     Label(formatCount(favorites), systemImage: "heart")
                 }
                 Spacer()
@@ -261,7 +273,7 @@ struct WallpaperCard: View {
     }
 
     private func prefetchFullResolutionPreview() {
-        guard let url = URL(string: wallpaper.filePath), url.scheme?.hasPrefix("http") == true else { return }
+        guard let url = URL(string: item.filePath), url.scheme?.hasPrefix("http") == true else { return }
         Task {
             await PreviewResourcePipeline.shared.prefetchFullResolution(url: url)
         }

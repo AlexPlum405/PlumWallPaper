@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Artisan Wallpaper Explore (Scheme C: Pure Edition)
 struct WallpaperExploreView: View {
     @StateObject private var viewModel = WallpaperExploreViewModel()
-    @State private var detailWallpaper: Wallpaper?
+    @State private var detailItem: WallpaperPreviewItem?
     @State private var showFilters = false
 
     let mainPadding: CGFloat = 88
@@ -31,9 +31,9 @@ struct WallpaperExploreView: View {
             .padding(.bottom, 100)
         }
         .background(LiquidGlassColors.deepBackground)
-        .sheet(item: $detailWallpaper) { wallpaper in
+        .sheet(item: $detailItem) { item in
             WallpaperDetailView(
-                wallpaper: wallpaper,
+                wallpaper: item.makeWallpaper(),
                 onPrevious: { current, callback in
                     let newWallpaper = getNavigateWallpaper(current: current, direction: -1)
                     callback(newWallpaper)
@@ -57,20 +57,20 @@ struct WallpaperExploreView: View {
 
     // MARK: - Navigation Logic
     private func getNavigateWallpaper(current: Wallpaper? = nil, direction: Int) -> Wallpaper {
-        let allWallpapers = viewModel.wallpapers.map(Wallpaper.from)
-        let activeWallpaper = current ?? detailWallpaper
+        let allItems = viewModel.wallpapers.map(WallpaperPreviewItem.init(remote:))
+        let activeRemoteId = current?.remoteId ?? detailItem?.remoteId
+        let activeTitle = current?.name ?? detailItem?.title
 
-        guard !allWallpapers.isEmpty else {
-            return activeWallpaper ?? Wallpaper(name: "Unknown", filePath: "", type: .image)
+        guard !allItems.isEmpty else {
+            return current ?? detailItem?.makeWallpaper() ?? Wallpaper(name: "Unknown", filePath: "", type: .image)
         }
 
-        if let activeWallpaper,
-           let currentIndex = allWallpapers.firstIndex(where: { $0.remoteId == activeWallpaper.remoteId || $0.name == activeWallpaper.name }) {
-            let newIndex = (currentIndex + direction + allWallpapers.count) % allWallpapers.count
-            return allWallpapers[newIndex]
+        if let currentIndex = allItems.firstIndex(where: { $0.remoteId == activeRemoteId || $0.title == activeTitle }) {
+            let newIndex = (currentIndex + direction + allItems.count) % allItems.count
+            return allItems[newIndex].makeWallpaper()
         }
 
-        return allWallpapers.first ?? Wallpaper(name: "Unknown", filePath: "", type: .image)
+        return allItems.first?.makeWallpaper() ?? Wallpaper(name: "Unknown", filePath: "", type: .image)
     }
 
     // MARK: - 筛选区域
@@ -337,7 +337,7 @@ struct WallpaperExploreView: View {
                             await PreviewResourcePipeline.shared.prefetchFullResolution(url: url)
                         }
                     }
-                    detailWallpaper = Wallpaper.from(remote: wallpaper)
+                    detailItem = WallpaperPreviewItem(remote: wallpaper)
                 }
                 .onAppear {
                     // 无限滚动：检测到最后几个元素时加载更多
