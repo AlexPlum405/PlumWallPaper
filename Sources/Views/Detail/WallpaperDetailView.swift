@@ -24,7 +24,6 @@ struct WallpaperDetailView: View {
     @State private var toastMessage: String?
     @State private var showToast = false
     @State private var isNavigatingWallpaper = false
-    @State private var isFavoriteDisplayed = false
     @StateObject private var downloadManager = DownloadManager.shared
     @StateObject private var viewModel = WallpaperDetailViewModel()
 
@@ -98,7 +97,7 @@ struct WallpaperDetailView: View {
             await viewModel.prepareFullResolutionPreview(for: wallpaper)
         }
         .onAppear {
-            syncFavoriteDisplayState()
+            viewModel.syncFavoriteDisplayState(for: wallpaper, in: modelContext)
             loadSavedStudioPreset()
         }
     }
@@ -272,7 +271,7 @@ struct WallpaperDetailView: View {
             withAnimation(.galleryEase) {
                 self.viewModel.resetPreview()
                 self.wallpaper = newWallpaper
-                self.syncFavoriteDisplayState(for: newWallpaper)
+                self.viewModel.syncFavoriteDisplayState(for: newWallpaper, in: self.modelContext)
             }
             if newWallpaper.type == .video, let videoURL = WallpaperDetailViewModel.url(from: newWallpaper.filePath) {
                 PreviewResourcePipeline.shared.preloadVideo(url: videoURL)
@@ -387,7 +386,7 @@ struct WallpaperDetailView: View {
 
     private var artisanMainDock: some View {
         DetailActionDock(
-            isFavorite: isFavoriteDisplayed,
+            isFavorite: viewModel.isFavoriteDisplayed,
             isApplying: isApplying,
             isStudioActive: isStudioActive,
             isDownloading: isDownloading,
@@ -796,31 +795,13 @@ struct WallpaperDetailView: View {
 
     private func toggleFavorite() {
         do {
-            let newFavoriteState = try FavoriteService.toggleFavorite(for: wallpaper, in: modelContext)
-            wallpaper.isFavorite = newFavoriteState
-            isFavoriteDisplayed = newFavoriteState
+            let newFavoriteState = try viewModel.toggleFavorite(for: wallpaper, in: modelContext)
             showToastMessage(newFavoriteState ? "已加入收藏" : "已取消收藏")
-            NSLog("[WallpaperDetailView] ✅ 收藏状态已保存: \(wallpaper.isFavorite), remoteId: \(wallpaper.remoteId ?? "nil")")
             onFavorite?(wallpaper)
             SlideshowScheduler.shared.rebuildPlaylist()
         } catch {
             NSLog("[WallpaperDetailView] ❌ 收藏保存失败: \(error.localizedDescription)")
             showToastMessage("收藏失败: \(error.localizedDescription)")
-        }
-    }
-
-    private func syncFavoriteDisplayState(for target: Wallpaper? = nil) {
-        let current = target ?? wallpaper
-        do {
-            if let persisted = try FavoriteService.persistedWallpaper(for: current, in: modelContext) {
-                isFavoriteDisplayed = persisted.isFavorite
-                current.isFavorite = persisted.isFavorite
-            } else {
-                isFavoriteDisplayed = current.isFavorite
-            }
-        } catch {
-            isFavoriteDisplayed = current.isFavorite
-            NSLog("[WallpaperDetailView] ⚠️ 收藏状态同步失败: \(error.localizedDescription)")
         }
     }
 

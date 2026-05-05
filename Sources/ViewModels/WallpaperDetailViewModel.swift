@@ -1,9 +1,11 @@
 import Combine
 import Foundation
+import SwiftData
 
 @MainActor
 final class WallpaperDetailViewModel: ObservableObject {
     @Published private(set) var fullResolutionContentURL: URL?
+    @Published private(set) var isFavoriteDisplayed = false
 
     private var activePreviewTaskID: String?
 
@@ -75,5 +77,27 @@ final class WallpaperDetailViewModel: ObservableObject {
 
     private func isActive(_ taskID: String) -> Bool {
         !Task.isCancelled && activePreviewTaskID == taskID
+    }
+
+    func toggleFavorite(for wallpaper: Wallpaper, in modelContext: ModelContext) throws -> Bool {
+        let newFavoriteState = try FavoriteService.toggleFavorite(for: wallpaper, in: modelContext)
+        wallpaper.isFavorite = newFavoriteState
+        isFavoriteDisplayed = newFavoriteState
+        NSLog("[WallpaperDetailViewModel] ✅ 收藏状态已保存: \(wallpaper.isFavorite), remoteId: \(wallpaper.remoteId ?? "nil")")
+        return newFavoriteState
+    }
+
+    func syncFavoriteDisplayState(for wallpaper: Wallpaper, in modelContext: ModelContext) {
+        do {
+            if let persisted = try FavoriteService.persistedWallpaper(for: wallpaper, in: modelContext) {
+                isFavoriteDisplayed = persisted.isFavorite
+                wallpaper.isFavorite = persisted.isFavorite
+            } else {
+                isFavoriteDisplayed = wallpaper.isFavorite
+            }
+        } catch {
+            isFavoriteDisplayed = wallpaper.isFavorite
+            NSLog("[WallpaperDetailViewModel] ⚠️ 收藏状态同步失败: \(error.localizedDescription)")
+        }
     }
 }
