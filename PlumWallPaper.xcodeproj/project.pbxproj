@@ -40,7 +40,6 @@
 		4079067352F1802C1FA00485 /* WallpaperSetter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CB6CD0FA8F444B530729322 /* WallpaperSetter.swift */; };
 		41BBD3D0B830D4B9D10352EE /* LiquidGlassExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BFC070EB9E6FC67ECF0A30E /* LiquidGlassExtensions.swift */; };
 		46E4E3E6AD47CF341E95D939 /* MediaExploreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71153ED11B64EAC620D943C /* MediaExploreView.swift */; };
-		48D29BFA4EBB151E5DA5B0A7 /* HomeView+Logic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62DBB7ADDE4C7D34F2E92DD1 /* HomeView+Logic.swift */; };
 		4921D2915FBB77C934311E1B /* FourKWallpapersParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769939AC7F7DC019F6B523B5 /* FourKWallpapersParser.swift */; };
 		497680F1B822B89B17425FD7 /* RemoteThumbnailImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30F0B67F6D3152EDCE4B36B /* RemoteThumbnailImage.swift */; };
 		4E8351BFE9BFBE4C94CFC85A /* ImportWallpaperSheet+Logic.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8D64F6129E91E1C6CAE3376 /* ImportWallpaperSheet+Logic.swift */; };
@@ -62,6 +61,7 @@
 		61AA8D7EADD4BE815DF19A8A /* plumwallpaper.html in Resources */ = {isa = PBXBuildFile; fileRef = 2008F380223F64B8EF14B4AB /* plumwallpaper.html */; };
 		61CA53778202A043032BE780 /* VideoDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30690CE1865E4C25A72CDA44 /* VideoDecoder.swift */; };
 		643CAA31BDB650A47088DF57 /* ShaderPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5EBCE2BF9B39694862C475 /* ShaderPreviewView.swift */; };
+		65E31C1BA602B7B0E98D1203 /* NetworkRequestManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7561144AAC50905AAAB4D23A /* NetworkRequestManager.swift */; };
 		665A6C328A895BFF05A5445A /* ThumbnailGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBE5FA06BA9E7ED726E742D2 /* ThumbnailGenerator.swift */; };
 		68A218BB024039CE0CBF6251 /* FourKWallpapersService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CEE41255323B82B4C49ECAC /* FourKWallpapersService.swift */; };
 		69E4D260CDD0BB691F45FDAF /* PlaybackTab+Logic.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1BAF20FF8F1C2D3C9D8ACC5 /* PlaybackTab+Logic.swift */; };
@@ -129,7 +129,6 @@
 		F43406CEAE07A793A61705C9 /* LiquidGlassDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B737F68063AC67E3CDEE620 /* LiquidGlassDesignSystem.swift */; };
 		F43FDE1B9A058397730912A9 /* PreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C772358D777023DF5DDA0881 /* PreferencesStore.swift */; };
 		F9C44B8AD1E98BE7F5A45604 /* PexelsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A7053EEC553502F9FEEE3F2 /* PexelsService.swift */; };
-		FB0B0431FDEF515238269447 /* MediaService.swift.backup in Resources */ = {isa = PBXBuildFile; fileRef = 65C0C0A88957B8735E9544EC /* MediaService.swift.backup */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -178,13 +177,12 @@
 		60AD48DB3AC1A8944B151694 /* PlumWallPaper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PlumWallPaper.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		626C651D660611BD7FD7F03D /* LaunchAtLoginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManager.swift; sourceTree = "<group>"; };
 		62A361D77B06FF5600CEB4CB /* NetworkError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkError.swift; sourceTree = "<group>"; };
-		62DBB7ADDE4C7D34F2E92DD1 /* HomeView+Logic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+Logic.swift"; sourceTree = "<group>"; };
 		63AB7C972CC7EB8B5701124C /* FilterChips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterChips.swift; sourceTree = "<group>"; };
 		64D088ED03F8EA2C61BE98A1 /* BingDailyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BingDailyService.swift; sourceTree = "<group>"; };
-		65C0C0A88957B8735E9544EC /* MediaService.swift.backup */ = {isa = PBXFileReference; path = MediaService.swift.backup; sourceTree = "<group>"; };
 		661E4F1C07FBFDC99AB1010B /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		69EBDBCB4A00C4968EC5B1B3 /* NetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkService.swift; sourceTree = "<group>"; };
 		6CEE41255323B82B4C49ECAC /* FourKWallpapersService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FourKWallpapersService.swift; sourceTree = "<group>"; };
+		7561144AAC50905AAAB4D23A /* NetworkRequestManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkRequestManager.swift; sourceTree = "<group>"; };
 		769939AC7F7DC019F6B523B5 /* FourKWallpapersParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FourKWallpapersParser.swift; sourceTree = "<group>"; };
 		777318D7149CD291FA60B4B6 /* MenuBarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarViewModel.swift; sourceTree = "<group>"; };
 		7BFC070EB9E6FC67ECF0A30E /* LiquidGlassExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlassExtensions.swift; sourceTree = "<group>"; };
@@ -285,7 +283,6 @@
 			isa = PBXGroup;
 			children = (
 				CBD7FD3FCEE90906A82E005D /* HomeView.swift */,
-				62DBB7ADDE4C7D34F2E92DD1 /* HomeView+Logic.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -448,10 +445,10 @@
 				769939AC7F7DC019F6B523B5 /* FourKWallpapersParser.swift */,
 				6CEE41255323B82B4C49ECAC /* FourKWallpapersService.swift */,
 				D0560CA611E726EE2244751F /* MediaService.swift */,
-				65C0C0A88957B8735E9544EC /* MediaService.swift.backup */,
 				008AD387C711921794DDBAC1 /* MyLiveWallpapersService.swift */,
 				62A361D77B06FF5600CEB4CB /* NetworkError.swift */,
 				23B0315556C33A01E96549F0 /* NetworkMonitor.swift */,
+				7561144AAC50905AAAB4D23A /* NetworkRequestManager.swift */,
 				69EBDBCB4A00C4968EC5B1B3 /* NetworkService.swift */,
 				E5FDAD698A3E842C2B2505A5 /* NetworkState.swift */,
 				3A7053EEC553502F9FEEE3F2 /* PexelsService.swift */,
@@ -664,7 +661,6 @@
 				00A9E2E33FA363B00E1592BE /* Assets.xcassets in Resources */,
 				17B1F985B215BDDEAFBD86C3 /* DataSourceProfile.json in Resources */,
 				EB2BB8B32350F50CAA0F6F1F /* Localizable.strings in Resources */,
-				FB0B0431FDEF515238269447 /* MediaService.swift.backup in Resources */,
 				B008A83321705246C07F5166 /* WallpaperSourceManager_USAGE.md in Resources */,
 				61AA8D7EADD4BE815DF19A8A /* plumwallpaper.html in Resources */,
 			);
@@ -703,7 +699,6 @@
 				B11BF4E8AAD9594A747F8485 /* GlobalShortcutManager.swift in Sources */,
 				B75475FD6218E24AC8C7F70B /* GrainTextureOverlay.swift in Sources */,
 				DF944A3AF90222EB7BBB426C /* HomeFeedViewModel.swift in Sources */,
-				48D29BFA4EBB151E5DA5B0A7 /* HomeView+Logic.swift in Sources */,
 				51BF133243509E7E07A4B531 /* HomeView.swift in Sources */,
 				4E8351BFE9BFBE4C94CFC85A /* ImportWallpaperSheet+Logic.swift in Sources */,
 				F07D392C4096EED8FD00FD7F /* ImportWallpaperSheet.swift in Sources */,
@@ -727,6 +722,7 @@
 				E435B10F19FF405210C17990 /* MyLiveWallpapersService.swift in Sources */,
 				1AAB14F6DFA0E99BF907A620 /* NetworkError.swift in Sources */,
 				374315EC6C08D27710FF0034 /* NetworkMonitor.swift in Sources */,
+				65E31C1BA602B7B0E98D1203 /* NetworkRequestManager.swift in Sources */,
 				5A86975CFA3B20124E4BB98D /* NetworkService.swift in Sources */,
 				60E780513B91C3BEC77F41CA /* NetworkState.swift in Sources */,
 				7C5822DC85BE2561CEB3C8D2 /* ParticleEmitter.swift in Sources */,

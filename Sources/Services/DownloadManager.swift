@@ -159,7 +159,12 @@ final class DownloadManager: ObservableObject {
             existing.type = item.type
             existing.resolution = item.resolution
             existing.fileSize = fileSize
-            existing.thumbnailPath = item.thumbnailURL?.absoluteString
+            // 生成本地缩略图
+            if let localThumbnail = try? await ThumbnailGenerator.shared.generateThumbnail(for: localURL, type: item.type) {
+                existing.thumbnailPath = localThumbnail
+            } else {
+                existing.thumbnailPath = item.thumbnailURL?.absoluteString
+            }
             existing.source = .downloaded
             existing.remoteId = remoteId
             existing.remoteSource = remoteSource
@@ -182,6 +187,13 @@ final class DownloadManager: ObservableObject {
             downloadQuality: quality,
             remoteMetadata: metadata
         )
+
+        // 生成本地缩略图
+        if let localThumbnail = try? await ThumbnailGenerator.shared.generateThumbnail(for: localURL, type: item.type) {
+            wallpaper.thumbnailPath = localThumbnail
+        } else {
+            wallpaper.thumbnailPath = item.thumbnailURL?.absoluteString
+        }
 
         context.insert(wallpaper)
         try context.save()

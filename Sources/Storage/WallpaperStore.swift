@@ -10,6 +10,32 @@ struct WallpaperStore {
         return try modelContext.fetch(descriptor)
     }
 
+    /// 分页查询壁纸
+    func fetchPage(offset: Int, limit: Int) throws -> [Wallpaper] {
+        var descriptor = FetchDescriptor<Wallpaper>(
+            sortBy: [SortDescriptor(\.importDate, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit
+        descriptor.fetchOffset = offset
+        return try modelContext.fetch(descriptor)
+    }
+
+    /// 查询壁纸总数
+    func count(predicate: Predicate<Wallpaper>? = nil) throws -> Int {
+        var descriptor = FetchDescriptor<Wallpaper>()
+        if let predicate = predicate {
+            descriptor.predicate = predicate
+        }
+        return try modelContext.fetchCount(descriptor)
+    }
+
+    /// 根据条件查询壁纸
+    func fetch(predicate: Predicate<Wallpaper>?, sortBy: [SortDescriptor<Wallpaper>] = []) throws -> [Wallpaper] {
+        var descriptor = FetchDescriptor<Wallpaper>(sortBy: sortBy)
+        descriptor.predicate = predicate
+        return try modelContext.fetch(descriptor)
+    }
+
     func add(_ wallpaper: Wallpaper) throws {
         modelContext.insert(wallpaper)
         try modelContext.save()

@@ -17,6 +17,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             window.minSize = NSSize(width: 900, height: 600)
         }
 
+        // 关键服务立即初始化
         Task {
             RenderPipeline.shared.setupRenderers()
             let context = PlumWallPaperApp.sharedModelContainer.mainContext
@@ -29,6 +30,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 context: context,
                 displayManager: DisplayManager.shared
             )
+        }
+
+        // 非关键服务延迟初始化（优化启动速度）
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            PerformanceMonitor.shared.startMonitoring()
+            // 清理旧的磁盘缓存
+            Task {
+                await RemoteThumbnailImageCache.shared.cleanDiskCache(olderThan: 30)
+            }
         }
 
         NotificationCenter.default.addObserver(

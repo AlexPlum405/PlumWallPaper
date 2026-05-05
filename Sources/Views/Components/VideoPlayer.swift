@@ -235,14 +235,17 @@ private final class PlayerLayerContainerView: NSView {
 struct HeroVideoPlayer: NSViewRepresentable {
     let url: URL
     var isActive: Bool = true
+    var onReadyChanged: (Bool) -> Void = { _ in }
 
     func makeNSView(context: Context) -> HeroVideoPlayerView {
         let view = HeroVideoPlayerView()
+        view.onReadyChanged = onReadyChanged
         view.configure(url: url, isActive: isActive)
         return view
     }
 
     func updateNSView(_ nsView: HeroVideoPlayerView, context: Context) {
+        nsView.onReadyChanged = onReadyChanged
         nsView.configure(url: url, isActive: isActive)
     }
 
@@ -252,10 +255,13 @@ struct HeroVideoPlayer: NSViewRepresentable {
 }
 
 final class HeroVideoPlayerView: NSView {
-    private let player = AVPlayer()
+    private var player = AVPlayer()
     private let playerLayer = AVPlayerLayer()
     private var currentURL: URL?
     private var endObserver: NSObjectProtocol?
+    private var statusObservation: NSKeyValueObservation?
+    private var isCurrentlyActive = true  // 添加状态跟踪
+    var onReadyChanged: ((Bool) -> Void)?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -277,32 +283,54 @@ final class HeroVideoPlayerView: NSView {
     }
 
     func configure(url: URL, isActive: Bool) {
+        isCurrentlyActive = isActive  // 更新状态
+
         if currentURL != url {
             currentURL = url
+            notifyReady(false)
             if let endObserver {
                 NotificationCenter.default.removeObserver(endObserver)
                 self.endObserver = nil
             }
+            statusObservation?.invalidate()
+            statusObservation = nil
 
-            let playerItem = AVPlayerItem(url: url)
+            if let preloadedPlayer = VideoPreloader.shared.getPreloadedPlayer(url: url) {
+                player.pause()
+                player = preloadedPlayer
+                playerLayer.player = preloadedPlayer
+                player.isMuted = true
+                player.automaticallyWaitsToMinimizeStalling = false
+
+                if let item = preloadedPlayer.currentItem {
+                    observeReadiness(for: item, player: preloadedPlayer, url: url)
+                    installLoopObserver(for: item, url: url)
+                }
+
+                if isActive {
+                    player.play()
+                }
+                return
+            }
+
+            let asset = AVURLAsset(
+                url: url,
+                options: [
+                    "AVURLAssetHTTPHeaderFieldsKey": [
+                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+                    ]
+                ]
+            )
+            let playerItem = AVPlayerItem(asset: asset)
             playerItem.preferredForwardBufferDuration = 3
             playerItem.canUseNetworkResourcesForLiveStreamingWhilePaused = true
             player.replaceCurrentItem(with: playerItem)
-            player.isMuted = false
-            player.volume = 1.0
+            player.isMuted = true
+            player.volume = 0
             player.automaticallyWaitsToMinimizeStalling = false
 
-            endObserver = NotificationCenter.default.addObserver(
-                forName: .AVPlayerItemDidPlayToEndTime,
-                object: playerItem,
-                queue: .main
-            ) { [weak self] _ in
-                guard self?.currentURL == url else { return }
-                self?.player.seek(to: .zero)
-                if isActive {
-                    self?.player.play()
-                }
-            }
+            observeReadiness(for: playerItem, player: player, url: url)
+            installLoopObserver(for: playerItem, url: url)
         }
 
         if isActive {
@@ -312,11 +340,54 @@ final class HeroVideoPlayerView: NSView {
         }
     }
 
+    private func observeReadiness(for item: AVPlayerItem, player observedPlayer: AVPlayer, url: URL) {
+        statusObservation = item.observe(\.status, options: [.initial, .new]) { [weak self, weak observedPlayer] item, _ in
+            DispatchQueue.main.async {
+                guard let self, self.currentURL == url else { return }
+                switch item.status {
+                case .readyToPlay:
+                    self.notifyReady(true)
+                    if self.isCurrentlyActive, observedPlayer?.rate == 0 {
+                        observedPlayer?.play()
+                    }
+                    NSLog("[HeroVideoPlayer] ✅ 首帧可播放: \(url.lastPathComponent)")
+                case .failed:
+                    self.notifyReady(false)
+                    NSLog("[HeroVideoPlayer] ❌ 播放失败: \(item.error?.localizedDescription ?? "unknown")")
+                default:
+                    break
+                }
+            }
+        }
+    }
+
+    private func installLoopObserver(for item: AVPlayerItem, url: URL) {
+        endObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: item,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self, self.currentURL == url else { return }
+            NSLog("[HeroVideoPlayer] 视频播放结束，循环播放")
+            self.player.seek(to: .zero)
+            if self.isCurrentlyActive {
+                self.player.play()
+            }
+        }
+    }
+
+    private func notifyReady(_ isReady: Bool) {
+        onReadyChanged?(isReady)
+    }
+
     func stop() {
         if let endObserver {
             NotificationCenter.default.removeObserver(endObserver)
             self.endObserver = nil
         }
+        statusObservation?.invalidate()
+        statusObservation = nil
+        notifyReady(false)
         player.pause()
         player.replaceCurrentItem(with: nil)
         currentURL = nil

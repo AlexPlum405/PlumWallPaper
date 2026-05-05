@@ -91,7 +91,7 @@ extension Wallpaper {
             resolution: remote.resolution,
             fileSize: remote.fileSize,
             thumbnailPath: remote.thumbURL?.absoluteString,
-            source: .downloaded,
+            source: .online,
             remoteId: remote.id,
             remoteSource: remoteSource(fromRemoteId: remote.id),
             remoteMetadata: RemoteMetadata(
@@ -119,15 +119,13 @@ extension Wallpaper {
 
         return Wallpaper(
             name: media.title,
-            filePath: media.hasAudioTrack == true
-                ? (media.fullVideoURL?.absoluteString ?? media.previewVideoURL?.absoluteString ?? "")
-                : (media.previewVideoURL?.absoluteString ?? media.fullVideoURL?.absoluteString ?? ""),
+            filePath: media.fullVideoURL?.absoluteString ?? media.previewVideoURL?.absoluteString ?? "",
             type: .video,
             resolution: media.exactResolution ?? media.resolutionLabel,
             fileSize: media.fileSize ?? 0,
             duration: media.durationSeconds,
             thumbnailPath: media.thumbnailURL.absoluteString,
-            source: .downloaded,
+            source: .online,
             remoteId: media.id,
             remoteSource: remoteSource,
             downloadQuality: media.fullVideoURL?.absoluteString,

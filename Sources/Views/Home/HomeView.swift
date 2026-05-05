@@ -19,6 +19,7 @@ struct HomeView: View {
     @State var detailWallpaper: Wallpaper?
     @State private var isHeroLeftHovered = false
     @State private var isHeroRightHovered = false
+    @State private var readyHeroVideoURL: URL?
     @State private var toast: ToastConfig?
 
     private let mainPadding: CGFloat = 88
@@ -123,7 +124,7 @@ struct HomeView: View {
     private func preheatHomeVideos() {
         preheatHeroVideos()
         let motionURLs = viewModel.popularMotions.compactMap(previewVideoURL(for:))
-        VideoPreloader.shared.preload(urls: motionURLs, limit: 6)
+        PreviewResourcePipeline.shared.preloadVideos(urls: motionURLs, limit: 6)
     }
 
     private func preheatHeroVideos() {
@@ -140,7 +141,7 @@ struct HomeView: View {
             .map { viewModel.heroItems[$0] }
             .compactMap(bestHeroVideoURL(for:))
 
-        VideoPreloader.shared.preload(urls: urls, limit: 3)
+        PreviewResourcePipeline.shared.preloadVideos(urls: urls, limit: 3)
     }
 
     private func previewVideoURL(for item: MediaItem) -> URL? {
@@ -307,16 +308,24 @@ struct HomeView: View {
 
                     // 只渲染当前视频。前后项通过 VideoPreloader 预热，避免 AppKit 视频层透出旧画面。
                     if let videoURL = bestHeroVideoURL(for: item) {
-                        HeroVideoPlayer(url: videoURL, isActive: true)
+                        RemoteThumbnailImage(urls: [bestHeroImageURL(for: item)], contentMode: .fill)
+                            .frame(width: size.width, height: size.height)
+                            .clipped()
+
+                        HeroVideoPlayer(url: videoURL, isActive: true) { isReady in
+                            if isReady {
+                                readyHeroVideoURL = videoURL
+                            } else if readyHeroVideoURL == videoURL {
+                                readyHeroVideoURL = nil
+                            }
+                        }
                         .id(videoURL.absoluteString)
                         .frame(width: size.width, height: size.height)
                         .clipped()
+                        .opacity(readyHeroVideoURL == videoURL ? 1 : 0)
+                        .animation(.easeInOut(duration: 0.18), value: readyHeroVideoURL)
                     } else {
-                        AsyncImage(url: bestHeroImageURL(for: item)) { phase in
-                            if let image = phase.image {
-                                image.resizable().aspectRatio(contentMode: .fill)
-                            } else { Color.black }
-                        }
+                        RemoteThumbnailImage(urls: [bestHeroImageURL(for: item)], contentMode: .fill)
                         .frame(width: size.width, height: size.height)
                         .clipped()
                     }
@@ -400,6 +409,7 @@ struct HomeView: View {
                     }
                 }
                 .padding(.leading, mainPadding).padding(.bottom, 100)
+                .zIndex(2)
             }
 
             // Navigation arrows
@@ -408,6 +418,7 @@ struct HomeView: View {
                 Spacer()
                 artisanHeroNavButton(isLeft: false)
             }
+            .zIndex(1)
         }
         .frame(height: size.height)
     }
@@ -528,11 +539,11 @@ struct HomeView: View {
                         })
                         .onHover { hovering in
                             if hovering {
-                                // hover 时预加载图片
                                 let wallpaper = Wallpaper.from(remote: remoteWallpaper)
                                 if let url = URL(string: wallpaper.filePath) {
-                                    // 预加载图片到缓存
-                                    URLSession.shared.dataTask(with: url).resume()
+                                    Task {
+                                        await PreviewResourcePipeline.shared.prefetchFullResolution(url: url)
+                                    }
                                 }
                             }
                         }
@@ -583,9 +594,11 @@ struct HomeView: View {
                         })
                         .onHover { hovering in
                             if hovering {
-                                // hover 时预加载视频
-                                if let videoURL = mediaItem.previewVideoURL ?? mediaItem.fullVideoURL {
-                                    VideoPreloader.shared.preload(url: videoURL)
+                                if let videoURL = mediaItem.fullVideoURL ?? mediaItem.previewVideoURL {
+                                    Task {
+                                        await PreviewResourcePipeline.shared.prefetchFullResolution(url: videoURL)
+                                    }
+                                    PreviewResourcePipeline.shared.preloadVideo(url: videoURL)
                                 }
                             }
                         }
@@ -630,7 +643,7 @@ struct HomeView: View {
     // MARK: - Hero Online Actions
 
     private func bestHeroVideoURL(for item: MediaItem) -> URL? {
-        item.fullVideoURL ?? item.previewVideoURL
+        item.previewVideoURL ?? item.fullVideoURL
     }
 
     private func bestHeroImageURL(for item: MediaItem) -> URL {
@@ -687,11 +700,34 @@ struct HomeView: View {
                 }
             } else {
                 let wallpaper = makeOnlineHeroWallpaper(from: item)
+                NSLog("[HomeView] 创建在线收藏壁纸: \(wallpaper.name), type: \(wallpaper.type), source: \(wallpaper.source), isFavorite: \(wallpaper.isFavorite)")
+
+                // 下载缩略图到本地
+                if let remoteThumbnailURL = URL(string: wallpaper.thumbnailPath ?? ""),
+                   remoteThumbnailURL.scheme?.hasPrefix("http") == true {
+                    if let localThumbnail = await downloadThumbnailToLocal(from: remoteThumbnailURL) {
+                        wallpaper.thumbnailPath = localThumbnail
+                        NSLog("[HomeView] 缩略图已下载到本地: \(localThumbnail)")
+                    } else {
+                        NSLog("[HomeView] ⚠️ 缩略图下载失败，使用远程 URL")
+                    }
+                }
+
                 modelContext.insert(wallpaper)
+                NSLog("[HomeView] 壁纸已插入 modelContext")
                 toast = ToastConfig(message: "已加入收藏", type: .success)
             }
 
             try modelContext.save()
+            NSLog("[HomeView] ✅ modelContext 已保存")
+
+            // 验证保存是否成功
+            if let saved = try fetchSavedHeroWallpaper(remoteID: item.id) {
+                NSLog("[HomeView] ✅ 验证成功，已保存壁纸: \(saved.name), isFavorite: \(saved.isFavorite), source: \(saved.source)")
+            } else {
+                NSLog("[HomeView] ❌ 验证失败，未找到保存的壁纸")
+            }
+
             SlideshowScheduler.shared.rebuildPlaylist()
         } catch {
             toast = ToastConfig(message: "收藏失败: \(error.localizedDescription)", type: .error)
@@ -804,10 +840,13 @@ struct HomeView: View {
         let contentURL = bestHeroDownloadURL(for: item)?.absoluteString ?? ""
         let posterURL = bestHeroImageURL(for: item).absoluteString
 
+        // 判断壁纸类型：如果有视频 URL 就是视频，否则是图片
+        let wallpaperType: WallpaperType = (item.fullVideoURL != nil || item.previewVideoURL != nil) ? .video : .image
+
         return Wallpaper(
             name: item.title,
             filePath: contentURL,
-            type: .video,
+            type: wallpaperType,
             resolution: bestHeroResolutionLabel(for: item),
             fileSize: item.fileSize ?? 0,
             duration: item.durationSeconds,
@@ -833,6 +872,39 @@ struct HomeView: View {
             return false
         }
         return scheme == "http" || scheme == "https"
+    }
+
+    /// 下载远程缩略图到本地缓存
+    private func downloadThumbnailToLocal(from url: URL) async -> String? {
+        do {
+            var request = URLRequest(url: url)
+            request.timeoutInterval = 10
+            request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36", forHTTPHeaderField: "User-Agent")
+
+            let (data, _) = try await URLSession.shared.data(for: request)
+            guard let image = NSImage(data: data) else { return nil }
+
+            // 保存到缩略图缓存目录
+            let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+            let cacheDir = caches.appendingPathComponent("PlumWallPaper/Thumbnails", isDirectory: true)
+            try? FileManager.default.createDirectory(at: cacheDir, withIntermediateDirectories: true)
+
+            let outputURL = cacheDir.appendingPathComponent(UUID().uuidString).appendingPathExtension("jpg")
+
+            // 转换为 JPEG 并保存
+            guard let tiffData = image.tiffRepresentation,
+                  let bitmap = NSBitmapImageRep(data: tiffData),
+                  let jpegData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.8]) else {
+                return nil
+            }
+
+            try jpegData.write(to: outputURL)
+            NSLog("[HomeView] ✅ 缩略图已下载到本地: \(outputURL.lastPathComponent)")
+            return outputURL.path
+        } catch {
+            NSLog("[HomeView] ❌ 下载缩略图失败: \(error.localizedDescription)")
+            return nil
+        }
     }
 
     // MARK: - Hero 壁纸设置

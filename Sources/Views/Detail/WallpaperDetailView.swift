@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import AVFoundation
+import SwiftData
 
 // MARK: - Artisan Exhibition Hall (Scheme C: Artisan Gallery)
 // 沉浸式壁纸鉴赏厅，UI 仅在鼠标触碰功能区时如雾般浮现。
@@ -111,12 +112,12 @@ private enum LabParticleLayer: String, CaseIterable, Identifiable {
 private let labParticleMaterials = ParticleMaterial.allCases
 
 struct WallpaperDetailView: View {
-    @State var wallpaper: Wallpaper 
+    @State var wallpaper: Wallpaper
     var onPrevious: ((Wallpaper, @escaping (Wallpaper) -> Void) -> Void)? = nil
     var onNext: ((Wallpaper, @escaping (Wallpaper) -> Void) -> Void)? = nil
     var onFavorite: ((Wallpaper) -> Void)? = nil
     var onDownload: ((Wallpaper) -> Void)? = nil
-    
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     
@@ -128,6 +129,8 @@ struct WallpaperDetailView: View {
     @State private var toastMessage: String?
     @State private var showToast = false
     @State private var isNavigatingWallpaper = false
+    @State private var isFavoriteDisplayed = false
+    @State private var fullResolutionContentURL: URL?
     @StateObject private var downloadManager = DownloadManager.shared
 
     // 侧翼导航悬停
@@ -196,10 +199,11 @@ struct WallpaperDetailView: View {
         }
         .overlay { toastOverlay }
         .preferredColorScheme(.dark)
+        .task(id: previewCacheTaskID) {
+            await prepareFullResolutionPreview()
+        }
         .onAppear {
-            if wallpaper.type == .video, let videoURL = wallpaperContentURL {
-                VideoPreloader.shared.preload(url: videoURL)
-            }
+            syncFavoriteDisplayState()
             loadSavedStudioPreset()
         }
     }
@@ -389,9 +393,13 @@ struct WallpaperDetailView: View {
         isNavigatingWallpaper = true
         
         let finish: (Wallpaper) -> Void = { newWallpaper in
-            withAnimation(.galleryEase) { self.wallpaper = newWallpaper }
+            withAnimation(.galleryEase) {
+                self.fullResolutionContentURL = nil
+                self.wallpaper = newWallpaper
+                self.syncFavoriteDisplayState(for: newWallpaper)
+            }
             if newWallpaper.type == .video, let videoURL = url(from: newWallpaper.filePath) {
-                VideoPreloader.shared.preload(url: videoURL)
+                PreviewResourcePipeline.shared.preloadVideo(url: videoURL)
             }
             // 稍作延迟，防止连续疯狂点击导致的逻辑混乱
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -503,10 +511,8 @@ struct WallpaperDetailView: View {
 
     private var artisanMainDock: some View {
         HStack(spacing: 24) {
-            actionCircleButton(icon: wallpaper.isFavorite ? "heart.fill" : "heart", color: wallpaper.isFavorite ? LiquidGlassColors.primaryPink : .white.opacity(0.6)) {
-                wallpaper.isFavorite.toggle()
-                try? modelContext.save()
-                onFavorite?(wallpaper)
+            actionCircleButton(icon: isFavoriteDisplayed ? "heart.fill" : "heart", color: isFavoriteDisplayed ? LiquidGlassColors.primaryPink : .white.opacity(0.6)) {
+                toggleFavorite()
             }
             Button(action: { Task { await applyWallpaper() } }) {
                 HStack(spacing: 16) {
@@ -1333,6 +1339,75 @@ struct WallpaperDetailView: View {
         }.buttonStyle(.plain)
     }
 
+    private var previewCacheTaskID: String {
+        "\(wallpaper.remoteId ?? wallpaper.id.uuidString)|\(wallpaper.filePath)"
+    }
+
+    private func prepareFullResolutionPreview() async {
+        let expectedTaskID = previewCacheTaskID
+        guard let remoteURL = url(from: wallpaper.filePath), remoteURL.isFileURL == false else {
+            fullResolutionContentURL = nil
+            if wallpaper.type == .video, let videoURL = wallpaperContentURL {
+                PreviewResourcePipeline.shared.preloadVideo(url: videoURL)
+            }
+            return
+        }
+
+        if let cached = await PreviewResourcePipeline.shared.cachedFullResolutionURL(for: remoteURL) {
+            fullResolutionContentURL = cached
+            if wallpaper.type == .video {
+                PreviewResourcePipeline.shared.preloadVideo(url: cached)
+            }
+            return
+        }
+
+        if wallpaper.type == .video {
+            PreviewResourcePipeline.shared.preloadVideo(url: remoteURL)
+        }
+
+        do {
+            let cached = try await PreviewResourcePipeline.shared.prepareFullResolutionURL(for: remoteURL)
+            guard previewCacheTaskID == expectedTaskID else { return }
+            fullResolutionContentURL = cached
+            if wallpaper.type == .video {
+                PreviewResourcePipeline.shared.preloadVideo(url: cached)
+            }
+            NSLog("[WallpaperDetailView] ✅ 高清预览缓存就绪: \(cached.lastPathComponent)")
+        } catch {
+            NSLog("[WallpaperDetailView] ⚠️ 高清预览缓存失败，继续使用远程地址: \(error.localizedDescription)")
+        }
+    }
+
+    private func toggleFavorite() {
+        do {
+            let newFavoriteState = try WallpaperFavoriteStore.toggleFavorite(for: wallpaper, in: modelContext)
+            wallpaper.isFavorite = newFavoriteState
+            isFavoriteDisplayed = newFavoriteState
+            showToastMessage(newFavoriteState ? "已加入收藏" : "已取消收藏")
+            NSLog("[WallpaperDetailView] ✅ 收藏状态已保存: \(wallpaper.isFavorite), remoteId: \(wallpaper.remoteId ?? "nil")")
+            onFavorite?(wallpaper)
+            SlideshowScheduler.shared.rebuildPlaylist()
+        } catch {
+            NSLog("[WallpaperDetailView] ❌ 收藏保存失败: \(error.localizedDescription)")
+            showToastMessage("收藏失败: \(error.localizedDescription)")
+        }
+    }
+
+    private func syncFavoriteDisplayState(for target: Wallpaper? = nil) {
+        let current = target ?? wallpaper
+        do {
+            if let persisted = try WallpaperFavoriteStore.persistedWallpaper(for: current, in: modelContext) {
+                isFavoriteDisplayed = persisted.isFavorite
+                current.isFavorite = persisted.isFavorite
+            } else {
+                isFavoriteDisplayed = current.isFavorite
+            }
+        } catch {
+            isFavoriteDisplayed = current.isFavorite
+            NSLog("[WallpaperDetailView] ⚠️ 收藏状态同步失败: \(error.localizedDescription)")
+        }
+    }
+
     private func url(from path: String) -> URL? {
         let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
@@ -1340,8 +1415,16 @@ struct WallpaperDetailView: View {
         return URL(fileURLWithPath: trimmed)
     }
 
-    private var wallpaperContentURL: URL? { url(from: wallpaper.filePath) }
-    private var wallpaperPosterURL: URL? { wallpaper.thumbnailPath.flatMap { url(from: $0) } }
+    private var wallpaperContentURL: URL? {
+        let url = fullResolutionContentURL ?? self.url(from: wallpaper.filePath)
+        if url == nil {
+            NSLog("[WallpaperDetailView] ⚠️ 无法解析 contentURL, filePath: '\(wallpaper.filePath)', type: \(wallpaper.type), source: \(wallpaper.source)")
+        }
+        return url
+    }
+    private var wallpaperPosterURL: URL? {
+        wallpaper.thumbnailPath.flatMap { url(from: $0) }
+    }
 
     private func applyWallpaper() async {
         isApplying = true; defer { isApplying = false }
@@ -1706,11 +1789,68 @@ private struct ArtisanBackgroundLayer: View {
     }
 }
 
+private enum WallpaperFavoriteStore {
+    static func toggleFavorite(for wallpaper: Wallpaper, in modelContext: ModelContext) throws -> Bool {
+        if let persisted = try persistedWallpaper(for: wallpaper, in: modelContext) {
+            if persisted.isFavorite && persisted.source == .online {
+                modelContext.delete(persisted)
+                try modelContext.save()
+                return false
+            }
+
+            persisted.isFavorite.toggle()
+            try modelContext.save()
+            return persisted.isFavorite
+        }
+
+        modelContext.insert(makeOnlineFavoriteCopy(from: wallpaper))
+        try modelContext.save()
+        return true
+    }
+
+    static func persistedWallpaper(for wallpaper: Wallpaper, in modelContext: ModelContext) throws -> Wallpaper? {
+        let wallpaperId = wallpaper.id
+        let idDescriptor = FetchDescriptor<Wallpaper>(
+            predicate: #Predicate<Wallpaper> { $0.id == wallpaperId }
+        )
+        if let exactMatch = try modelContext.fetch(idDescriptor).first {
+            return exactMatch
+        }
+
+        guard let remoteId = wallpaper.remoteId else { return nil }
+        let remoteDescriptor = FetchDescriptor<Wallpaper>(
+            predicate: #Predicate<Wallpaper> { $0.remoteId == remoteId },
+            sortBy: [SortDescriptor(\.importDate, order: .reverse)]
+        )
+        return try modelContext.fetch(remoteDescriptor).first
+    }
+
+    private static func makeOnlineFavoriteCopy(from wallpaper: Wallpaper) -> Wallpaper {
+        Wallpaper(
+            name: wallpaper.name,
+            filePath: wallpaper.filePath,
+            type: wallpaper.type,
+            resolution: wallpaper.resolution,
+            fileSize: wallpaper.fileSize,
+            duration: wallpaper.duration,
+            frameRate: wallpaper.frameRate,
+            hasAudio: wallpaper.hasAudio,
+            thumbnailPath: wallpaper.thumbnailPath,
+            isFavorite: true,
+            source: .online,
+            remoteId: wallpaper.remoteId,
+            remoteSource: wallpaper.remoteSource,
+            downloadQuality: wallpaper.downloadQuality,
+            remoteMetadata: wallpaper.remoteMetadata
+        )
+    }
+}
+
 private struct ArtisanSimpleImage: View {
     let url: URL
     var body: some View {
         if url.isFileURL { if let img = NSImage(contentsOf: url) { Image(nsImage: img).resizable().aspectRatio(contentMode: .fill) } else { Color.black } }
-        else { AsyncImage(url: url) { ph in if let img = ph.image { img.resizable().aspectRatio(contentMode: .fill) } else { Color.black } } }
+        else { RemoteThumbnailImage(urls: [url], contentMode: .fill) }
     }
 }
 
@@ -1734,10 +1874,62 @@ private final class DetailVideoLayerView: NSView {
     func configure(url: URL) {
         guard currentURL != url else { return }; currentURL = url
         if let obs = endObserver { NotificationCenter.default.removeObserver(obs) }; player?.pause()
-        let item = AVPlayerItem(url: url); let p = AVPlayer(playerItem: item); p.isMuted = false; p.volume = 1.0; player = p; playerLayer.player = p; p.play()
-        endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in p.seek(to: .zero); p.play() }
+
+        // 优先使用预加载的 player
+        if let preloadedPlayer = VideoPreloader.shared.getPreloadedPlayer(url: url) {
+            NSLog("[DetailVideoLayerView] 使用预加载播放器: \(url.lastPathComponent)")
+            player = preloadedPlayer
+            playerLayer.player = preloadedPlayer
+            preloadedPlayer.isMuted = false
+            preloadedPlayer.volume = 1.0
+            preloadedPlayer.play()
+
+            if let item = preloadedPlayer.currentItem {
+                endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
+                    preloadedPlayer.seek(to: .zero)
+                    preloadedPlayer.play()
+                }
+            }
+        } else {
+            // 降级：创建新 player，等待就绪后再播放
+            NSLog("[DetailVideoLayerView] 创建新播放器: \(url.lastPathComponent)")
+            let item = AVPlayerItem(url: url)
+            let p = AVPlayer(playerItem: item)
+            p.isMuted = false
+            p.volume = 1.0
+            player = p
+            playerLayer.player = p
+
+            // 等待就绪后再播放
+            Task { @MainActor in
+                await self.waitUntilReadyAndPlay(player: p, item: item)
+            }
+
+            endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
+                p.seek(to: .zero)
+                p.play()
+            }
+        }
     }
     func stop() { if let obs = endObserver { NotificationCenter.default.removeObserver(obs) }; player?.pause(); playerLayer.player = nil; player = nil; currentURL = nil }
+
+    private func waitUntilReadyAndPlay(player: AVPlayer, item: AVPlayerItem) async {
+        let maxAttempts = 50 // 5 秒超时
+        for _ in 0..<maxAttempts {
+            if item.status == .readyToPlay {
+                player.play()
+                NSLog("[DetailVideoLayerView] ✅ 播放器就绪，开始播放")
+                return
+            } else if item.status == .failed {
+                NSLog("[DetailVideoLayerView] ❌ 播放器加载失败: \(item.error?.localizedDescription ?? "unknown")")
+                return
+            }
+            try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+        }
+        NSLog("[DetailVideoLayerView] ⚠️ 播放器超时，强制播放")
+        player.play()
+    }
+
     override func layout() { super.layout(); CATransaction.begin(); CATransaction.setDisableActions(true); playerLayer.frame = bounds; CATransaction.commit() }
 }
 

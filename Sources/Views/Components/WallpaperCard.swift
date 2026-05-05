@@ -44,7 +44,12 @@ struct WallpaperCard: View {
         }
         .buttonStyle(.plain)
         .animation(.gallerySpring, value: isHovered)
-        .onHover { isHovered = $0 }
+        .onHover { hovering in
+            isHovered = hovering
+            if hovering {
+                prefetchFullResolutionPreview()
+            }
+        }
     }
     
     // MARK: - 图片区域 (Gallery Canvas)
@@ -253,5 +258,12 @@ struct WallpaperCard: View {
             return String(format: "%.1fGB", mb / 1024.0)
         }
         return String(format: "%.0fMB", mb)
+    }
+
+    private func prefetchFullResolutionPreview() {
+        guard let url = URL(string: wallpaper.filePath), url.scheme?.hasPrefix("http") == true else { return }
+        Task {
+            await PreviewResourcePipeline.shared.prefetchFullResolution(url: url)
+        }
     }
 }

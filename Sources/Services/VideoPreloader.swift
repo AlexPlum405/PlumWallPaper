@@ -1,6 +1,7 @@
 // Sources/Services/VideoPreloader.swift
 import Foundation
 import AVFoundation
+import AppKit
 
 /// 视频预加载管理器
 class VideoPreloader {
@@ -9,12 +10,19 @@ class VideoPreloader {
     private var preloadedPlayers: [URL: AVPlayer] = [:]
     private var preloadTasks: [URL: Task<Void, Never>] = [:]
     private let queue = DispatchQueue(label: "com.plumwallpaper.videopreloader", qos: .utility)
+    private var maxPreloadCount = 12
 
     private init() {}
 
+    /// 根据内存压力动态调整预加载数量
+    private func adjustPreloadLimit() -> Int {
+        return 12
+    }
+
     /// 批量预加载视频，保留前几个最可能马上被用户看到的项目。
     func preload(urls: [URL], limit: Int = 6) {
-        for url in Array(urls.prefix(limit)) {
+        let actualLimit = min(limit, adjustPreloadLimit())
+        for url in Array(urls.prefix(actualLimit)) {
             preload(url: url)
         }
     }
@@ -118,6 +126,15 @@ class VideoPreloader {
             preloadedPlayers[url] = nil
         }
         return player
+    }
+
+    /// 检查是否已预加载
+    func isPreloaded(url: URL) -> Bool {
+        var result = false
+        queue.sync {
+            result = preloadedPlayers[url] != nil
+        }
+        return result
     }
 
     /// 取消预加载

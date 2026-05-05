@@ -64,7 +64,7 @@ struct MediaExploreView: View {
 
     private func preheatVisibleMediaVideos() {
         let urls = viewModel.mediaItems.compactMap { $0.previewVideoURL ?? $0.fullVideoURL }
-        VideoPreloader.shared.preload(urls: urls, limit: 8)
+        PreviewResourcePipeline.shared.preloadVideos(urls: urls, limit: 8)
     }
 
     // MARK: - Navigation Logic

@@ -332,6 +332,11 @@ struct WallpaperExploreView: View {
         ) {
             ForEach(viewModel.wallpapers) { wallpaper in
                 RemoteWallpaperCard(wallpaper: wallpaper) {
+                    if let url = wallpaper.fullImageURL {
+                        Task {
+                            await PreviewResourcePipeline.shared.prefetchFullResolution(url: url)
+                        }
+                    }
                     detailWallpaper = Wallpaper.from(remote: wallpaper)
                 }
                 .onAppear {

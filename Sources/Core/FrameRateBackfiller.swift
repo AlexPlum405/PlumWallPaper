@@ -11,41 +11,46 @@ final class FrameRateBackfiller {
 
     /// 启动时静默扫描并补全缺失的帧率数据
     func backfillMissingFrameRates(modelContext: ModelContext) {
-        Task.detached(priority: .background) {
+        Task(priority: .background) {
             let descriptor = FetchDescriptor<Wallpaper>(
                 predicate: #Predicate { $0.frameRate == nil }
             )
 
-            let wallpapers: [Wallpaper]
+            let candidates: [FrameRateBackfillCandidate]
             do {
-                let all = try await MainActor.run { try modelContext.fetch(descriptor) }
-                wallpapers = all.filter { $0.type == .video }
+                candidates = try modelContext.fetch(descriptor)
+                    .filter { $0.type == .video }
+                    .map { FrameRateBackfillCandidate(id: $0.id, filePath: $0.filePath) }
             } catch {
                 return
             }
 
-            guard !wallpapers.isEmpty else { return }
+            guard !candidates.isEmpty else { return }
 
-            print("[FrameRateBackfiller] 发现 \(wallpapers.count) 个视频壁纸缺少帧率数据，开始后台扫描...")
+            print("[FrameRateBackfiller] 发现 \(candidates.count) 个视频壁纸缺少帧率数据，开始后台扫描...")
 
-            for wallpaper in wallpapers {
-                guard let frameRate = await self.detectFrameRate(filePath: wallpaper.filePath) else {
+            var updatedCount = 0
+            for candidate in candidates {
+                guard let frameRate = await self.detectFrameRate(filePath: candidate.filePath) else {
                     continue
                 }
 
-                await MainActor.run {
+                let wallpaperId = candidate.id
+                let updateDescriptor = FetchDescriptor<Wallpaper>(
+                    predicate: #Predicate<Wallpaper> { $0.id == wallpaperId }
+                )
+                if let wallpaper = try? modelContext.fetch(updateDescriptor).first {
                     wallpaper.frameRate = Double(frameRate)
+                    updatedCount += 1
                 }
             }
 
-            await MainActor.run {
-                try? modelContext.save()
-                print("[FrameRateBackfiller] 帧率补全完成，已更新 \(wallpapers.count) 个壁纸")
-            }
+            try? modelContext.save()
+            print("[FrameRateBackfiller] 帧率补全完成，已更新 \(updatedCount) 个壁纸")
         }
     }
 
-    private func detectFrameRate(filePath: String) async -> Int? {
+    private nonisolated func detectFrameRate(filePath: String) async -> Int? {
         let url = URL(fileURLWithPath: filePath)
         guard FileManager.default.fileExists(atPath: filePath) else { return nil }
 
@@ -57,4 +62,9 @@ final class FrameRateBackfiller {
         let rate = try? await track.load(.nominalFrameRate)
         return rate.map { Int($0.rounded()) }
     }
+}
+
+private struct FrameRateBackfillCandidate: Sendable {
+    let id: UUID
+    let filePath: String
 }

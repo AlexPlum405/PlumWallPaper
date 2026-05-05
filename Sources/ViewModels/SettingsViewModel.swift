@@ -118,6 +118,7 @@ final class SettingsViewModel {
         VideoCacheManager.shared.clearCache()
         URLCache.shared.removeAllCachedResponses()
         try? await CacheService.shared.clearCache()
+        try? await PreviewResourcePipeline.shared.clearPreviewCache()
         ThumbnailGenerator.shared.cleanCacheIfNeeded(threshold: 0)
     }
 

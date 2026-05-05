@@ -51,6 +51,7 @@ struct RemoteThumbnailImage: View {
             return
         }
 
+        // 先检查内存缓存
         for url in candidateURLs {
             if let cached = RemoteThumbnailImageCache.shared.image(for: url) {
                 phase = .success(cached)
@@ -58,12 +59,22 @@ struct RemoteThumbnailImage: View {
             }
         }
 
+        // 再检查磁盘缓存
+        for url in candidateURLs {
+            if let diskCached = await RemoteThumbnailImageCache.shared.loadFromDisk(url: url) {
+                phase = .success(diskCached)
+                return
+            }
+        }
+
         phase = .loading
 
+        // 最后从网络加载
         for url in candidateURLs {
             do {
                 let image = try await Self.loadImage(from: url)
                 RemoteThumbnailImageCache.shared.store(image, for: url)
+                await RemoteThumbnailImageCache.shared.saveToDisk(image: image, url: url)
                 phase = .success(image)
                 return
             } catch {
@@ -135,6 +146,7 @@ struct RemoteThumbnailImage: View {
         if host.contains("pexels.com") { return "https://www.pexels.com/" }
         if host.contains("pixabay.com") { return "https://pixabay.com/" }
         if host.contains("unsplash.com") { return "https://unsplash.com/" }
+        if host.contains("wallhaven.cc") || host.contains("w.wallhaven.cc") { return "https://wallhaven.cc/" }
         if host.contains("steam") { return "https://steamcommunity.com/" }
         if host.contains("desktophut.com") { return "https://www.desktophut.com/" }
         if host.contains("motionbgs.com") { return "https://motionbgs.com/" }
@@ -160,14 +172,20 @@ struct RemoteThumbnailImage: View {
 }
 
 @MainActor
-private final class RemoteThumbnailImageCache {
+final class RemoteThumbnailImageCache {
     static let shared = RemoteThumbnailImageCache()
 
     private let cache = NSCache<NSURL, NSImage>()
+    private let diskCacheDirectory: URL
 
     private init() {
         cache.countLimit = 240
         cache.totalCostLimit = 80 * 1024 * 1024
+
+        // 初始化磁盘缓存目录
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+        diskCacheDirectory = caches.appendingPathComponent("PlumWallPaper/RemoteThumbnails", isDirectory: true)
+        try? FileManager.default.createDirectory(at: diskCacheDirectory, withIntermediateDirectories: true)
     }
 
     func image(for url: URL) -> NSImage? {
@@ -177,5 +195,66 @@ private final class RemoteThumbnailImageCache {
     func store(_ image: NSImage, for url: URL) {
         let cost = max(1, Int(image.size.width * image.size.height * 4))
         cache.setObject(image, forKey: url as NSURL, cost: cost)
+    }
+
+    /// 从磁盘加载缓存
+    func loadFromDisk(url: URL) async -> NSImage? {
+        let cachePath = diskCachePath(for: url)
+        guard FileManager.default.fileExists(atPath: cachePath.path) else {
+            return nil
+        }
+
+        return await Task.detached(priority: .utility) {
+            guard let image = NSImage(contentsOf: cachePath), image.isValid else {
+                return nil
+            }
+            await MainActor.run {
+                self.store(image, for: url)
+            }
+            return image
+        }.value
+    }
+
+    /// 保存到磁盘
+    func saveToDisk(image: NSImage, url: URL) async {
+        let cachePath = diskCachePath(for: url)
+
+        await Task.detached(priority: .utility) {
+            guard let tiffData = image.tiffRepresentation,
+                  let bitmap = NSBitmapImageRep(data: tiffData),
+                  let jpegData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.85]) else {
+                return
+            }
+
+            try? jpegData.write(to: cachePath)
+        }.value
+    }
+
+    /// 清理磁盘缓存
+    func cleanDiskCache(olderThan days: Int = 30) {
+        Task.detached(priority: .utility) {
+            let fm = FileManager.default
+            guard let files = try? fm.contentsOfDirectory(at: self.diskCacheDirectory, includingPropertiesForKeys: [.contentModificationDateKey]) else {
+                return
+            }
+
+            let cutoffDate = Date().addingTimeInterval(-Double(days * 24 * 3600))
+            for file in files {
+                guard let values = try? file.resourceValues(forKeys: [.contentModificationDateKey]),
+                      let modDate = values.contentModificationDate,
+                      modDate < cutoffDate else {
+                    continue
+                }
+                try? fm.removeItem(at: file)
+            }
+        }
+    }
+
+    private func diskCachePath(for url: URL) -> URL {
+        let hash = url.absoluteString.data(using: .utf8)!
+            .base64EncodedString()
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "+", with: "-")
+        return diskCacheDirectory.appendingPathComponent(hash).appendingPathExtension("jpg")
     }
 }

@@ -7,6 +7,7 @@ struct MyLibraryView: View {
     @State var viewModel = LibraryViewModel()
     @Environment(\.modelContext) private var modelContext
     @Query private var existingTags: [Tag]
+    @Query private var allWallpapers: [Wallpaper]  // 直接监听 SwiftData 变化
     @State var isEditMode = false
     @State var selectedIDs = Set<UUID>()
     @State var toast: ToastConfig?
@@ -31,10 +32,28 @@ struct MyLibraryView: View {
                             ZStack(alignment: .topTrailing) {
                                 WallpaperCard(wallpaper: wallpaper) {
                                     if isEditMode { toggleSelection(wallpaper.id) }
-                                    else { detailWallpaper = wallpaper }
+                                    else {
+                                        // 点击时立即预加载
+                                        if wallpaper.type == .video {
+                                            let url = wallpaper.filePath.hasPrefix("http") ? URL(string: wallpaper.filePath) : URL(fileURLWithPath: wallpaper.filePath)
+                                            if let url = url {
+                                                PreviewResourcePipeline.shared.preloadVideo(url: url)
+                                            }
+                                        }
+                                        detailWallpaper = wallpaper
+                                    }
                                 }
                                 .scaleEffect(isEditMode ? 0.94 : 1.0)
                                 .animation(.gallerySpring, value: isEditMode)
+                                .onHover { isHovering in
+                                    // hover 时预加载视频
+                                    if isHovering && wallpaper.type == .video {
+                                        let url = wallpaper.filePath.hasPrefix("http") ? URL(string: wallpaper.filePath) : URL(fileURLWithPath: wallpaper.filePath)
+                                        if let url = url {
+                                            PreviewResourcePipeline.shared.preloadVideo(url: url)
+                                        }
+                                    }
+                                }
 
                                 if isEditMode {
                                     artisanSelectionIndicator(for: wallpaper.id)
@@ -51,6 +70,22 @@ struct MyLibraryView: View {
         .background(LiquidGlassColors.deepBackground)
         .onAppear {
             viewModel.configure(modelContext: modelContext)
+            preloadVisibleVideos()
+
+            // 调试日志
+            NSLog("[MyLibraryView] onAppear - 总壁纸数: \(allWallpapers.count)")
+            let favoriteCount = allWallpapers.filter { $0.isFavorite }.count
+            let onlineCount = allWallpapers.filter { $0.source == .online }.count
+            let onlineFavoriteCount = allWallpapers.filter { $0.source == .online && $0.isFavorite }.count
+            NSLog("[MyLibraryView] 收藏数: \(favoriteCount), 在线数: \(onlineCount), 在线收藏数: \(onlineFavoriteCount)")
+            NSLog("[MyLibraryView] 当前筛选: typeFilter=\(viewModel.typeFilter.rawValue), sourceFilter=\(viewModel.sourceFilter.rawValue)")
+            NSLog("[MyLibraryView] 筛选后壁纸数: \(filteredWallpapers.count)")
+        }
+        .onChange(of: allWallpapers) { oldValue, newValue in
+            NSLog("[MyLibraryView] allWallpapers 变化: \(oldValue.count) -> \(newValue.count)")
+        }
+        .onChange(of: filteredWallpapers) { _, _ in
+            preloadVisibleVideos()
         }
         .sheet(isPresented: $showImportSheet) { ImportWallpaperSheet(viewModel: viewModel, toast: $toast) }
         .sheet(isPresented: $showTagManager) { TagManagerSheet() }
@@ -62,12 +97,6 @@ struct MyLibraryView: View {
                 },
                 onNext: { current, callback in
                     callback(getNavigateWallpaper(current: current, direction: 1))
-                },
-                onFavorite: { _ in
-                    viewModel.loadWallpapers()
-                },
-                onDownload: { _ in
-                    viewModel.loadWallpapers()
                 }
             )
         }
@@ -275,7 +304,41 @@ struct MyLibraryView: View {
 
     // MARK: - Computed Properties
     private var filteredWallpapers: [Wallpaper] {
-        viewModel.filteredWallpapers
+        var result = allWallpapers
+
+        // 1. Apply type filter
+        switch viewModel.typeFilter {
+        case .all:
+            break
+        case .image:
+            result = result.filter { $0.type == .image || $0.type == .heic }
+        case .video:
+            result = result.filter { $0.type == .video }
+        }
+
+        // 2. Apply source filter
+        switch viewModel.sourceFilter {
+        case .favorites:
+            result = result.filter { $0.isFavorite }
+        case .downloaded:
+            result = result.filter { $0.source == .downloaded }
+        case .imported:
+            result = result.filter { $0.source == .imported }
+        }
+
+        // 3. Apply search filter
+        if !viewModel.searchText.isEmpty {
+            result = result.filter { $0.name.localizedCaseInsensitiveContains(viewModel.searchText) }
+        }
+
+        // 4. Apply tag filter
+        if let tagFilter = viewModel.selectedTagFilter {
+            result = result.filter { wallpaper in
+                wallpaper.tags.contains { $0.name == tagFilter }
+            }
+        }
+
+        return result
     }
 
     private func getNavigateWallpaper(current: Wallpaper, direction: Int) -> Wallpaper {
@@ -288,6 +351,23 @@ struct MyLibraryView: View {
 
         let newIndex = (currentIndex + direction + wallpapers.count) % wallpapers.count
         return wallpapers[newIndex]
+    }
+
+    /// 预加载可见区域的视频
+    private func preloadVisibleVideos() {
+        let videoWallpapers = filteredWallpapers.filter { $0.type == .video }
+        let urls = videoWallpapers.prefix(12).compactMap { wallpaper -> URL? in
+            if wallpaper.filePath.hasPrefix("http") {
+                return URL(string: wallpaper.filePath)
+            } else {
+                return URL(fileURLWithPath: wallpaper.filePath)
+            }
+        }
+
+        if !urls.isEmpty {
+            NSLog("[MyLibraryView] 预加载 \(urls.count) 个视频")
+            PreviewResourcePipeline.shared.preloadVideos(urls: urls, limit: 12)
+        }
     }
 
     // MARK: - Actions
