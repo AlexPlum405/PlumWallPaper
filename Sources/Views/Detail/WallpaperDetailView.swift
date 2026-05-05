@@ -19,7 +19,6 @@ struct WallpaperDetailView: View {
     // 状态驱动
     @State internal var isStudioActive = false      
     @State internal var studioTab = 0               
-    @State internal var isApplying = false           
     @State private var toastMessage: String?
     @State private var showToast = false
     @State private var isNavigatingWallpaper = false
@@ -386,7 +385,7 @@ struct WallpaperDetailView: View {
     private var artisanMainDock: some View {
         DetailActionDock(
             isFavorite: viewModel.isFavoriteDisplayed,
-            isApplying: isApplying,
+            isApplying: viewModel.isApplying,
             isStudioActive: isStudioActive,
             isDownloading: viewModel.isDownloading,
             onFavorite: toggleFavorite,
@@ -813,74 +812,14 @@ struct WallpaperDetailView: View {
     }
 
     private func applyWallpaper() async {
-        isApplying = true; defer { isApplying = false }
         do {
-            let effects = currentRenderEffects
-            let localWallpaper = try await ensureLocalWallpaperForApply()
-            if localWallpaper.type == .video {
-                let videoURL = URL(fileURLWithPath: localWallpaper.filePath)
-                try await RenderPipeline.shared.setWallpaper(url: videoURL, wallpaperId: localWallpaper.id, effects: effects)
-            } else {
-                let imageURL = URL(fileURLWithPath: localWallpaper.filePath)
-                let renderedURL = try WallpaperRenderEffectRenderer.renderImage(sourceURL: imageURL, effects: effects)
-                if effects.hasDynamicEnvironment {
-                    try await RenderPipeline.shared.setImageWallpaper(url: renderedURL, wallpaperId: localWallpaper.id, effects: effects)
-                } else {
-                    RenderPipeline.shared.cleanup()
-                    try await MainActor.run { try WallpaperSetter.shared.setWallpaper(imageURL: renderedURL) }
-                }
+            let result = try await viewModel.applyWallpaper(wallpaper, effects: currentRenderEffects, in: modelContext)
+            wallpaper = result.wallpaper
+            if let downloaded = result.downloadedWallpaper {
+                onDownload?(downloaded)
             }
-            if effects.hasDynamicEnvironment {
-                showToastMessage("已应用基础调校，动态天气/粒子已保存")
-            } else {
-                showToastMessage("设置成功")
-            }
+            showToastMessage(result.message)
         } catch { showToastMessage("失败: \(error.localizedDescription)") }
-    }
-
-    private func ensureLocalWallpaperForApply() async throws -> Wallpaper {
-        if !isRemotePath(wallpaper.filePath), FileManager.default.fileExists(atPath: wallpaper.filePath) {
-            return wallpaper
-        }
-
-        if let remoteId = wallpaper.remoteId,
-           let downloaded = DownloadManager.shared.isAlreadyDownloaded(remoteId: remoteId, context: modelContext) {
-            wallpaper = downloaded
-            return downloaded
-        }
-
-        guard let remoteURL = remoteDownloadURLForApply else {
-            throw NSError(domain: "PlumWallPaper", code: 1, userInfo: [NSLocalizedDescriptionKey: "找不到可下载的远程地址"])
-        }
-
-        let downloaded = try await DownloadManager.shared.downloadWallpaper(
-            item: .local(wallpaper),
-            quality: wallpaper.resolution ?? "Original",
-            downloadURL: remoteURL,
-            context: modelContext
-        )
-        wallpaper = downloaded
-        onDownload?(downloaded)
-        return downloaded
-    }
-
-    private var remoteDownloadURLForApply: URL? {
-        let preferredPath = highQualityVideoPathForApply ?? wallpaper.filePath
-        guard isRemotePath(preferredPath) else { return nil }
-        return URL(string: preferredPath)
-    }
-
-    private var highQualityVideoPathForApply: String? {
-        guard wallpaper.type == .video,
-              let quality = wallpaper.downloadQuality,
-              isRemotePath(quality)
-        else { return nil }
-        return quality
-    }
-
-    private func isRemotePath(_ path: String) -> Bool {
-        guard let url = URL(string: path), let scheme = url.scheme?.lowercased() else { return false }
-        return scheme == "http" || scheme == "https"
     }
 
     private func downloadWallpaper() async {
