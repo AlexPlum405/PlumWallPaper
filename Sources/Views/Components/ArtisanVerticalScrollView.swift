@@ -10,11 +10,13 @@ struct ArtisanVerticalScrollView<Content: View>: View {
     @State private var contentHeight: CGFloat = 0
     @State private var scrollOffset: CGFloat = 0
     @State private var isHovering = false
+    @State private var isRecentlyScrolling = false
+    @State private var scrollPulseTask: Task<Void, Never>?
 
     init(
         topInset: CGFloat = 104,
         bottomInset: CGFloat = 44,
-        trailingInset: CGFloat = 16,
+        trailingInset: CGFloat = 28,
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.topInset = topInset
@@ -53,7 +55,11 @@ struct ArtisanVerticalScrollView<Content: View>: View {
                 }
             }
             .onPreferenceChange(ArtisanScrollOffsetPreferenceKey.self) { value in
-                scrollOffset = max(0, -value)
+                let nextOffset = max(0, -value)
+                if abs(nextOffset - scrollOffset) > 0.5 {
+                    markRecentlyScrolling()
+                }
+                scrollOffset = nextOffset
             }
             .onPreferenceChange(ArtisanScrollContentHeightPreferenceKey.self) { value in
                 contentHeight = value
@@ -72,19 +78,20 @@ struct ArtisanVerticalScrollView<Content: View>: View {
         let trackHeight = max(0, viewportHeight - topInset - bottomInset)
 
         if overflow > 1, trackHeight > 48 {
+            let isActive = isHovering || isRecentlyScrolling
             let progress = min(max(scrollOffset / overflow, 0), 1)
             let thumbHeight = min(trackHeight, max(48, trackHeight * viewportHeight / max(contentHeight, viewportHeight)))
             let thumbOffset = (trackHeight - thumbHeight) * progress
-            let trackWidth: CGFloat = isHovering ? 7 : 4
-            let visibleOpacity: Double = isHovering ? 1 : 0.7
+            let trackWidth: CGFloat = isActive ? 10 : 7
+            let visibleOpacity: Double = isActive ? 1 : 0.86
 
             VStack(spacing: 0) {
                 ZStack(alignment: .top) {
                     Capsule(style: .continuous)
-                        .fill(Color.white.opacity(isHovering ? 0.055 : 0.028))
+                        .fill(Color.white.opacity(isActive ? 0.10 : 0.065))
                         .overlay {
                             Capsule(style: .continuous)
-                                .stroke(Color.white.opacity(isHovering ? 0.10 : 0.055), lineWidth: 0.5)
+                                .stroke(Color.white.opacity(isActive ? 0.18 : 0.10), lineWidth: 0.5)
                         }
                         .frame(width: trackWidth, height: trackHeight)
 
@@ -92,8 +99,8 @@ struct ArtisanVerticalScrollView<Content: View>: View {
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    Color.white.opacity(isHovering ? 0.50 : 0.34),
-                                    LiquidGlassColors.primaryPink.opacity(isHovering ? 0.62 : 0.42)
+                                    Color.white.opacity(isActive ? 0.76 : 0.58),
+                                    LiquidGlassColors.primaryPink.opacity(isActive ? 0.82 : 0.64)
                                 ],
                                 startPoint: .top,
                                 endPoint: .bottom
@@ -101,20 +108,36 @@ struct ArtisanVerticalScrollView<Content: View>: View {
                         )
                         .overlay {
                             Capsule(style: .continuous)
-                                .stroke(Color.white.opacity(isHovering ? 0.18 : 0.10), lineWidth: 0.5)
+                                .stroke(Color.white.opacity(isActive ? 0.28 : 0.18), lineWidth: 0.5)
                         }
                         .frame(width: trackWidth, height: thumbHeight)
                         .offset(y: thumbOffset)
-                        .shadow(color: LiquidGlassColors.primaryPink.opacity(isHovering ? 0.18 : 0.08), radius: 10, y: 4)
+                        .shadow(color: LiquidGlassColors.primaryPink.opacity(isActive ? 0.28 : 0.14), radius: 12, y: 5)
                 }
-                .frame(width: 18, height: trackHeight, alignment: .top)
+                .frame(width: 24, height: trackHeight, alignment: .top)
 
                 Spacer(minLength: 0)
             }
             .padding(.top, topInset)
             .padding(.bottom, bottomInset)
             .opacity(visibleOpacity)
-            .animation(.easeInOut(duration: 0.18), value: isHovering)
+            .animation(.easeInOut(duration: 0.18), value: isActive)
+        }
+    }
+
+    private func markRecentlyScrolling() {
+        scrollPulseTask?.cancel()
+        withAnimation(.easeInOut(duration: 0.12)) {
+            isRecentlyScrolling = true
+        }
+        scrollPulseTask = Task {
+            try? await Task.sleep(nanoseconds: 900_000_000)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                withAnimation(.easeInOut(duration: 0.28)) {
+                    isRecentlyScrolling = false
+                }
+            }
         }
     }
 }
