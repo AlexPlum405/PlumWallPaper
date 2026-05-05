@@ -34,8 +34,7 @@ struct MyLibraryView: View {
                         ForEach(filteredWallpapers) { wallpaper in
                             ZStack(alignment: .topTrailing) {
                                 WallpaperCard(wallpaper: wallpaper) {
-                                    if isEditMode { toggleSelection(wallpaper.id) }
-                                    else {
+                                    if !isEditMode {
                                         // 点击时立即预加载
                                         if wallpaper.type == .video {
                                             let url = wallpaper.filePath.hasPrefix("http") ? URL(string: wallpaper.filePath) : URL(fileURLWithPath: wallpaper.filePath)
@@ -49,7 +48,6 @@ struct MyLibraryView: View {
                                 .scaleEffect(isEditMode ? 0.94 : 1.0)
                                 .animation(.gallerySpring, value: isEditMode)
                                 .background(cardFrameReader(for: wallpaper.id))
-                                .gesture(dragSelectionGesture(for: wallpaper.id), including: isEditMode ? .gesture : .none)
                                 .onHover { isHovering in
                                     // hover 时预加载视频
                                     if isHovering && wallpaper.type == .video {
@@ -61,8 +59,12 @@ struct MyLibraryView: View {
                                 }
 
                                 if isEditMode {
+                                    cardSelectionOverlay(for: wallpaper.id)
+
                                     artisanSelectionIndicator(for: wallpaper.id)
-                                        .padding(16).transition(.scale.combined(with: .opacity))
+                                        .padding(16)
+                                        .allowsHitTesting(false)
+                                        .transition(.scale.combined(with: .opacity))
                                 }
                             }
                         }
@@ -437,18 +439,18 @@ struct MyLibraryView: View {
         }
     }
 
-    private func dragSelectionGesture(for id: UUID) -> some Gesture {
-        LongPressGesture(minimumDuration: 0.22, maximumDistance: 8)
-            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("libraryGrid")))
+    private func cardSelectionOverlay(for id: UUID) -> some View {
+        Rectangle()
+            .fill(Color.clear)
+            .contentShape(Rectangle())
+            .gesture(dragSelectionGesture(startingAt: id))
+    }
+
+    private func dragSelectionGesture(startingAt id: UUID) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .named("libraryGrid"))
             .onChanged { value in
-                switch value {
-                case .first(true):
-                    beginDragSelection(from: id)
-                case .second(true, let drag?):
-                    updateDragSelection(at: drag.location)
-                default:
-                    break
-                }
+                beginDragSelection(from: id)
+                updateDragSelection(at: value.location)
             }
             .onEnded { _ in
                 isDragSelecting = false

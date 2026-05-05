@@ -11,7 +11,7 @@ Covered behavior:
 - `全选` selects every wallpaper currently visible under the active filters.
 - When all visible wallpapers are selected, the action changes to `清空`.
 - `清空` clears the selected visible wallpapers.
-- Long-press drag selection selects or deselects cards crossed by the drag path.
+- Mouse or trackpad drag selection selects or deselects cards crossed by the drag path.
 - Existing batch delete and batch remove favorite actions still operate on `selectedIDs`.
 
 Not covered by this smoke:
@@ -62,9 +62,9 @@ Expected process path:
 7. Confirm the button text changes to `清空`.
 8. Click `清空`.
 9. Confirm the visible cards are no longer selected.
-10. Long-press one card and drag across adjacent cards.
+10. Press one card and drag across adjacent cards with the mouse or trackpad.
 11. Confirm crossed cards select together.
-12. Long-press a selected card and drag across selected cards.
+12. Press a selected card and drag across selected cards with the mouse or trackpad.
 13. Confirm crossed cards deselect together.
 14. Click `完成`.
 15. Confirm edit mode exits and selection clears.
