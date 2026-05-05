@@ -25,8 +25,8 @@ struct WallpaperDetailView: View {
     @State private var showToast = false
     @State private var isNavigatingWallpaper = false
     @State private var isFavoriteDisplayed = false
-    @State private var fullResolutionContentURL: URL?
     @StateObject private var downloadManager = DownloadManager.shared
+    @StateObject private var viewModel = WallpaperDetailViewModel()
 
     // 侧翼导航悬停
     @State internal var isLeftEdgeHovered = false
@@ -95,7 +95,7 @@ struct WallpaperDetailView: View {
         .overlay { toastOverlay }
         .preferredColorScheme(.dark)
         .task(id: previewCacheTaskID) {
-            await prepareFullResolutionPreview()
+            await viewModel.prepareFullResolutionPreview(for: wallpaper)
         }
         .onAppear {
             syncFavoriteDisplayState()
@@ -270,11 +270,11 @@ struct WallpaperDetailView: View {
         
         let finish: (Wallpaper) -> Void = { newWallpaper in
             withAnimation(.galleryEase) {
-                self.fullResolutionContentURL = nil
+                self.viewModel.resetPreview()
                 self.wallpaper = newWallpaper
                 self.syncFavoriteDisplayState(for: newWallpaper)
             }
-            if newWallpaper.type == .video, let videoURL = url(from: newWallpaper.filePath) {
+            if newWallpaper.type == .video, let videoURL = WallpaperDetailViewModel.url(from: newWallpaper.filePath) {
                 PreviewResourcePipeline.shared.preloadVideo(url: videoURL)
             }
             // 稍作延迟，防止连续疯狂点击导致的逻辑混乱
@@ -791,42 +791,7 @@ struct WallpaperDetailView: View {
     }
 
     private var previewCacheTaskID: String {
-        "\(wallpaper.remoteId ?? wallpaper.id.uuidString)|\(wallpaper.filePath)"
-    }
-
-    private func prepareFullResolutionPreview() async {
-        let expectedTaskID = previewCacheTaskID
-        guard let remoteURL = url(from: wallpaper.filePath), remoteURL.isFileURL == false else {
-            fullResolutionContentURL = nil
-            if wallpaper.type == .video, let videoURL = wallpaperContentURL {
-                PreviewResourcePipeline.shared.preloadVideo(url: videoURL)
-            }
-            return
-        }
-
-        if let cached = await PreviewResourcePipeline.shared.cachedFullResolutionURL(for: remoteURL) {
-            fullResolutionContentURL = cached
-            if wallpaper.type == .video {
-                PreviewResourcePipeline.shared.preloadVideo(url: cached)
-            }
-            return
-        }
-
-        if wallpaper.type == .video {
-            PreviewResourcePipeline.shared.preloadVideo(url: remoteURL)
-        }
-
-        do {
-            let cached = try await PreviewResourcePipeline.shared.prepareFullResolutionURL(for: remoteURL)
-            guard previewCacheTaskID == expectedTaskID else { return }
-            fullResolutionContentURL = cached
-            if wallpaper.type == .video {
-                PreviewResourcePipeline.shared.preloadVideo(url: cached)
-            }
-            NSLog("[WallpaperDetailView] ✅ 高清预览缓存就绪: \(cached.lastPathComponent)")
-        } catch {
-            NSLog("[WallpaperDetailView] ⚠️ 高清预览缓存失败，继续使用远程地址: \(error.localizedDescription)")
-        }
+        WallpaperDetailViewModel.previewTaskID(for: wallpaper)
     }
 
     private func toggleFavorite() {
@@ -859,22 +824,12 @@ struct WallpaperDetailView: View {
         }
     }
 
-    private func url(from path: String) -> URL? {
-        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-        if let url = URL(string: trimmed), url.scheme != nil { return url }
-        return URL(fileURLWithPath: trimmed)
+    private var wallpaperContentURL: URL? {
+        viewModel.contentURL(for: wallpaper)
     }
 
-    private var wallpaperContentURL: URL? {
-        let url = fullResolutionContentURL ?? self.url(from: wallpaper.filePath)
-        if url == nil {
-            NSLog("[WallpaperDetailView] ⚠️ 无法解析 contentURL, filePath: '\(wallpaper.filePath)', type: \(wallpaper.type), source: \(wallpaper.source)")
-        }
-        return url
-    }
     private var wallpaperPosterURL: URL? {
-        wallpaper.thumbnailPath.flatMap { url(from: $0) }
+        viewModel.posterURL(for: wallpaper)
     }
 
     private func applyWallpaper() async {
