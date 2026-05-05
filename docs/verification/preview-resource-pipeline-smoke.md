@@ -61,6 +61,7 @@ Expected process path:
 8. Open a Wallhaven static detail and confirm it does not show a blank canvas.
 9. Switch to Media Explore.
 10. Open a video detail and confirm playback still starts after loading.
+11. Confirm Static Explore and Media Explore show vertical scrollbars when content is taller than the viewport.
 
 ## Regression Checks
 

@@ -10,7 +10,7 @@ struct MediaExploreView: View {
     let mainPadding: CGFloat = 88
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
+        ScrollView(showsIndicators: true) {
             VStack(alignment: .leading, spacing: 48) {
                 // 1. 顶部筛选区域
                 artisanFilterSection

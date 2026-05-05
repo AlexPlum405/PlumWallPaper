@@ -12,6 +12,8 @@ Covered behavior:
 - When all visible wallpapers are selected, the action changes to `清空`.
 - `清空` clears the selected visible wallpapers.
 - Mouse or trackpad drag selection selects or deselects cards crossed by the drag path.
+- Drag selection behaves as a range from the first pressed card to the current card, so dragging back shrinks the active range.
+- The local library list shows a vertical scrollbar when content is taller than the viewport.
 - Existing batch delete and batch remove favorite actions still operate on `selectedIDs`.
 
 Not covered by this smoke:
@@ -63,11 +65,14 @@ Expected process path:
 8. Click `清空`.
 9. Confirm the visible cards are no longer selected.
 10. Press one card and drag across adjacent cards with the mouse or trackpad.
-11. Confirm crossed cards select together.
-12. Press a selected card and drag across selected cards with the mouse or trackpad.
-13. Confirm crossed cards deselect together.
-14. Click `完成`.
-15. Confirm edit mode exits and selection clears.
+11. Confirm the continuous range from the first card to the current card selects together.
+12. Drag back toward the first card before releasing.
+13. Confirm the active selection range shrinks.
+14. Press a selected card and drag across selected cards with the mouse or trackpad.
+15. Confirm the continuous range from the first card to the current card deselects together.
+16. Confirm a vertical scrollbar appears when the local list has more items than fit onscreen.
+17. Click `完成`.
+18. Confirm edit mode exits and selection clears.
 
 ## Regression Checks
 

@@ -17,11 +17,13 @@ struct MyLibraryView: View {
     @State var detailWallpaper: Wallpaper?
     @State private var cardFrames: [UUID: CGRect] = [:]
     @State private var isDragSelecting = false
+    @State private var dragSelectionAnchorID: UUID?
+    @State private var dragSelectionBaseIDs = Set<UUID>()
     @State private var dragSelectionShouldSelect = true
     let mainPadding: CGFloat = 88
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
+        ScrollView(showsIndicators: true) {
             VStack(alignment: .leading, spacing: 40) {
                 // 1. 双层筛选工具栏
                 artisanLibraryToolbar
@@ -97,6 +99,7 @@ struct MyLibraryView: View {
         }
         .onChange(of: filteredWallpapers) { _, _ in
             preloadVisibleVideos()
+            resetDragSelection()
         }
         .sheet(isPresented: $showImportSheet) { ImportWallpaperSheet(viewModel: viewModel, toast: $toast) }
         .sheet(isPresented: $showTagManager) { TagManagerSheet() }
@@ -453,7 +456,7 @@ struct MyLibraryView: View {
                 updateDragSelection(at: value.location)
             }
             .onEnded { _ in
-                isDragSelecting = false
+                resetDragSelection()
             }
     }
 
@@ -462,26 +465,61 @@ struct MyLibraryView: View {
 
         if !isDragSelecting {
             isDragSelecting = true
+            dragSelectionAnchorID = id
+            dragSelectionBaseIDs = selectedIDs
             dragSelectionShouldSelect = !selectedIDs.contains(id)
         }
 
-        applyDragSelection(to: id)
+        updateRangeSelection(to: id)
     }
 
     private func updateDragSelection(at location: CGPoint) {
         guard isEditMode, isDragSelecting else { return }
-        let visibleIDs = visibleWallpaperIDs
-        for (id, frame) in cardFrames where visibleIDs.contains(id) && frame.insetBy(dx: -8, dy: -8).contains(location) {
-            applyDragSelection(to: id)
-        }
+        guard let id = cardID(at: location) else { return }
+        updateRangeSelection(to: id)
     }
 
-    private func applyDragSelection(to id: UUID) {
-        if dragSelectionShouldSelect {
-            selectedIDs.insert(id)
-        } else {
-            selectedIDs.remove(id)
+    private func cardID(at location: CGPoint) -> UUID? {
+        let visibleIDs = visibleWallpaperIDs
+        if let directHit = cardFrames.first(where: { id, frame in
+            visibleIDs.contains(id) && frame.insetBy(dx: -18, dy: -18).contains(location)
+        })?.key {
+            return directHit
         }
+
+        return cardFrames
+            .filter { visibleIDs.contains($0.key) }
+            .min { lhs, rhs in
+                lhs.value.distance(to: location) < rhs.value.distance(to: location)
+            }
+            .flatMap { entry in
+                entry.value.distance(to: location) <= 96 ? entry.key : nil
+            }
+    }
+
+    private func updateRangeSelection(to currentID: UUID) {
+        guard let anchorID = dragSelectionAnchorID,
+              let anchorIndex = filteredWallpapers.firstIndex(where: { $0.id == anchorID }),
+              let currentIndex = filteredWallpapers.firstIndex(where: { $0.id == currentID })
+        else { return }
+
+        let range = min(anchorIndex, currentIndex)...max(anchorIndex, currentIndex)
+        let rangeIDs = Set(filteredWallpapers[range].map(\.id))
+        var nextSelection = dragSelectionBaseIDs
+
+        if dragSelectionShouldSelect {
+            nextSelection.formUnion(rangeIDs)
+        } else {
+            nextSelection.subtract(rangeIDs)
+        }
+
+        selectedIDs = nextSelection
+    }
+
+    private func resetDragSelection() {
+        isDragSelecting = false
+        dragSelectionAnchorID = nil
+        dragSelectionBaseIDs.removeAll()
     }
 
     private func batchDelete() {
@@ -512,5 +550,13 @@ private struct LibraryCardFramePreferenceKey: PreferenceKey {
 
     static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
         value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
+}
+
+private extension CGRect {
+    func distance(to point: CGPoint) -> CGFloat {
+        let dx = max(minX - point.x, 0, point.x - maxX)
+        let dy = max(minY - point.y, 0, point.y - maxY)
+        return hypot(dx, dy)
     }
 }
