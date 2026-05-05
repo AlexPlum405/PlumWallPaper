@@ -103,10 +103,18 @@ actor MediaService {
 
             // 尝试提取图片和视频 URL
             var thumbnailURL: URL?
+            var posterURL: URL?
             var previewVideoURL: URL?
             var fullVideoURL: URL?
 
-            // 1. 优先从 picture > source 的 srcset 提取文件名，然后构建 4K 图片和预览视频 URL
+            // 1. 优先使用页面提供的裁剪缩略图。卡片只需要小图，直接拉 4K 原图会让 AsyncImage 在滚动中频繁失败/取消。
+            if let img = try? element.select("img").first(),
+               let src = try? img.attr("src"),
+               !src.isEmpty {
+                thumbnailURL = absoluteURL(for: src)
+            }
+
+            // 2. 从 picture > source 的 srcset 提取文件名，然后构建高清 poster 和预览视频 URL
             if let picture = try? element.select("picture").first() {
                 if let source = try? picture.select("source").first(),
                    let srcset = try? source.attr("srcset"),
@@ -124,8 +132,8 @@ actor MediaService {
                             .replacingOccurrences(of: ".3840x2160.jpg", with: "")
                             .replacingOccurrences(of: ".jpg", with: "")
 
-                        // 构建 4K 图片 URL
-                        thumbnailURL = baseURL.appendingPathComponent(cleanPath + ".3840x2160.jpg")
+                        // 构建高清 poster URL，详情页/首页 Hero 可以用；列表卡片仍使用页面裁剪缩略图。
+                        posterURL = baseURL.appendingPathComponent(cleanPath + ".3840x2160.jpg")
 
                         // 构建预览视频 URL - 使用 1080p 以平衡质量和性能
                         previewVideoURL = baseURL.appendingPathComponent(cleanPath + ".1920x1080.mp4")
@@ -133,38 +141,40 @@ actor MediaService {
                         // 构建完整 4K 视频 URL
                         fullVideoURL = baseURL.appendingPathComponent(cleanPath + ".3840x2160.mp4")
 
-                        NSLog("[MediaService] 构建 4K 图片: \(thumbnailURL?.absoluteString ?? "nil")")
+                        NSLog("[MediaService] 构建高清 poster: \(posterURL?.absoluteString ?? "nil")")
                         NSLog("[MediaService] 构建 1080p 视频: \(previewVideoURL?.absoluteString ?? "nil")")
                         NSLog("[MediaService] 构建 4K 视频: \(fullVideoURL?.absoluteString ?? "nil")")
                     }
                 }
             }
 
-            // 2. 回退到 img 标签
+            // 3. 如果没有 img.src，回退到 JPEG srcset 里的裁剪图，最后再用高清 poster。
             if thumbnailURL == nil {
-                if let img = try? element.select("img").first(),
-                   let src = try? img.attr("src") {
-                    if src.hasPrefix("http") {
-                        thumbnailURL = URL(string: src)
-                    } else if src.hasPrefix("/") {
-                        thumbnailURL = baseURL.appendingPathComponent(src)
-                    } else {
-                        thumbnailURL = baseURL.appendingPathComponent("/\(src)")
-                    }
+                if let source = try? element.select("picture source[type='image/jpeg']").last(),
+                   let srcset = try? source.attr("srcset"),
+                   let src = srcset.components(separatedBy: " ").first,
+                   !src.isEmpty {
+                    thumbnailURL = absoluteURL(for: src)
                 }
             }
+
+            guard let resolvedThumbnailURL = thumbnailURL ?? posterURL else {
+                NSLog("[MediaService] 跳过无缩略图项目: \(cleanTitle)")
+                continue
+            }
+            let resolvedPosterURL = posterURL ?? resolvedThumbnailURL
 
             let item = MediaItem(
                 slug: slug,
                 title: cleanTitle,
                 pageURL: baseURL.appendingPathComponent(href),
-                thumbnailURL: thumbnailURL ?? baseURL,
+                thumbnailURL: resolvedThumbnailURL,
                 resolutionLabel: "4K",
                 collectionTitle: nil,
                 summary: nil,
                 previewVideoURL: previewVideoURL,
                 fullVideoURL: fullVideoURL,
-                posterURL: thumbnailURL,
+                posterURL: resolvedPosterURL,
                 tags: [],
                 exactResolution: "3840x2160",
                 durationSeconds: nil,
@@ -302,6 +312,10 @@ actor MediaService {
             .replacingOccurrences(of: " - MotionBGs", with: "", options: [.caseInsensitive])
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .htmlDecoded
+    }
+
+    private func absoluteURL(for value: String) -> URL? {
+        URL(string: value, relativeTo: baseURL)?.absoluteURL
     }
 
     private func capture(match: NSTextCheckingResult, in text: String, at index: Int) -> String? {

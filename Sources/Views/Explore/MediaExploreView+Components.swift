@@ -85,6 +85,15 @@ extension MediaExploreView {
         )
     }
 
+    // MARK: - 分类筛选
+    var categoryFilters: some View {
+        artisanFilterGroup(
+            title: "分类",
+            options: viewModel.categoryFilterOptions,
+            selected: $viewModel.selectedCategory
+        )
+    }
+
     // MARK: - 分辨率筛选
     var resolutionFilters: some View {
         artisanFilterGroup(
@@ -224,6 +233,7 @@ extension MediaExploreView {
                             .foregroundStyle(selected.wrappedValue == option ? LiquidGlassColors.primaryPink : LiquidGlassColors.textSecondary)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 8)
+                            .frame(minWidth: 58, minHeight: 32)
                             .background {
                                 if selected.wrappedValue == option {
                                     Capsule()
@@ -236,7 +246,7 @@ extension MediaExploreView {
                             }
                     }
                     .buttonStyle(.plain)
-                    .contentShape(Capsule())
+                    .contentShape(Rectangle())
                 }
             }
         }

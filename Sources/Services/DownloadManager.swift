@@ -199,9 +199,21 @@ final class DownloadManager: ObservableObject {
 
     private func extractRemoteSource(from item: WallpaperDisplayItem) -> RemoteSourceType {
         switch item {
-        case .remote: return .wallhaven
+        case .remote(let w):
+            if w.id.hasPrefix("pexels_") { return .pexels }
+            if w.id.hasPrefix("unsplash_") { return .unsplash }
+            if w.id.hasPrefix("pixabay_") { return .pixabay }
+            if w.id.hasPrefix("bing_") { return .bingDaily }
+            return .wallhaven
         case .media(let m):
-            return m.sourceName == "MotionBG" ? .motionBG : .steamWorkshop
+            switch m.sourceName.lowercased() {
+            case "motionbg": return .motionBG
+            case "steam workshop": return .steamWorkshop
+            case "pexels": return .pexels
+            case "pixabay": return .pixabay
+            case "desktophut": return .desktopHut
+            default: return .motionBG
+            }
         case .local(let w): return w.remoteSource ?? .wallhaven
         }
     }

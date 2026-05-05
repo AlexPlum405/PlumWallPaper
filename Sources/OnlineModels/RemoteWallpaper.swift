@@ -16,12 +16,13 @@ struct RemoteWallpaper: Codable, Identifiable, Hashable {
     let purity: String          // "sfw", "sketchy", "nsfw"
     let views: Int
     let favorites: Int
+    let downloads: Int?
     let uploadedAt: Date
     let tags: [APITag]?
     let colors: [String]?
 
     enum CodingKeys: String, CodingKey {
-        case id, url, resolution, category, purity, views, favorites, colors, tags
+        case id, url, resolution, category, purity, views, favorites, downloads, colors, tags
         case shortURL = "short_url"
         case thumbURL = "thumbs"
         case fullImageURL = "path"
@@ -46,6 +47,7 @@ struct RemoteWallpaper: Codable, Identifiable, Hashable {
         purity: String,
         views: Int,
         favorites: Int,
+        downloads: Int? = nil,
         uploadedAt: Date,
         tags: [APITag]? = nil,
         colors: [String]? = nil
@@ -63,6 +65,7 @@ struct RemoteWallpaper: Codable, Identifiable, Hashable {
         self.purity = purity
         self.views = views
         self.favorites = favorites
+        self.downloads = downloads
         self.uploadedAt = uploadedAt
         self.tags = tags
         self.colors = colors
@@ -84,6 +87,7 @@ struct RemoteWallpaper: Codable, Identifiable, Hashable {
         purity = try container.decode(String.self, forKey: .purity)
         views = try container.decode(Int.self, forKey: .views)
         favorites = try container.decode(Int.self, forKey: .favorites)
+        downloads = try container.decodeIfPresent(Int.self, forKey: .downloads)
         uploadedAt = try container.decode(Date.self, forKey: .uploadedAt)
         tags = try container.decodeIfPresent([APITag].self, forKey: .tags)
         colors = try container.decodeIfPresent([String].self, forKey: .colors)
@@ -114,6 +118,7 @@ struct RemoteWallpaper: Codable, Identifiable, Hashable {
         try container.encode(purity, forKey: .purity)
         try container.encode(views, forKey: .views)
         try container.encode(favorites, forKey: .favorites)
+        try container.encodeIfPresent(downloads, forKey: .downloads)
         try container.encode(uploadedAt, forKey: .uploadedAt)
         try container.encodeIfPresent(tags, forKey: .tags)
         try container.encodeIfPresent(colors, forKey: .colors)

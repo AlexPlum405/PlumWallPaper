@@ -96,7 +96,7 @@ struct MediaExploreView: View {
 
             // API Key 提示（未配置或配置后加载失败时显示）
             if let keyService = viewModel.selectedSource.apiKeyService,
-               (!APIKeyManager.shared.hasKey(for: keyService) || viewModel.errorMessage != nil) {
+               !APIKeyManager.shared.hasKey(for: keyService) {
                 APIKeyInputBanner(service: keyService) {
                     Task { await viewModel.applyFilters() }
                 }
@@ -104,9 +104,18 @@ struct MediaExploreView: View {
 
             // 筛选和排序
             VStack(alignment: .leading, spacing: 20) {
-                sortingFilters
-                resolutionFilters
-                durationFilters
+                if viewModel.categoryFilterOptions.count > 1 {
+                    categoryFilters
+                }
+                if viewModel.sortingOptionsForCurrentSource.count > 1 {
+                    sortingFilters
+                }
+                if viewModel.resolutionFilterOptions.count > 1 {
+                    resolutionFilters
+                }
+                if viewModel.durationFilterOptions.count > 1 {
+                    durationFilters
+                }
             }
         }
     }

@@ -20,6 +20,7 @@ final class WallpaperExploreViewModel: ObservableObject {
     @Published var selectedSorting = "最新"
     @Published var selectedOrder = "desc"
     @Published var selectedTopRange: String? = nil
+    @Published var selectedResolutionFilter = "全部"
     @Published var selectedResolutions: [String] = []
     @Published var selectedRatios: [String] = []
     @Published var selectedColors: [String] = []
@@ -30,6 +31,7 @@ final class WallpaperExploreViewModel: ObservableObject {
     private let unsplashService = UnsplashService.shared
     private let pixabayService = PixabayService.shared
     private let bingDailyService = BingDailyService.shared
+    private var loadGeneration = 0
 
     enum WallpaperSource: String, CaseIterable {
         case wallhaven = "Wallhaven"
@@ -61,7 +63,7 @@ final class WallpaperExploreViewModel: ObservableObject {
         }
 
         var supportsPagination: Bool {
-            self != .bingDaily
+            true
         }
     }
 
@@ -74,11 +76,11 @@ final class WallpaperExploreViewModel: ObservableObject {
         case .wallhaven:
             return ["最新", "热门", "随机", "最多浏览", "最多收藏"]
         case .pexels:
-            return ["热门", "最新"]
+            return ["精选"]
         case .unsplash:
             return ["最新", "热门", "随机"]
         case .pixabay:
-            return ["热门", "最新"]
+            return ["热门", "最新", "最多浏览", "最多收藏", "最多下载"]
         case .bingDaily:
             return ["最新"]
         }
@@ -91,18 +93,22 @@ final class WallpaperExploreViewModel: ObservableObject {
         case .pexels, .unsplash, .pixabay:
             return ["全部", "大尺寸", "中等", "小尺寸"]
         case .bingDaily:
-            return ["全部", "UHD", "1920x1080"]
+            return ["UHD"]
         }
     }
 
-    var categoryFilterOptions: [String] {
+    var categoryFilterOptions: [(label: String, value: String)] {
         switch selectedSource {
         case .wallhaven:
-            return ["全部", "通用", "动漫", "人物"]
-        case .pexels, .unsplash, .pixabay:
-            return ["全部", "自然", "城市", "抽象", "动物", "科技"]
+            return [("全部", "111"), ("通用", "100"), ("动漫", "010"), ("人物", "001")]
+        case .pexels:
+            return [("全部", "全部"), ("自然", "nature wallpaper"), ("城市", "city wallpaper"), ("抽象", "abstract wallpaper"), ("科技", "technology wallpaper"), ("空间", "space wallpaper"), ("极简", "minimal wallpaper")]
+        case .unsplash:
+            return [("全部", "全部"), ("自然", "nature"), ("建筑", "architecture"), ("纹理", "textures"), ("暗色", "dark"), ("极简", "minimal"), ("桌面", "desktop")]
+        case .pixabay:
+            return [("全部", "全部"), ("自然", "nature wallpaper"), ("背景", "background"), ("抽象", "abstract"), ("动物", "animals"), ("科技", "technology"), ("空间", "space")]
         case .bingDaily:
-            return ["全部"]
+            return [("全部", "全部")]
         }
     }
 
@@ -112,10 +118,11 @@ final class WallpaperExploreViewModel: ObservableObject {
         if !options.contains(selectedSorting) {
             selectedSorting = options.first ?? "最新"
         }
+        selectedCategory = categoryFilterOptions.first?.value ?? "全部"
         if source != .wallhaven {
-            selectedCategory = "111"
             selectedPurity = "100"
             selectedTopRange = nil
+            selectedResolutionFilter = "全部"
             selectedResolutions = []
             selectedRatios = []
             selectedColors = []
@@ -125,35 +132,49 @@ final class WallpaperExploreViewModel: ObservableObject {
     // MARK: - Public Methods
 
     func loadInitialData() async {
+        loadGeneration += 1
+        let generation = loadGeneration
         currentPage = 1
         wallpapers = []
         hasMore = true
-        await loadMore()
+        isLoading = false
+        await loadMore(generation: generation)
     }
 
     func loadMore() async {
+        await loadMore(generation: loadGeneration)
+    }
+
+    private func loadMore(generation: Int) async {
         guard !isLoading && hasMore else { return }
         isLoading = true
         errorMessage = nil
+        defer {
+            if generation == loadGeneration {
+                isLoading = false
+            }
+        }
 
         do {
             let newWallpapers = try await fetchBySource()
+            guard generation == loadGeneration else { return }
+            let existingIds = Set(wallpapers.map(\.id))
+            let uniqueNewWallpapers = newWallpapers.filter { !existingIds.contains($0.id) }
 
-            if newWallpapers.isEmpty {
+            if uniqueNewWallpapers.isEmpty {
                 hasMore = false
             } else {
-                wallpapers.append(contentsOf: newWallpapers)
+                wallpapers.append(contentsOf: uniqueNewWallpapers)
                 currentPage += 1
                 if !selectedSource.supportsPagination {
                     hasMore = false
                 }
             }
         } catch {
+            guard generation == loadGeneration else { return }
             errorMessage = "加载失败: \(error.localizedDescription)"
             print("[WallpaperExploreViewModel] Error: \(error)")
         }
-
-        isLoading = false
     }
 
     func refresh() async {
@@ -182,9 +203,12 @@ final class WallpaperExploreViewModel: ObservableObject {
                 colors: selectedColors
             )
         case .bingDaily:
-            guard currentPage == 1 else { return [] }
-            let items = try await bingDailyService.fetchDaily()
-            return orderWallpapers(applyClientFilters(items), for: selectedSorting)
+            let items = try await bingDailyService.fetchDaily(
+                market: selectedBingMarket,
+                page: currentPage,
+                imageSize: selectedBingImageSize
+            )
+            return orderWallpapers(items, for: selectedSorting)
         case .pexels:
             return try await fetchPexelsPhotos()
         case .unsplash:
@@ -221,10 +245,15 @@ final class WallpaperExploreViewModel: ObservableObject {
             // 根据排序选择不同的数据源
             switch selectedSorting {
             case "最新":
-                // Pexels 搜索端点按时间排序
-                items = try await pexelsService.searchPhotos(query: "wallpaper nature", page: currentPage, perPage: 20)
-            default: // "热门"
-                items = try await pexelsService.fetchCurated(page: currentPage, perPage: 20)
+                items = try await pexelsService.searchPhotos(query: resolvedStaticQuery(defaultQuery: "wallpaper nature"), page: currentPage, perPage: 20)
+            case "随机":
+                items = try await pexelsService.searchPhotos(query: resolvedStaticQuery(defaultQuery: "wallpaper"), page: currentPage, perPage: 20).shuffled()
+            default: // "精选"
+                if selectedCategory == "全部" {
+                    items = try await pexelsService.fetchCurated(page: currentPage, perPage: 20)
+                } else {
+                    items = try await pexelsService.searchPhotos(query: selectedCategory, page: currentPage, perPage: 20)
+                }
             }
         } else {
             items = try await pexelsService.searchPhotos(query: trimmed, page: currentPage, perPage: 20)
@@ -239,19 +268,27 @@ final class WallpaperExploreViewModel: ObservableObject {
         if trimmed.isEmpty {
             switch selectedSorting {
             case "随机":
-                items = try await unsplashService.fetchRandom(count: 20)
+                items = try await unsplashService.fetchRandom(query: unsplashRandomQuery, count: 20)
             case "热门":
-                items = try await unsplashService.fetchWallpaperTopic(
-                    page: currentPage,
-                    perPage: 20,
-                    orderBy: "popular"
-                )
+                if selectedCategory == "全部" {
+                    items = try await unsplashService.fetchWallpaperTopic(
+                        page: currentPage,
+                        perPage: 20,
+                        orderBy: "popular"
+                    )
+                } else {
+                    items = try await unsplashService.searchPhotos(query: selectedCategory, page: currentPage, perPage: 20, orderBy: "popular")
+                }
             default: // "最新"
-                items = try await unsplashService.fetchWallpaperTopic(
-                    page: currentPage,
-                    perPage: 20,
-                    orderBy: "latest"
-                )
+                if selectedCategory == "全部" {
+                    items = try await unsplashService.fetchWallpaperTopic(
+                        page: currentPage,
+                        perPage: 20,
+                        orderBy: "latest"
+                    )
+                } else {
+                    items = try await unsplashService.searchPhotos(query: selectedCategory, page: currentPage, perPage: 20, orderBy: "latest")
+                }
             }
         } else {
             items = try await unsplashService.searchPhotos(query: trimmed, page: currentPage, perPage: 20)
@@ -261,7 +298,7 @@ final class WallpaperExploreViewModel: ObservableObject {
 
     private func fetchPixabayPhotos() async throws -> [RemoteWallpaper] {
         let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        let query = trimmed.isEmpty ? "wallpaper" : trimmed
+        let query = trimmed.isEmpty ? resolvedStaticQuery(defaultQuery: "wallpaper") : trimmed
 
         // 根据用户选择的分辨率动态调整 API 参数
         let (minWidth, minHeight) = pixabayMinResolution
@@ -271,13 +308,32 @@ final class WallpaperExploreViewModel: ObservableObject {
             page: currentPage,
             perPage: 20,
             minWidth: minWidth,
-            minHeight: minHeight
+            minHeight: minHeight,
+            order: selectedSorting == "最新" ? "latest" : "popular"
         )
         return orderWallpapers(applyClientFilters(items), for: selectedSorting)
     }
 
+    private func resolvedStaticQuery(defaultQuery: String) -> String {
+        guard selectedCategory != "全部" else { return defaultQuery }
+        return selectedCategory
+    }
+
+    private var unsplashRandomQuery: String? {
+        selectedCategory == "全部" ? nil : selectedCategory
+    }
+
+    private var selectedBingMarket: String {
+        selectedCategory == "全部" ? "zh-CN" : selectedCategory
+    }
+
+    private var selectedBingImageSize: String {
+        let selected = activeResolutionFilter ?? "UHD"
+        return selected == "全部" ? "UHD" : selected
+    }
+
     private var pixabayMinResolution: (width: Int, height: Int) {
-        guard let selectedResolution = selectedResolutions.first else {
+        guard let selectedResolution = activeResolutionFilter else {
             return (1920, 1080) // 默认 1080P
         }
 
@@ -304,14 +360,14 @@ final class WallpaperExploreViewModel: ObservableObject {
 
         // 如果过滤后结果太少，记录警告
         if filtered.count < 3 && wallpapers.count > 10 {
-            NSLog("[WallpaperExploreViewModel] 警告：分辨率过滤后仅剩 \(filtered.count)/\(wallpapers.count) 个结果（源：\(selectedSource.displayName)，分辨率：\(selectedResolutions.first ?? "全部")）")
+            NSLog("[WallpaperExploreViewModel] 警告：分辨率过滤后仅剩 \(filtered.count)/\(wallpapers.count) 个结果（源：\(selectedSource.displayName)，分辨率：\(activeResolutionFilter ?? "全部")）")
         }
 
         return filtered
     }
 
     private func matchesResolution(_ wallpaper: RemoteWallpaper) -> Bool {
-        guard let selectedResolution = selectedResolutions.first, selectedResolution != "全部" else {
+        guard let selectedResolution = activeResolutionFilter, selectedResolution != "全部" else {
             return true
         }
 
@@ -334,6 +390,17 @@ final class WallpaperExploreViewModel: ObservableObject {
         }
     }
 
+    private var activeResolutionFilter: String? {
+        switch selectedSource {
+        case .wallhaven:
+            return selectedResolutions.first
+        case .bingDaily:
+            return selectedResolutionFilter == "全部" ? "UHD" : selectedResolutionFilter
+        case .pexels, .unsplash, .pixabay:
+            return selectedResolutionFilter == "全部" ? nil : selectedResolutionFilter
+        }
+    }
+
     private func orderWallpapers(_ wallpapers: [RemoteWallpaper], for sorting: String) -> [RemoteWallpaper] {
         switch sorting {
         case "随机":
@@ -342,12 +409,16 @@ final class WallpaperExploreViewModel: ObservableObject {
             return wallpapers.sorted { $0.views > $1.views }
         case "最多收藏":
             return wallpapers.sorted { $0.favorites > $1.favorites }
+        case "最多下载":
+            return wallpapers.sorted { ($0.downloads ?? 0) > ($1.downloads ?? 0) }
         case "热门":
             return wallpapers.sorted {
-                ($0.views + $0.favorites * 3) > ($1.views + $1.favorites * 3)
+                ($0.views + $0.favorites * 3 + ($0.downloads ?? 0)) > ($1.views + $1.favorites * 3 + ($1.downloads ?? 0))
             }
         case "最新":
             return wallpapers.sorted { $0.uploadedAt > $1.uploadedAt }
+        case "最早":
+            return wallpapers.sorted { $0.uploadedAt < $1.uploadedAt }
         default:
             return wallpapers
         }

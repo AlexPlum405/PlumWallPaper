@@ -54,7 +54,7 @@ struct MediaDetailView: View {
     private var fullscreenCanvas: some View {
         ZStack {
             // 背景模糊
-            AsyncImage(url: mediaItem.thumbnailURL) { phase in
+            AsyncImage(url: detailPosterURL) { phase in
                 if let image = phase.image {
                     image
                         .resizable()
@@ -68,9 +68,9 @@ struct MediaDetailView: View {
 
             // 主视频（2K 优先）或图片
             if let videoURL = mediaItem.previewVideoURL ?? mediaItem.fullVideoURL {
-                VideoPlayer(url: videoURL, posterURL: mediaItem.thumbnailURL)
+                VideoPlayer(url: videoURL, posterURL: detailPosterURL)
             } else {
-                AsyncImage(url: mediaItem.thumbnailURL) { phase in
+                AsyncImage(url: detailPosterURL) { phase in
                     if let image = phase.image {
                         image
                             .resizable()
@@ -93,6 +93,10 @@ struct MediaDetailView: View {
         }
         .background(Color.black)
         .ignoresSafeArea()
+    }
+
+    private var detailPosterURL: URL {
+        mediaItem.posterURL ?? mediaItem.thumbnailURL
     }
 
     // MARK: - 顶部栏

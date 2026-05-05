@@ -77,7 +77,9 @@ struct WallpaperExploreView: View {
     private var artisanFilterSection: some View {
         VStack(alignment: .leading, spacing: 24) {
             // 搜索栏
-            searchBar
+            if viewModel.selectedSource.supportsSearch {
+                searchBar
+            }
 
             // 来源筛选
             sourceFilters
@@ -102,16 +104,23 @@ struct WallpaperExploreView: View {
                     advancedFiltersSection
                 }
             } else {
-                // 其他源的简化筛选
+                // 其他源的源定制筛选
                 VStack(alignment: .leading, spacing: 20) {
-                    sortingFilters
-                    resolutionFilters
+                    if viewModel.categoryFilterOptions.count > 1 {
+                        categoryFilters
+                    }
+                    if viewModel.sortingOptionsForCurrentSource.count > 1 {
+                        sortingFilters
+                    }
+                    if viewModel.resolutionFilterOptions.count > 1 {
+                        resolutionFilters
+                    }
                 }
             }
 
             // API Key 提示（未配置或配置后加载失败时显示）
             if let keyService = viewModel.selectedSource.apiKeyService,
-               (!APIKeyManager.shared.hasKey(for: keyService) || viewModel.errorMessage != nil) {
+               !APIKeyManager.shared.hasKey(for: keyService) {
                 APIKeyInputBanner(service: keyService) {
                     Task { await viewModel.applyFilters() }
                 }
@@ -182,25 +191,15 @@ struct WallpaperExploreView: View {
     private var categoryFilters: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 16) {
-                ForEach(categories, id: \.value) { category in
+                ForEach(viewModel.categoryFilterOptions, id: \.value) { category in
                     FilterChip(
                         title: category.label,
                         isSelected: viewModel.selectedCategory == category.value
                     ) {
-                        let previousCategory = viewModel.selectedCategory
                         withAnimation(.gallerySpring) {
                             viewModel.selectedCategory = category.value
                         }
-                        Task {
-                            do {
-                                await viewModel.applyFilters()
-                            } catch {
-                                // 恢复之前的选择
-                                withAnimation(.gallerySpring) {
-                                    viewModel.selectedCategory = previousCategory
-                                }
-                            }
-                        }
+                        Task { await viewModel.applyFilters() }
                     }
                 }
             }
@@ -240,17 +239,7 @@ struct WallpaperExploreView: View {
         simpleFilterGroup(
             title: "分辨率",
             options: viewModel.resolutionFilterOptions,
-            selected: Binding(
-                get: { viewModel.selectedResolutions.first ?? "全部" },
-                set: { value in
-                    if value == "全部" {
-                        viewModel.selectedResolutions = []
-                    } else {
-                        viewModel.selectedResolutions = [value]
-                    }
-                    Task { await viewModel.applyFilters() }
-                }
-            )
+            selected: $viewModel.selectedResolutionFilter
         )
     }
 
@@ -478,6 +467,7 @@ struct WallpaperExploreView: View {
                             .foregroundStyle(selected.wrappedValue == option ? LiquidGlassColors.primaryPink : LiquidGlassColors.textSecondary)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 8)
+                            .frame(minWidth: 58, minHeight: 32)
                             .background {
                                 if selected.wrappedValue == option {
                                     Capsule()
@@ -490,7 +480,7 @@ struct WallpaperExploreView: View {
                             }
                     }
                     .buttonStyle(.plain)
-                    .contentShape(Capsule())
+                    .contentShape(Rectangle())
                 }
             }
         }
@@ -561,13 +551,6 @@ struct WallpaperExploreView: View {
     }
 
     // MARK: - 数据定义
-    private let categories: [(label: String, value: String)] = [
-        ("全部", "111"),
-        ("通用", "100"),
-        ("动漫", "010"),
-        ("人物", "001")
-    ]
-
     private let purityOptions: [(label: String, value: String)] = [
         ("SFW", "100"),
         ("Sketchy", "010")

@@ -75,11 +75,6 @@ struct APIKeyInputBanner: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(LiquidGlassColors.primaryPink.opacity(0.15), lineWidth: 0.5)
         }
-        .onAppear {
-            if let existing = keyManager.apiKey(for: service) {
-                keyInput = existing
-            }
-        }
     }
 
     private func saveKey() {

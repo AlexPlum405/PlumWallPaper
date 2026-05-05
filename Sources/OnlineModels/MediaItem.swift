@@ -116,6 +116,28 @@ struct MediaItem: Codable, Identifiable, Hashable {
         return String(format: "%02d:%02d", minutes, seconds)
     }
 
+    var pixelCount: Int? {
+        let candidates = [exactResolution, resolutionLabel]
+            .compactMap { $0?.lowercased().replacingOccurrences(of: " ", with: "") }
+
+        for candidate in candidates {
+            let parts = candidate
+                .replacingOccurrences(of: "×", with: "x")
+                .components(separatedBy: "x")
+            if parts.count == 2,
+               let width = Int(parts[0].filter(\.isNumber)),
+               let height = Int(parts[1].filter(\.isNumber)) {
+                return width * height
+            }
+        }
+
+        if candidates.contains(where: { $0.contains("4k") }) { return 3840 * 2160 }
+        if candidates.contains(where: { $0.contains("2k") }) { return 2560 * 1440 }
+        if candidates.contains(where: { $0.contains("1080") || $0.contains("fullhd") }) { return 1920 * 1080 }
+        if candidates.contains(where: { $0.contains("720") || $0 == "hd" }) { return 1280 * 720 }
+        return nil
+    }
+
     func withAudioTrack(_ value: Bool?) -> MediaItem {
         MediaItem(
             slug: slug,

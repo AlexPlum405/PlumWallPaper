@@ -85,6 +85,24 @@ history/
 # Logs
 *.log
 
+# Generated reports, one-off verification scripts, and design artifacts
+/TEST_CASES_QUICK_REFERENCE.md
+/TEST_GENERATION_SUMMARY.md
+/TEST_REPORT_60_CASES.md
+/TEST_RUNNER_USAGE.md
+/complete_test_runner.swift
+/complete_test_runner_60_cases.swift
+/detailed_test_runner.swift
+/test_automation.swift
+/_design_demos/
+/decks/
+/docs/AUTOMATED_TEST_VERIFICATION.md
+/docs/BUG_FIX_REPORT.md
+/docs/COMPLETE_TEST_REPORT_3RUNS.md
+/docs/DETAILED_TEST_REPORT.md
+/docs/FINAL_TEST_EXECUTION_REPORT.md
+/docs/TEST_EXECUTION_SUMMARY.md
+
 # Superpowers (Claude Code specific)
 .superpowers/
 .build/

@@ -64,6 +64,11 @@ enum RemoteSourceType: String, Codable {
     case fourKWallpapers
     case motionBG
     case steamWorkshop
+    case pexels
+    case unsplash
+    case pixabay
+    case bingDaily
+    case desktopHut
 }
 
 /// 远程壁纸元数据
@@ -88,7 +93,7 @@ extension Wallpaper {
             thumbnailPath: remote.thumbURL?.absoluteString,
             source: .downloaded,
             remoteId: remote.id,
-            remoteSource: .wallhaven,
+            remoteSource: remoteSource(fromRemoteId: remote.id),
             remoteMetadata: RemoteMetadata(
                 author: nil,
                 views: remote.views,
@@ -105,6 +110,9 @@ extension Wallpaper {
             switch media.sourceName.lowercased() {
             case "motionbg": return .motionBG
             case "steam workshop": return .steamWorkshop
+            case "pexels": return .pexels
+            case "pixabay": return .pixabay
+            case "desktophut": return .desktopHut
             default: return .motionBG
             }
         }()
@@ -131,5 +139,13 @@ extension Wallpaper {
                 originalURL: media.pageURL.absoluteString
             )
         )
+    }
+
+    private static func remoteSource(fromRemoteId id: String) -> RemoteSourceType {
+        if id.hasPrefix("pexels_") { return .pexels }
+        if id.hasPrefix("unsplash_") { return .unsplash }
+        if id.hasPrefix("pixabay_") { return .pixabay }
+        if id.hasPrefix("bing_") { return .bingDaily }
+        return .wallhaven
     }
 }

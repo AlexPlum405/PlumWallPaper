@@ -13,7 +13,7 @@ actor UnsplashService {
     // MARK: - Public API
 
     /// 搜索照片
-    func searchPhotos(query: String, page: Int = 1, perPage: Int = 20) async throws -> [RemoteWallpaper] {
+    func searchPhotos(query: String, page: Int = 1, perPage: Int = 20, orderBy: String = "relevant") async throws -> [RemoteWallpaper] {
         guard let apiKey = await APIKeyManager.shared.apiKey(for: .unsplash) else {
             throw NetworkError.invalidResponse
         }
@@ -23,6 +23,7 @@ actor UnsplashService {
             URLQueryItem(name: "query", value: query),
             URLQueryItem(name: "page", value: String(page)),
             URLQueryItem(name: "per_page", value: String(perPage)),
+            URLQueryItem(name: "order_by", value: orderBy),
             URLQueryItem(name: "orientation", value: "landscape")
         ]
 
@@ -36,7 +37,7 @@ actor UnsplashService {
     }
 
     /// 获取随机照片
-    func fetchRandom(count: Int = 20) async throws -> [RemoteWallpaper] {
+    func fetchRandom(query: String? = nil, count: Int = 20) async throws -> [RemoteWallpaper] {
         guard let apiKey = await APIKeyManager.shared.apiKey(for: .unsplash) else {
             throw NetworkError.invalidResponse
         }
@@ -44,9 +45,13 @@ actor UnsplashService {
         var components = URLComponents(string: "\(baseURL)/photos/random")!
         components.queryItems = [
             URLQueryItem(name: "count", value: String(count)),
-            URLQueryItem(name: "topics", value: "wallpapers"),
             URLQueryItem(name: "orientation", value: "landscape")
         ]
+        if let query, !query.isEmpty {
+            components.queryItems?.append(URLQueryItem(name: "query", value: query))
+        } else {
+            components.queryItems?.append(URLQueryItem(name: "topics", value: "wallpapers"))
+        }
 
         guard let url = components.url else {
             throw NetworkError.invalidResponse

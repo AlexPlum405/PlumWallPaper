@@ -89,18 +89,37 @@ actor DesktopHutService {
 
         // Extract resolution - look for text pattern like "3840x2160"
         let cardText = try card.text()
-        let resolutionPattern = try NSRegularExpression(pattern: "(\\d{3,4})x(\\d{3,4})", options: [])
+        let resolutionPattern = try NSRegularExpression(pattern: "(\\d{3,4})\\s*[x×]\\s*(\\d{3,4})", options: [.caseInsensitive])
         let resolutionMatches = resolutionPattern.matches(in: cardText, options: [], range: NSRange(cardText.startIndex..., in: cardText))
 
         var resolutionLabel = "HD"
         var exactResolution: String?
 
-        if let match = resolutionMatches.first, let range = Range(match.range, in: cardText) {
-            exactResolution = String(cardText[range])
-            if exactResolution?.contains("3840") == true || exactResolution?.contains("4096") == true {
-                resolutionLabel = "4K"
-            }
+        if let badgeText = try card.select(".thumb-badge").first()?.text(), !badgeText.isEmpty {
+            exactResolution = badgeText
         }
+
+        if let match = resolutionMatches.first, let range = Range(match.range, in: cardText) {
+            exactResolution = exactResolution ?? String(cardText[range])
+        }
+
+        if exactResolution?.contains("3840") == true || exactResolution?.contains("4096") == true {
+            resolutionLabel = "4K"
+        } else if exactResolution?.contains("2048") == true || exactResolution?.contains("2560") == true {
+            resolutionLabel = "2K"
+        } else if exactResolution?.contains("1920") == true {
+            resolutionLabel = "1080P"
+        }
+
+        let durationSeconds = parseDurationSeconds(from: cardText)
+        let downloadOptions = derivedVideoURL.map {
+            [MediaDownloadOption(
+                label: resolutionLabel,
+                fileSizeLabel: "未知大小",
+                detailText: "\(exactResolution ?? resolutionLabel) mp4",
+                remoteURL: $0
+            )]
+        } ?? []
 
         // Extract creator/author - look for common patterns
         var authorName: String?
@@ -127,6 +146,8 @@ actor DesktopHutService {
             posterURL: absoluteThumbnailURL,
             tags: [],
             exactResolution: exactResolution,
+            durationSeconds: durationSeconds,
+            downloadOptions: downloadOptions,
             sourceName: "DesktopHut",
             authorName: authorName
         )
@@ -151,5 +172,36 @@ actor DesktopHutService {
         }
         let assetID = String(thumbnailURL[idRange])
         return URL(string: "\(baseURL)/files/\(assetID).mp4")
+    }
+
+    private func parseDurationSeconds(from text: String) -> Double? {
+        let patterns = [
+            #"(?i)\b(\d{1,2}):(\d{2})\b"#,
+            #"(?i)\b(\d+(?:\.\d+)?)\s*(?:min|mins|minute|minutes)\b"#,
+            #"(?i)\b(\d+(?:\.\d+)?)\s*(?:sec|secs|second|seconds)\b"#
+        ]
+
+        for (index, pattern) in patterns.enumerated() {
+            guard let regex = try? NSRegularExpression(pattern: pattern),
+                  let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text))
+            else { continue }
+
+            if index == 0,
+               let minutes = capture(match: match, in: text, at: 1).flatMap(Double.init),
+               let seconds = capture(match: match, in: text, at: 2).flatMap(Double.init) {
+                return minutes * 60 + seconds
+            }
+
+            if let value = capture(match: match, in: text, at: 1).flatMap(Double.init) {
+                return index == 1 ? value * 60 : value
+            }
+        }
+
+        return nil
+    }
+
+    private func capture(match: NSTextCheckingResult, in text: String, at index: Int) -> String? {
+        guard let range = Range(match.range(at: index), in: text) else { return nil }
+        return String(text[range])
     }
 }

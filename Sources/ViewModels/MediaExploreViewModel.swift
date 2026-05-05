@@ -16,8 +16,9 @@ final class MediaExploreViewModel: ObservableObject {
     // MARK: - Filters
     @Published var searchQuery = ""
     @Published var selectedSource: MediaSource = .motionBG
+    @Published var selectedCategory = "全部"
     @Published var selectedResolution: String? = nil
-    @Published var selectedSorting = "热门"
+    @Published var selectedSorting = "最新"
     @Published var selectedDuration = "全部"
 
     // MARK: - Repository
@@ -27,6 +28,7 @@ final class MediaExploreViewModel: ObservableObject {
     private let pexelsService = PexelsService.shared
     private let pixabayService = PixabayService.shared
     private let desktopHutService = DesktopHutService.shared
+    private var loadGeneration = 0
 
     enum MediaSource: String, CaseIterable {
         case motionBG = "MotionBG"
@@ -70,20 +72,24 @@ final class MediaExploreViewModel: ObservableObject {
     var sortingOptionsForCurrentSource: [String] {
         switch selectedSource {
         case .motionBG:
-            return ["热门", "最新", "随机", "最多浏览", "最多收藏"]
+            return ["最新"]
         case .workshop:
             return ["热门", "最新", "最高评分", "最多订阅"]
-        case .pexelsVideo, .pixabayVideo:
+        case .pexelsVideo:
+            return ["热门"]
+        case .pixabayVideo:
             return ["热门", "最新"]
         case .desktopHut:
-            return ["热门", "最新", "随机", "最多下载"]
+            return ["最新", "随机", "高分辨率优先"]
         }
     }
 
     var resolutionFilterOptions: [String] {
         switch selectedSource {
-        case .motionBG, .desktopHut:
-            return ["全部", "4K", "2K", "1080P", "720P"]
+        case .motionBG:
+            return ["全部"]
+        case .desktopHut:
+            return ["全部", "4096x2304", "3840x2160", "1920x1080", "2048x1152"]
         case .workshop:
             return ["全部", "3840x2160", "2560x1440", "1920x1080", "1280x720"]
         case .pexelsVideo, .pixabayVideo:
@@ -92,7 +98,27 @@ final class MediaExploreViewModel: ObservableObject {
     }
 
     var durationFilterOptions: [String] {
-        ["全部", "短视频 (<30s)", "中等 (30s-2m)", "长视频 (>2m)"]
+        switch selectedSource {
+        case .motionBG, .desktopHut:
+            return ["全部"]
+        default:
+            return ["全部", "短视频 (<30s)", "中等 (30s-2m)", "长视频 (>2m)"]
+        }
+    }
+
+    var categoryFilterOptions: [String] {
+        switch selectedSource {
+        case .motionBG:
+            return ["全部", "Anime", "Nature", "Gaming", "Cyberpunk", "Space", "Cars", "Abstract"]
+        case .desktopHut:
+            return ["全部", "Anime", "Gaming", "Nature", "Fantasy", "Cars", "Space", "Minimal"]
+        case .pexelsVideo:
+            return ["全部", "Nature", "City", "Abstract", "Technology", "Ocean", "Space", "Minimal"]
+        case .pixabayVideo:
+            return ["全部", "Nature", "Background", "Abstract", "Technology", "Animals", "Space", "Loop"]
+        case .workshop:
+            return ["全部", "Scene", "Video", "Anime", "Relaxing", "Audio responsive"]
+        }
     }
 
     func selectSource(_ source: MediaSource) {
@@ -101,45 +127,66 @@ final class MediaExploreViewModel: ObservableObject {
         if !options.contains(selectedSorting) {
             selectedSorting = options.first ?? "热门"
         }
-        selectedResolution = nil
-        selectedDuration = "全部"
+        if !categoryFilterOptions.contains(selectedCategory) {
+            selectedCategory = "全部"
+        }
+        if resolutionFilterOptions.count <= 1 || !resolutionFilterOptions.contains(selectedResolution ?? "全部") {
+            selectedResolution = nil
+        }
+        if !durationFilterOptions.contains(selectedDuration) {
+            selectedDuration = "全部"
+        }
     }
 
     // MARK: - Public Methods
 
     func loadInitialData() async {
+        loadGeneration += 1
+        let generation = loadGeneration
         currentPage = 1
         mediaItems = []
         hasMore = true
-        await loadMore()
+        isLoading = false
+        await loadMore(generation: generation)
     }
 
     func loadMore() async {
+        await loadMore(generation: loadGeneration)
+    }
+
+    private func loadMore(generation: Int) async {
         guard !isLoading && hasMore else { return }
         isLoading = true
         errorMessage = nil
+        defer {
+            if generation == loadGeneration {
+                isLoading = false
+            }
+        }
 
         do {
             let newItems: [MediaItem]
 
             // 根据选择的源、搜索词和排序获取数据
             newItems = try await fetchBySource()
+            guard generation == loadGeneration else { return }
+            let existingIds = Set(mediaItems.map(\.id))
+            let uniqueNewItems = newItems.filter { !existingIds.contains($0.id) }
 
-            if newItems.isEmpty {
+            if uniqueNewItems.isEmpty {
                 hasMore = false
             } else {
-                mediaItems.append(contentsOf: newItems)
+                mediaItems.append(contentsOf: uniqueNewItems)
                 currentPage += 1
                 if selectedSource == .motionBG {
                     hasMore = false
                 }
             }
         } catch {
+            guard generation == loadGeneration else { return }
             errorMessage = "Failed to load media: \(error.localizedDescription)"
             print("[MediaExploreViewModel] Error: \(error)")
         }
-
-        isLoading = false
     }
 
     func refresh() async {
@@ -171,9 +218,10 @@ final class MediaExploreViewModel: ObservableObject {
         guard currentPage == 1 else { return [] }
 
         let trimmedQuery = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        let items = trimmedQuery.isEmpty
+        let resolvedQuery = resolvedCategoryQuery(fallback: trimmedQuery)
+        let items = resolvedQuery.isEmpty
             ? try await mediaService.fetchHomePage()
-            : try await repository.search(query: trimmedQuery, page: currentPage)
+            : try await repository.search(query: resolvedQuery, page: currentPage)
         let filtered = await applyClientFilters(to: items)
         return orderItems(filtered, for: selectedSorting)
     }
@@ -227,9 +275,10 @@ final class MediaExploreViewModel: ObservableObject {
 
     private func fetchPexelsVideos() async throws -> [MediaItem] {
         let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedQuery = resolvedCategoryQuery(fallback: trimmed)
         let items: [MediaItem]
-        if !trimmed.isEmpty {
-            items = try await pexelsService.searchVideos(query: trimmed, page: currentPage, perPage: 20)
+        if !resolvedQuery.isEmpty {
+            items = try await pexelsService.searchVideos(query: resolvedQuery, page: currentPage, perPage: 20)
         } else {
             items = try await pexelsService.fetchPopularVideos(page: currentPage, perPage: 20)
         }
@@ -239,8 +288,7 @@ final class MediaExploreViewModel: ObservableObject {
 
     private func fetchPixabayVideos() async throws -> [MediaItem] {
         let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        // 使用固定查询词，避免排序选项改变搜索内容
-        let query = trimmed.isEmpty ? "wallpaper" : trimmed
+        let query = resolvedCategoryQuery(fallback: trimmed, defaultQuery: "wallpaper")
 
         // 根据用户选择的分辨率动态调整 API 参数
         let (minWidth, minHeight) = pixabayMinResolution
@@ -250,7 +298,8 @@ final class MediaExploreViewModel: ObservableObject {
             page: currentPage,
             perPage: 20,
             minWidth: minWidth,
-            minHeight: minHeight
+            minHeight: minHeight,
+            order: selectedSorting == "最新" ? "latest" : "popular"
         )
         let filtered = await applyClientFilters(to: items)
 
@@ -279,14 +328,21 @@ final class MediaExploreViewModel: ObservableObject {
 
     private func fetchDesktopHutItems() async throws -> [MediaItem] {
         let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedQuery = resolvedCategoryQuery(fallback: trimmed)
         let items: [MediaItem]
-        if trimmed.isEmpty {
+        if resolvedQuery.isEmpty {
             items = try await desktopHutService.fetchLatest(page: currentPage)
         } else {
-            items = try await desktopHutService.search(query: trimmed, page: currentPage)
+            items = try await desktopHutService.search(query: resolvedQuery, page: currentPage)
         }
         let filtered = await applyClientFilters(to: items)
         return orderItems(filtered, for: selectedSorting)
+    }
+
+    private func resolvedCategoryQuery(fallback: String, defaultQuery: String = "") -> String {
+        if !fallback.isEmpty { return fallback }
+        guard selectedCategory != "全部" else { return defaultQuery }
+        return selectedCategory.lowercased()
     }
 
     private func orderItems(_ items: [MediaItem], for sorting: String) -> [MediaItem] {
@@ -308,6 +364,10 @@ final class MediaExploreViewModel: ObservableObject {
             return items.sorted { ($0.ratingScore ?? 0) > ($1.ratingScore ?? 0) }
         case "最多订阅":
             return items.sorted { ($0.subscriptionCount ?? 0) > ($1.subscriptionCount ?? 0) }
+        case "高分辨率优先":
+            return items.sorted { lhs, rhs in
+                (lhs.pixelCount ?? 0) > (rhs.pixelCount ?? 0)
+            }
         default:
             if items.contains(where: { ($0.viewCount ?? 0) + ($0.favoriteCount ?? 0) + ($0.subscriptionCount ?? 0) > 0 }) {
                 return items.sorted { lhs, rhs in
@@ -353,7 +413,9 @@ final class MediaExploreViewModel: ObservableObject {
 
     private func matchesDuration(_ item: MediaItem) -> Bool {
         guard selectedDuration != "全部" else { return true }
-        guard let duration = item.durationSeconds else { return false }
+        guard let duration = item.durationSeconds else {
+            return selectedDuration == "未知时长"
+        }
 
         switch selectedDuration {
         case "短视频 (<30s)":
@@ -367,4 +429,3 @@ final class MediaExploreViewModel: ObservableObject {
         }
     }
 }
-

@@ -10,7 +10,7 @@ actor PixabayService {
 
     // MARK: - Photos
 
-    func searchPhotos(query: String, page: Int = 1, perPage: Int = 20, minWidth: Int = 1920, minHeight: Int = 1080) async throws -> [RemoteWallpaper] {
+    func searchPhotos(query: String, page: Int = 1, perPage: Int = 20, minWidth: Int = 1920, minHeight: Int = 1080, order: String = "popular") async throws -> [RemoteWallpaper] {
         guard let apiKey = await APIKeyManager.shared.apiKey(for: .pixabay) else {
             throw NetworkError.invalidResponse
         }
@@ -24,6 +24,7 @@ actor PixabayService {
             URLQueryItem(name: "image_type", value: "photo"),
             URLQueryItem(name: "min_width", value: String(minWidth)),
             URLQueryItem(name: "min_height", value: String(minHeight)),
+            URLQueryItem(name: "order", value: order),
         ]
 
         guard let url = components.url else {
@@ -40,7 +41,7 @@ actor PixabayService {
 
     // MARK: - Videos
 
-    func searchVideos(query: String, page: Int = 1, perPage: Int = 20, minWidth: Int = 1920, minHeight: Int = 1080) async throws -> [MediaItem] {
+    func searchVideos(query: String, page: Int = 1, perPage: Int = 20, minWidth: Int = 1920, minHeight: Int = 1080, order: String = "popular") async throws -> [MediaItem] {
         guard let apiKey = await APIKeyManager.shared.apiKey(for: .pixabay) else {
             throw NetworkError.invalidResponse
         }
@@ -53,6 +54,7 @@ actor PixabayService {
             URLQueryItem(name: "page", value: String(page)),
             URLQueryItem(name: "min_width", value: String(minWidth)),
             URLQueryItem(name: "min_height", value: String(minHeight)),
+            URLQueryItem(name: "order", value: order),
         ]
 
         guard let url = components.url else {
@@ -84,6 +86,7 @@ actor PixabayService {
             purity: "sfw",
             views: hit.views,
             favorites: hit.favorites ?? hit.likes,
+            downloads: hit.downloads,
             uploadedAt: Date(),
             tags: nil,
             colors: nil
@@ -96,18 +99,23 @@ actor PixabayService {
 
         let largeVideo = hit.videos.large
         let mediumVideo = hit.videos.medium
+        let thumbnailURL = largeVideo.thumbnail
+            .flatMap(URL.init(string:))
+            ?? mediumVideo.thumbnail.flatMap(URL.init(string:))
+            ?? hit.pictureID.flatMap { URL(string: "https://i.vimeocdn.com/video/\($0)_640x360.jpg") }
+            ?? URL(string: hit.pageURL)!
 
         return MediaItem(
             slug: "pixabay_video_\(hit.id)",
             title: title.isEmpty ? "Pixabay Video" : title,
             pageURL: URL(string: hit.pageURL)!,
-            thumbnailURL: URL(string: largeVideo.thumbnail ?? mediumVideo.thumbnail ?? "")!,
+            thumbnailURL: thumbnailURL,
             resolutionLabel: "\(largeVideo.width)x\(largeVideo.height)",
             collectionTitle: nil,
             summary: nil,
             previewVideoURL: URL(string: mediumVideo.url),
             fullVideoURL: URL(string: largeVideo.url),
-            posterURL: nil,
+            posterURL: thumbnailURL,
             tags: tags,
             exactResolution: "\(largeVideo.width)x\(largeVideo.height)",
             durationSeconds: Double(hit.duration),
