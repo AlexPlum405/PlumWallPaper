@@ -184,9 +184,8 @@ struct RemoteWallpaperCard: View {
     }
 
     private func prefetchFullResolutionPreview() {
-        guard let url = wallpaper.fullImageURL else { return }
         Task {
-            await PreviewResourcePipeline.shared.prefetchFullResolution(url: url)
+            await PreviewResourcePipeline.shared.prefetchFullResolution(for: wallpaper)
         }
     }
 }

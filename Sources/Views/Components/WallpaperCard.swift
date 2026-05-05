@@ -273,9 +273,8 @@ struct WallpaperCard: View {
     }
 
     private func prefetchFullResolutionPreview() {
-        guard let url = URL(string: item.filePath), url.scheme?.hasPrefix("http") == true else { return }
         Task {
-            await PreviewResourcePipeline.shared.prefetchFullResolution(url: url)
+            await PreviewResourcePipeline.shared.prefetchFullResolution(for: item)
         }
     }
 }

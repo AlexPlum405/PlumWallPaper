@@ -123,17 +123,13 @@ extension MediaExploreView {
         ) {
             ForEach(viewModel.mediaItems) { item in
                 MediaCard(mediaItem: item) {
-                    if let url = item.fullVideoURL ?? item.previewVideoURL {
-                        Task {
-                            await PreviewResourcePipeline.shared.prefetchFullResolution(url: url)
-                        }
+                    Task {
+                        await PreviewResourcePipeline.shared.prefetchFullResolution(for: item)
                     }
                     detailItem = WallpaperPreviewItem(media: item)
                 }
                 .onAppear {
-                    if let videoURL = item.fullVideoURL ?? item.previewVideoURL {
-                        PreviewResourcePipeline.shared.preloadVideo(url: videoURL)
-                    }
+                    PreviewResourcePipeline.shared.preloadVideo(for: item, preferFullResolution: true)
                 }
             }
             

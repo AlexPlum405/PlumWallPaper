@@ -185,9 +185,8 @@ struct MediaCard: View {
     }
 
     private func prefetchFullResolutionPreview() {
-        guard let url = mediaItem.fullVideoURL ?? mediaItem.previewVideoURL else { return }
         Task {
-            await PreviewResourcePipeline.shared.prefetchFullResolution(url: url)
+            await PreviewResourcePipeline.shared.prefetchFullResolution(for: mediaItem)
         }
     }
 }

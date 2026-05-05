@@ -299,6 +299,27 @@ final class PreviewResourcePipeline {
 
     private init() {}
 
+    func previewVideoURL(for item: MediaItem) -> URL? {
+        item.previewVideoURL ?? item.fullVideoURL
+    }
+
+    func fullResolutionURL(for item: MediaItem) -> URL? {
+        item.fullVideoURL ?? item.previewVideoURL
+    }
+
+    func fullResolutionURL(for item: WallpaperPreviewItem) -> URL? {
+        if item.type == .video,
+           let downloadQuality = item.downloadQuality,
+           let qualityURL = Self.remoteURL(from: downloadQuality) {
+            return qualityURL
+        }
+        return item.contentURL.flatMap(Self.remoteURL)
+    }
+
+    func fullResolutionURL(for wallpaper: RemoteWallpaper) -> URL? {
+        wallpaper.fullImageURL.flatMap(Self.remoteURL)
+    }
+
     func cachedFullResolutionURL(for remoteURL: URL) async -> URL? {
         await FullResolutionPreviewCache.shared.cachedURL(for: remoteURL)
     }
@@ -311,15 +332,55 @@ final class PreviewResourcePipeline {
         await FullResolutionPreviewCache.shared.prefetch(remoteURL: remoteURL)
     }
 
+    func prefetchFullResolution(for item: WallpaperPreviewItem) async {
+        guard let url = fullResolutionURL(for: item) else { return }
+        await prefetchFullResolution(url: url)
+    }
+
+    func prefetchFullResolution(for item: MediaItem) async {
+        guard let url = fullResolutionURL(for: item) else { return }
+        await prefetchFullResolution(url: url)
+    }
+
+    func prefetchFullResolution(for wallpaper: RemoteWallpaper) async {
+        guard let url = fullResolutionURL(for: wallpaper) else { return }
+        await prefetchFullResolution(url: url)
+    }
+
     func preloadVideo(url: URL) {
         VideoPreloader.shared.preload(url: url)
+    }
+
+    func preloadVideo(for item: MediaItem, preferFullResolution: Bool = false) {
+        let url = preferFullResolution ? fullResolutionURL(for: item) : previewVideoURL(for: item)
+        guard let url else { return }
+        preloadVideo(url: url)
+    }
+
+    func preloadVideo(for item: WallpaperPreviewItem) {
+        guard item.type == .video, let url = fullResolutionURL(for: item) else { return }
+        preloadVideo(url: url)
     }
 
     func preloadVideos(urls: [URL], limit: Int) {
         VideoPreloader.shared.preload(urls: urls, limit: limit)
     }
 
+    func preloadPreviewVideos(for items: [MediaItem], limit: Int) {
+        preloadVideos(urls: items.compactMap(previewVideoURL(for:)), limit: limit)
+    }
+
     func clearPreviewCache() async throws {
         try await FullResolutionPreviewCache.shared.clearCache()
+    }
+
+    private static func remoteURL(from string: String) -> URL? {
+        guard let url = URL(string: string) else { return nil }
+        return remoteURL(from: url)
+    }
+
+    private static func remoteURL(from url: URL) -> URL? {
+        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else { return nil }
+        return url
     }
 }

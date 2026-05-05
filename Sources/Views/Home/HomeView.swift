@@ -123,8 +123,7 @@ struct HomeView: View {
 
     private func preheatHomeVideos() {
         preheatHeroVideos()
-        let motionURLs = viewModel.popularMotions.compactMap(previewVideoURL(for:))
-        PreviewResourcePipeline.shared.preloadVideos(urls: motionURLs, limit: 6)
+        PreviewResourcePipeline.shared.preloadPreviewVideos(for: viewModel.popularMotions, limit: 6)
     }
 
     private func preheatHeroVideos() {
@@ -139,13 +138,9 @@ struct HomeView: View {
 
         let urls = indexes
             .map { viewModel.heroItems[$0] }
-            .compactMap(bestHeroVideoURL(for:))
+            .compactMap(PreviewResourcePipeline.shared.previewVideoURL(for:))
 
         PreviewResourcePipeline.shared.preloadVideos(urls: urls, limit: 3)
-    }
-
-    private func previewVideoURL(for item: MediaItem) -> URL? {
-        item.previewVideoURL ?? item.fullVideoURL
     }
 
     // MARK: - Loading & Error States
@@ -539,10 +534,8 @@ struct HomeView: View {
                         })
                         .onHover { hovering in
                             if hovering {
-                                if let url = item.contentURL {
-                                    Task {
-                                        await PreviewResourcePipeline.shared.prefetchFullResolution(url: url)
-                                    }
+                                Task {
+                                    await PreviewResourcePipeline.shared.prefetchFullResolution(for: item)
                                 }
                             }
                         }
@@ -593,12 +586,10 @@ struct HomeView: View {
                         })
                         .onHover { hovering in
                             if hovering {
-                                if let videoURL = mediaItem.fullVideoURL ?? mediaItem.previewVideoURL {
-                                    Task {
-                                        await PreviewResourcePipeline.shared.prefetchFullResolution(url: videoURL)
-                                    }
-                                    PreviewResourcePipeline.shared.preloadVideo(url: videoURL)
+                                Task {
+                                    await PreviewResourcePipeline.shared.prefetchFullResolution(for: mediaItem)
                                 }
+                                PreviewResourcePipeline.shared.preloadVideo(for: mediaItem, preferFullResolution: true)
                             }
                         }
                     }
@@ -641,7 +632,7 @@ struct HomeView: View {
     // MARK: - Hero Online Actions
 
     private func bestHeroVideoURL(for item: MediaItem) -> URL? {
-        item.previewVideoURL ?? item.fullVideoURL
+        PreviewResourcePipeline.shared.previewVideoURL(for: item)
     }
 
     private func bestHeroImageURL(for item: MediaItem) -> URL {
