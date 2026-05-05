@@ -284,63 +284,44 @@ struct WallpaperDetailView: View {
             }
         }
     }
+
     private var fullscreenCanvas: some View {
-        ZStack {
-            ArtisanBackgroundLayer(
-                wallpaper: wallpaper,
-                contentURL: wallpaperContentURL,
-                posterURL: wallpaperPosterURL,
-                blur: blur,
-                grayscale: grayscale,
-                contrast: contrast,
-                saturation: saturation,
-                exposure: exposure,
-                hue: hue,
-                highlights: highlights,
-                shadows: shadows,
-                invert: invert,
-                grain: grain,
-                vignette: vignette
-            )
-
-            Group {
-                if weatherThunder > 0 {
-                    ArtisanLightningLayer(frequency: weatherThunder, flash: $lightningFlash)
-                }
-                if weatherSnow > 0 {
-                    ArtisanSnowLayer(intensity: weatherSnow, wind: weatherWind)
-                }
-                if weatherRain > 0 {
-                    ArtisanRainLayer(intensity: weatherRain, wind: weatherWind)
-                }
-            }
-
-            if isStudioActive && particleRate > 0 {
-                ParticleOverlay(
-                    style: particleStyle,
-                    rate: particleRate,
-                    lifetime: particleLifetime,
-                    size: particleSize,
-                    gravity: particleGravity,
-                    turbulence: particleTurbulence,
-                    spin: particleSpin,
-                    thrust: particleThrust,
-                    angle: particleAngle,
-                    spread: particleSpread,
-                    fadeIn: particleFadeIn,
-                    fadeOut: particleFadeOut,
-                    wind: weatherWind,
-                    isRainMode: false,
-                    colorStart: particleColorStart,
-                    colorEnd: particleColorEnd
-                )
-                .drawingGroup()
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.black)
-        .ignoresSafeArea()
-        .id("canvas-\(wallpaper.id)")
+        DetailPreviewCanvas(
+            wallpaper: wallpaper,
+            contentURL: wallpaperContentURL,
+            posterURL: wallpaperPosterURL,
+            isStudioActive: isStudioActive,
+            exposure: exposure,
+            contrast: contrast,
+            saturation: saturation,
+            hue: hue,
+            blur: blur,
+            grain: grain,
+            vignette: vignette,
+            grayscale: grayscale,
+            invert: invert,
+            highlights: highlights,
+            shadows: shadows,
+            weatherWind: weatherWind,
+            weatherRain: weatherRain,
+            weatherThunder: weatherThunder,
+            weatherSnow: weatherSnow,
+            lightningFlash: $lightningFlash,
+            particleStyle: particleStyle,
+            particleRate: particleRate,
+            particleLifetime: particleLifetime,
+            particleSize: particleSize,
+            particleGravity: particleGravity,
+            particleTurbulence: particleTurbulence,
+            particleSpin: particleSpin,
+            particleThrust: particleThrust,
+            particleAngle: particleAngle,
+            particleSpread: particleSpread,
+            particleFadeIn: particleFadeIn,
+            particleFadeOut: particleFadeOut,
+            particleColorStart: particleColorStart,
+            particleColorEnd: particleColorEnd
+        )
     }
 
     private func navigationEdgeButton(direction: Int, isHovered: Binding<Bool>) -> some View {
@@ -510,38 +491,21 @@ struct WallpaperDetailView: View {
     }
 
     private var artisanMainDock: some View {
-        HStack(spacing: 24) {
-            actionCircleButton(icon: isFavoriteDisplayed ? "heart.fill" : "heart", color: isFavoriteDisplayed ? LiquidGlassColors.primaryPink : .white.opacity(0.6)) {
-                toggleFavorite()
-            }
-            Button(action: { Task { await applyWallpaper() } }) {
-                HStack(spacing: 16) {
-                    if isApplying { CustomProgressView(tint: .white, scale: 0.8) }
-                    else { Text("设为壁纸").font(.system(size: 14, weight: .bold)).kerning(2) }
+        DetailActionDock(
+            isFavorite: isFavoriteDisplayed,
+            isApplying: isApplying,
+            isStudioActive: isStudioActive,
+            isDownloading: isDownloading,
+            onFavorite: toggleFavorite,
+            onApply: { Task { await applyWallpaper() } },
+            onToggleStudio: {
+                withAnimation(.gallerySpring) {
+                    isStudioActive.toggle()
+                    if !isStudioActive { NSColorPanel.shared.orderOut(nil) }
                 }
-                .padding(.horizontal, 60).frame(height: 52)
-                .background(LiquidGlassColors.primaryPink).clipShape(Capsule()).foregroundStyle(.black)
-                .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.3), radius: 20)
-            }.buttonStyle(.plain).disabled(isApplying)
-
-            Button(action: { withAnimation(.gallerySpring) { 
-                isStudioActive.toggle()
-                if !isStudioActive { NSColorPanel.shared.orderOut(nil) }
-            } }) {
-                VStack(spacing: 4) {
-                    Image(systemName: "camera.aperture").font(.system(size: 18))
-                    Text("实验室").font(.system(size: 10, weight: .bold))
-                }
-                .foregroundStyle(isStudioActive ? LiquidGlassColors.primaryPink : .white.opacity(0.6))
-                .frame(width: 52, height: 52).background(Circle().fill(Color.white.opacity(0.05)))
-                .overlay(Circle().stroke(isStudioActive ? LiquidGlassColors.primaryPink.opacity(0.5) : Color.white.opacity(0.1), lineWidth: 1))
-            }.buttonStyle(.plain)
-
-            actionCircleButton(icon: "arrow.down.to.line.compact", color: .white.opacity(0.6)) { Task { await downloadWallpaper() } }.disabled(isDownloading)
-        }
-        .padding(12).background(.ultraThinMaterial, in: Capsule())
-        .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
-        .artisanShadow(color: .black.opacity(0.2), radius: 30)
+            },
+            onDownload: { Task { await downloadWallpaper() } }
+        )
     }
 
     private var artisanStudioHUD: some View {
@@ -1331,14 +1295,6 @@ struct WallpaperDetailView: View {
         ]
     }
 
-    private func actionCircleButton(icon: String, color: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon).font(.system(size: 18)).foregroundStyle(color)
-                .frame(width: 52, height: 52).background(Circle().fill(Color.white.opacity(0.05)))
-                .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 1))
-        }.buttonStyle(.plain)
-    }
-
     private var previewCacheTaskID: String {
         "\(wallpaper.remoteId ?? wallpaper.id.uuidString)|\(wallpaper.filePath)"
     }
@@ -1675,131 +1631,6 @@ private struct ParticleMaterialSwatch: View {
         )
         return path
     }
-}
-
-// MARK: - Weather Engine Layers
-
-private struct ArtisanRainLayer: View {
-    let intensity: Double
-    let wind: Double
-    var body: some View {
-        TimelineView(.animation) { timeline in
-            Canvas { context, size in
-                let now = timeline.date.timeIntervalSinceReferenceDate
-                let bgCount = Int(intensity * 3)
-                for i in 0..<bgCount { drawRainLine(into: context, seed: Double(i) * 0.7, now: now, size: size, opacity: 0.15, width: 0.5, speedMult: 0.8) }
-                let fgCount = Int(intensity * 4)
-                for i in 0..<fgCount { drawRainLine(into: context, seed: Double(i) * 1.3, now: now, size: size, opacity: 0.4, width: 1.2, speedMult: 1.2) }
-            }
-        }.allowsHitTesting(false)
-    }
-    private func drawRainLine(into context: GraphicsContext, seed: Double, now: Double, size: CGSize, opacity: Double, width: CGFloat, speedMult: Double) {
-        let speed = (900.0 + (sin(seed * 123.4) * 300.0)) * speedMult
-        let life: Double = 1.2; let age = (now - seed * 0.08).truncatingRemainder(dividingBy: life)
-        let currentY = -150.0 + (speed * age); let currentX = (sin(seed * 456.7) * 0.5 + 0.5) * size.width + (wind * 350 * (age / life)) + (wind * 15 * age)
-        if currentY < size.height + 150 {
-            var path = Path(); path.move(to: CGPoint(x: currentX, y: currentY)); path.addLine(to: CGPoint(x: currentX + (wind * 3), y: currentY + speed * 0.045))
-            context.stroke(path, with: .color(.white.opacity(opacity)), lineWidth: width)
-        }
-    }
-}
-
-private struct ArtisanSnowLayer: View {
-    let intensity: Double
-    let wind: Double
-    var body: some View {
-        TimelineView(.animation) { timeline in
-            Canvas { context, size in
-                let now = timeline.date.timeIntervalSinceReferenceDate
-                let count = Int(intensity * 3.5)
-                for i in 0..<count {
-                    let seed = Double(i); let depth = (sin(seed * 99) * 0.5 + 0.5)
-                    let speed = (80.0 + depth * 120.0); let life: Double = 15.0; let age = (now - seed * 0.7).truncatingRemainder(dividingBy: life)
-                    let startX = (sin(seed * 321.0) * 0.5 + 0.5) * size.width + (wind * 80 * (age / life)) + sin(age * (1.0 + depth) + seed) * (15.0 + depth * 30.0)
-                    let currentY = -40.0 + (speed * age)
-                    if currentY < size.height + 40 {
-                        let rect = CGRect(x: startX, y: currentY, width: 1.5 + depth * 3.5, height: 1.5 + depth * 3.5)
-                        context.fill(Path(ellipseIn: rect), with: .color(.white.opacity(0.2 + depth * 0.5)))
-                    }
-                }
-            }
-        }.allowsHitTesting(false)
-    }
-}
-
-private struct ArtisanLightningLayer: View {
-    let frequency: Double
-    @Binding var flash: Double
-    @State private var bolts: [LightningBolt] = []
-    @State private var lastTriggerTime = Date()
-    @State private var nextTriggerDelay: TimeInterval = 1.0
-    struct LightningBolt: Identifiable { let id = UUID(); let path: Path; let opacity: Double; let width: CGFloat }
-    var body: some View {
-        TimelineView(.animation) { timeline in
-            Canvas { context, size in
-                for bolt in bolts {
-                    context.stroke(bolt.path, with: .color(.white.opacity(bolt.opacity)), lineWidth: bolt.width)
-                    var glow = context; glow.addFilter(.blur(radius: 4)); glow.stroke(bolt.path, with: .color(.blue.opacity(bolt.opacity * 0.4)), lineWidth: bolt.width * 3)
-                }
-            }.onChange(of: timeline.date) { _, date in updateBolts(at: date, size: NSScreen.main?.frame.size ?? CGSize(width: 1920, height: 1080)) }
-        }.allowsHitTesting(false)
-    }
-    private func updateBolts(at now: Date, size: CGSize) {
-        if now.timeIntervalSince(lastTriggerTime) > nextTriggerDelay {
-            if Double.random(in: 0...1) < frequency / 100.0 {
-                let path = generateLightningPath(start: CGPoint(x: Double.random(in: 0...size.width), y: 0), size: size)
-                bolts.append(LightningBolt(path: path, opacity: 1.0, width: CGFloat.random(in: 1...3)))
-                lastTriggerTime = now; nextTriggerDelay = Double.random(in: 0.2...max(0.5, 10.0 - frequency/10.0))
-                withAnimation(.linear(duration: 0.05)) { flash = Double.random(in: 0.5...0.8) }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { withAnimation(.easeOut(duration: 0.5)) { flash = 0 } }
-            }
-        }
-        for i in (0..<bolts.count).reversed() {
-            let op = bolts[i].opacity - 0.15
-            if op <= 0 { bolts.remove(at: i) } else { bolts[i] = LightningBolt(path: bolts[i].path, opacity: op, width: bolts[i].width) }
-        }
-    }
-    private func generateLightningPath(start: CGPoint, size: CGSize) -> Path {
-        var path = Path(); path.move(to: start); var current = start; let segs = 20; let h = size.height / CGFloat(segs)
-        for _ in 0..<segs {
-            current = CGPoint(x: current.x + CGFloat.random(in: -50...50), y: current.y + h); path.addLine(to: current)
-            if Double.random(in: 0...1) < 0.2 {
-                var br = current; for _ in 0..<5 { br = CGPoint(x: br.x + CGFloat.random(in: -30...30), y: br.y + CGFloat.random(in: 5...20)); path.move(to: current); path.addLine(to: br) }
-                path.move(to: current)
-            }
-        }
-        return path
-    }
-}
-
-// MARK: - Core Rendering Subviews
-
-private struct ArtisanBackgroundLayer: View {
-    let wallpaper: Wallpaper; let contentURL, posterURL: URL?; let blur, grayscale, contrast, saturation, exposure, hue, highlights, shadows, invert, grain, vignette: Double
-    var body: some View {
-        ZStack {
-            if wallpaper.type == .video, let url = contentURL { DetailVideoLayerContainer(url: url).frame(maxWidth: .infinity, maxHeight: .infinity).clipped() }
-            else if let url = contentURL { ArtisanSimpleImage(url: url).frame(maxWidth: .infinity, maxHeight: .infinity).clipped() }
-            else { ArtisanSimplePoster(url: posterURL) }
-            if invert > 50 { Color.white.blendMode(.difference) }
-            if grain > 0 { GrainTextureOverlay(opacity: grain / 100.0).blendMode(.overlay) }
-            if vignette > 0 { RadialGradient(colors: [.clear, .black.opacity(vignette / 100.0)], center: .center, startRadius: 300, endRadius: 1000) }
-        }
-        .blur(radius: CGFloat(blur)).grayscale(grayscale / 100.0).contrast(contrast / 100.0).saturation(saturation / 100.0).brightness((exposure - 100) / 100.0).hueRotation(.degrees(hue)).colorMultiply(Color(white: highlights / 100.0))
-    }
-}
-
-private struct ArtisanSimpleImage: View {
-    let url: URL
-    var body: some View {
-        if url.isFileURL { if let img = NSImage(contentsOf: url) { Image(nsImage: img).resizable().aspectRatio(contentMode: .fill) } else { Color.black } }
-        else { RemoteThumbnailImage(urls: [url], contentMode: .fill) }
-    }
-}
-
-private struct ArtisanSimplePoster: View {
-    let url: URL?
-    var body: some View { ZStack { Color.black; if let url = url { ArtisanSimpleImage(url: url).blur(radius: 16).opacity(0.45) } } }
 }
 
 // MARK: - 内置预设
