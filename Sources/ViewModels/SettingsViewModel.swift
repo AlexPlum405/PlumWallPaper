@@ -77,16 +77,6 @@ final class SettingsViewModel {
 
     func setDisplayTopology(_ topology: DisplayTopology) {
         settings?.displayTopology = topology
-        if topology == .independent,
-           let settings,
-           settings.independentScreenId == nil {
-            settings.independentScreenId = WallpaperTopologyCoordinator.shared.resolvedIndependentScreenId(settings: settings)
-        }
-        save()
-    }
-
-    func setIndependentScreenId(_ screenId: String) {
-        settings?.independentScreenId = screenId
         save()
     }
 

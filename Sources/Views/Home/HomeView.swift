@@ -950,17 +950,18 @@ struct HomeView: View {
 
     private func applyDownloadedWallpaper(_ wallpaper: Wallpaper, targetScreenId: String?) async throws -> String {
         let settings = try PreferencesStore(modelContext: modelContext).fetchSettings()
-        if let targetScreenId {
-            WallpaperTopologyCoordinator.shared.saveIndependentScreenSelection(targetScreenId, settings: settings)
-            try modelContext.save()
-        }
         let message = try await WallpaperTopologyCoordinator.shared.apply(
             wallpaper: wallpaper,
             effects: nil,
-            settings: settings
+            settings: settings,
+            targetScreenId: targetScreenId
         )
         RestoreManager.shared.saveSession(
-            mapping: WallpaperTopologyCoordinator.shared.sessionMapping(for: wallpaper.id, settings: settings)
+            mapping: WallpaperTopologyCoordinator.shared.sessionMapping(
+                for: wallpaper.id,
+                settings: settings,
+                targetScreenId: targetScreenId
+            )
         )
         SlideshowScheduler.shared.onWallpaperChanged(wallpaper.id)
         return wallpaper.source == .downloaded ? "已下载并\(message)" : message

@@ -156,10 +156,6 @@ struct PreviewView: View {
 
         do {
             let settings = try PreferencesStore(modelContext: modelContext).fetchSettings()
-            if let targetScreenId {
-                WallpaperTopologyCoordinator.shared.saveIndependentScreenSelection(targetScreenId, settings: settings)
-                try modelContext.save()
-            }
             let message = try await WallpaperTopologyCoordinator.shared.apply(
                 wallpaper: wallpaper,
                 effects: nil,

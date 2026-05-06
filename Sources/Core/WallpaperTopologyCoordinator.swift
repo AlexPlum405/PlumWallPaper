@@ -85,10 +85,6 @@ final class WallpaperTopologyCoordinator {
         return firstId
     }
 
-    func saveIndependentScreenSelection(_ screenId: String, settings: Settings) {
-        settings.independentScreenId = screenId
-    }
-
     func restore(mapping: [String: UUID], context: ModelContext, settings: Settings, displayManager: DisplayManager = .shared) async {
         let screens = displayManager.availableScreens
         guard !screens.isEmpty else { return }

@@ -31,7 +31,6 @@ final class Settings {
     var pauseBeforeSleep: Bool = true
     var pauseOnOcclusion: Bool = false
     var displayTopology: DisplayTopology = DisplayTopology.independent
-    var independentScreenId: String?
     var colorSpace: ColorSpaceOption = ColorSpaceOption.p3
     var screenOrder: [String]?
     var themeMode: ThemeMode = ThemeMode.auto
@@ -76,7 +75,6 @@ final class Settings {
         self.pauseBeforeSleep = true
         self.pauseOnOcclusion = false
         self.displayTopology = .independent
-        self.independentScreenId = nil
         self.colorSpace = .p3
         self.themeMode = .auto
         self.thumbnailSize = .medium
