@@ -154,48 +154,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             menu.addItem(NSMenuItem.separator())
 
-            // 播放控制
-            menu.addItem(NSMenuItem(title: "播放/暂停", action: #selector(togglePlayback), keyEquivalent: "p"))
-            menu.addItem(NSMenuItem(title: "下一张壁纸", action: #selector(nextWallpaper), keyEquivalent: "n"))
-
-            menu.addItem(NSMenuItem.separator())
-
-            // 增强功能
-            let superResItem = NSMenuItem(title: "超分辨率增强", action: #selector(toggleSuperResolution), keyEquivalent: "")
-            menu.addItem(superResItem)
-
-            let videoEnhanceItem = NSMenuItem(title: "视频增强", action: #selector(toggleVideoEnhancement), keyEquivalent: "")
-            menu.addItem(videoEnhanceItem)
-
-            menu.addItem(NSMenuItem.separator())
-
             // 底部操作
             menu.addItem(NSMenuItem(title: "退出", action: #selector(quitApp), keyEquivalent: "q"))
 
             statusMenu = menu
             self.statusItem?.menu = menu
-        }
-    }
-
-    @objc private func togglePlayback() {
-        NotificationCenter.default.post(name: .plumTogglePlayback, object: nil)
-    }
-
-    @objc private func nextWallpaper() {
-        NotificationCenter.default.post(name: .plumNextWallpaper, object: nil)
-    }
-
-    @objc private func toggleSuperResolution() {
-        NotificationCenter.default.post(name: .plumToggleSuperResolution, object: nil)
-    }
-
-    @objc private func toggleVideoEnhancement() {
-        NotificationCenter.default.post(name: .plumToggleVideoEnhancement, object: nil)
-    }
-
-    @objc private func openFeedback() {
-        if let url = URL(string: "https://github.com/yourusername/plumwallpaper/issues") {
-            NSWorkspace.shared.open(url)
         }
     }
 

@@ -110,23 +110,44 @@ final class ScreenRenderer {
 
         let asset = AVURLAsset(url: url)
         return AVVideoComposition(asset: asset) { request in
-            var image = request.sourceImage
-            if let effects {
-                image = WallpaperRenderEffectRenderer.apply(effects, to: image)
-            }
+            var image = request.sourceImage.clampedToExtent()
+
             if hasVideoEnhancement {
-                let controls = CIFilter.colorControls()
-                controls.inputImage = image
-                controls.contrast = 1.12
-                controls.saturation = 1.08
-                image = controls.outputImage ?? image
+                let clarityControls = CIFilter.colorControls()
+                clarityControls.inputImage = image
+                clarityControls.brightness = 0.01
+                clarityControls.contrast = 1.18
+                clarityControls.saturation = 1.12
+                image = clarityControls.outputImage ?? image
 
                 let sharpen = CIFilter.sharpenLuminance()
                 sharpen.inputImage = image
-                sharpen.sharpness = 0.5
+                sharpen.sharpness = 0.72
                 image = sharpen.outputImage ?? image
+
+                let highlightShadow = CIFilter.highlightShadowAdjust()
+                highlightShadow.inputImage = image
+                highlightShadow.highlightAmount = 0.72
+                highlightShadow.shadowAmount = 0.28
+                image = highlightShadow.outputImage ?? image
+
+                let vibrance = CIFilter.vibrance()
+                vibrance.inputImage = image
+                vibrance.amount = 0.28
+                image = vibrance.outputImage ?? image
+
+                let unsharpMask = CIFilter.unsharpMask()
+                unsharpMask.inputImage = image
+                unsharpMask.intensity = 0.45
+                unsharpMask.radius = 1.8
+                image = unsharpMask.outputImage ?? image
             }
-            request.finish(with: image, context: nil)
+
+            if let effects {
+                image = WallpaperRenderEffectRenderer.apply(effects, to: image)
+            }
+
+            request.finish(with: image.cropped(to: request.sourceImage.extent), context: nil)
         }
     }
 

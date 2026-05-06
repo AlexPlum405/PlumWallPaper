@@ -163,10 +163,15 @@ struct PreviewView: View {
             let message = try await WallpaperTopologyCoordinator.shared.apply(
                 wallpaper: wallpaper,
                 effects: nil,
-                settings: settings
+                settings: settings,
+                targetScreenId: targetScreenId
             )
             RestoreManager.shared.saveSession(
-                mapping: WallpaperTopologyCoordinator.shared.sessionMapping(for: wallpaper.id, settings: settings)
+                mapping: WallpaperTopologyCoordinator.shared.sessionMapping(
+                    for: wallpaper.id,
+                    settings: settings,
+                    targetScreenId: targetScreenId
+                )
             )
             SlideshowScheduler.shared.onWallpaperChanged(wallpaper.id)
             toast = ToastConfig(message: message, type: .success)
