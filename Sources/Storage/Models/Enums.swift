@@ -38,6 +38,10 @@ enum ThumbnailSize: String, Codable {
     case small, medium, large
 }
 
+enum ProxyMode: String, Codable {
+    case system, manual, direct
+}
+
 enum RuleAction: String, Codable {
     case pause, mute, limitFPS30, limitFPS15, none
 }

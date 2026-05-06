@@ -128,6 +128,35 @@ final class SettingsViewModel {
         NotificationCenter.default.post(name: .plumStatusBarConfigChanged, object: nil)
     }
 
+    func setProxyMode(_ mode: ProxyMode) {
+        settings?.proxyMode = mode
+        save()
+        applyProxySettings()
+    }
+
+    func setProxyHost(_ host: String) {
+        settings?.proxyHost = host
+        save()
+        applyProxySettings()
+    }
+
+    func setProxyPort(_ port: Int) {
+        settings?.proxyPort = port
+        save()
+        applyProxySettings()
+    }
+
+    func applyProxySettings() {
+        guard let settings else { return }
+        Task {
+            await NetworkService.shared.applyProxySettings(
+                mode: settings.proxyMode,
+                host: settings.proxyHost,
+                port: settings.proxyPort
+            )
+        }
+    }
+
     func setLibraryPath(_ path: String) {
         settings?.libraryPath = path
         save()
@@ -235,6 +264,7 @@ final class SettingsViewModel {
         PerformanceMonitor.shared.fpsLimit = settings.fpsLimit ?? 0
         applyTheme(settings.themeMode)
         applySlideshowSettings()
+        applyProxySettings()
     }
 
     private func applyTheme(_ mode: ThemeMode) {

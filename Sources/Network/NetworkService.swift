@@ -4,7 +4,7 @@ import Foundation
 actor NetworkService {
     static let shared = NetworkService()
 
-    private let session: URLSession
+    private var session: URLSession
     private let cache: URLCache
 
     // MARK: - Retry Configuration
@@ -28,6 +28,39 @@ actor NetworkService {
         config.allowsCellularAccess = true
         config.waitsForConnectivity = true
         config.isDiscretionary = false
+
+        self.session = URLSession(configuration: config)
+    }
+
+    // MARK: - Proxy Configuration
+
+    func applyProxySettings(mode: ProxyMode, host: String, port: Int) {
+        let config = URLSessionConfiguration.default
+        config.requestCachePolicy = .returnCacheDataElseLoad
+        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForResource = 60
+        config.urlCache = cache
+        config.allowsCellularAccess = true
+        config.waitsForConnectivity = true
+        config.isDiscretionary = false
+
+        switch mode {
+        case .system:
+            break
+        case .manual:
+            config.connectionProxyDictionary = [
+                kCFNetworkProxiesHTTPEnable: true,
+                kCFNetworkProxiesHTTPProxy: host,
+                kCFNetworkProxiesHTTPPort: port,
+                "HTTPSEnable": true,
+                "HTTPSProxy": host,
+                "HTTPSPort": port
+            ]
+            NSLog("[NetworkService] 代理已配置: \(host):\(port)")
+        case .direct:
+            config.connectionProxyDictionary = [:]
+            NSLog("[NetworkService] 代理已禁用，使用直连")
+        }
 
         self.session = URLSession(configuration: config)
     }

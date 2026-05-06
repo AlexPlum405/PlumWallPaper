@@ -45,6 +45,9 @@ final class Settings {
     var statusBarShowFPS: Bool = true
     var statusBarShowMemory: Bool = true
     var statusBarShowGPU: Bool = true
+    var proxyMode: ProxyMode = ProxyMode.system
+    var proxyHost: String = "127.0.0.1"
+    var proxyPort: Int = 7897
     var libraryPath: String = NSHomeDirectory() + "/Pictures/PlumWallPaper"
     var wallpaperOpacity: Int = 100
     var appRulesJSON: String?
@@ -88,6 +91,9 @@ final class Settings {
         self.statusBarShowFPS = true
         self.statusBarShowMemory = true
         self.statusBarShowGPU = true
+        self.proxyMode = .system
+        self.proxyHost = "127.0.0.1"
+        self.proxyPort = 7897
         self.libraryPath = NSHomeDirectory() + "/Pictures/PlumWallPaper"
         self.wallpaperOpacity = 100
     }

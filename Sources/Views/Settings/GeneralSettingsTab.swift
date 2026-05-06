@@ -57,6 +57,58 @@ struct GeneralSettingsTab: View {
                     }
                 }
 
+                // MARK: - [网络代理]
+                artisanSettingsSection(header: "网络代理 (NETWORK PROXY)") {
+                    artisanSettingsRow(title: "代理模式", subtitle: proxyModeDescription) {
+                        Picker("", selection: Binding(
+                            get: { viewModel.settings?.proxyMode ?? .system },
+                            set: { setProxyMode($0) }
+                        )) {
+                            Text("跟随系统").tag(ProxyMode.system)
+                            Text("手动指定").tag(ProxyMode.manual)
+                            Text("直连").tag(ProxyMode.direct)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 220)
+                    }
+
+                    if viewModel.settings?.proxyMode == .manual {
+                        artisanSettingsRow(title: "代理地址", subtitle: "HTTP/HTTPS 代理服务器", showDivider: false) {
+                            HStack(spacing: 8) {
+                                TextField("127.0.0.1", text: Binding(
+                                    get: { viewModel.settings?.proxyHost ?? "127.0.0.1" },
+                                    set: { setProxyHost($0) }
+                                ))
+                                .textFieldStyle(.plain)
+                                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                .foregroundStyle(LiquidGlassColors.textPrimary)
+                                .frame(width: 120)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.05)))
+                                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+
+                                Text(":")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundStyle(LiquidGlassColors.textQuaternary)
+
+                                TextField("7897", text: Binding(
+                                    get: { String(viewModel.settings?.proxyPort ?? 7897) },
+                                    set: { setProxyPort(Int($0) ?? 7897) }
+                                ))
+                                .textFieldStyle(.plain)
+                                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                .foregroundStyle(LiquidGlassColors.textPrimary)
+                                .frame(width: 60)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.05)))
+                                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                            }
+                        }
+                    }
+                }
+
                 // MARK: - [全局快捷键]
                 VStack(alignment: .leading, spacing: 16) {
                     Button {

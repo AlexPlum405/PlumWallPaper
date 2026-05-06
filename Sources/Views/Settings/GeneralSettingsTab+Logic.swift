@@ -39,4 +39,24 @@ extension GeneralSettingsTab {
         GlobalShortcutManager.shared.stop()
         GlobalShortcutManager.shared.start()
     }
+
+    func setProxyMode(_ mode: ProxyMode) {
+        viewModel.setProxyMode(mode)
+    }
+
+    func setProxyHost(_ host: String) {
+        viewModel.setProxyHost(host)
+    }
+
+    func setProxyPort(_ port: Int) {
+        viewModel.setProxyPort(port)
+    }
+
+    var proxyModeDescription: String {
+        switch viewModel.settings?.proxyMode ?? .system {
+        case .system: return "使用系统代理设置"
+        case .manual: return "手动指定代理服务器"
+        case .direct: return "不使用任何代理，直接连接"
+        }
+    }
 }
