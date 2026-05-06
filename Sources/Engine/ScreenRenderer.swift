@@ -113,33 +113,16 @@ final class ScreenRenderer {
             var image = request.sourceImage.clampedToExtent()
 
             if hasVideoEnhancement {
-                let clarityControls = CIFilter.colorControls()
-                clarityControls.inputImage = image
-                clarityControls.brightness = 0.01
-                clarityControls.contrast = 1.18
-                clarityControls.saturation = 1.12
-                image = clarityControls.outputImage ?? image
-
+                // 只做锐化，完全不动颜色
                 let sharpen = CIFilter.sharpenLuminance()
                 sharpen.inputImage = image
-                sharpen.sharpness = 0.72
+                sharpen.sharpness = 0.4
                 image = sharpen.outputImage ?? image
-
-                let highlightShadow = CIFilter.highlightShadowAdjust()
-                highlightShadow.inputImage = image
-                highlightShadow.highlightAmount = 0.72
-                highlightShadow.shadowAmount = 0.28
-                image = highlightShadow.outputImage ?? image
-
-                let vibrance = CIFilter.vibrance()
-                vibrance.inputImage = image
-                vibrance.amount = 0.28
-                image = vibrance.outputImage ?? image
 
                 let unsharpMask = CIFilter.unsharpMask()
                 unsharpMask.inputImage = image
-                unsharpMask.intensity = 0.45
-                unsharpMask.radius = 1.8
+                unsharpMask.intensity = 0.25
+                unsharpMask.radius = 1.2
                 image = unsharpMask.outputImage ?? image
             }
 

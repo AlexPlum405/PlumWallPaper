@@ -165,7 +165,7 @@ final class DesktopWindow: NSWindow {
             info += "  ❌ 超分辨率未启用\n"
         }
         if videoEnhancement {
-            info += "  ✅ 视频增强: 运行中（5 filters）"
+            info += "  ✅ 视频增强: 清晰度提升（2 filters）"
         } else {
             info += "  ❌ 视频增强未启用  "
         }
