@@ -75,15 +75,9 @@ struct MenuBarView: View {
     private var artisanHeaderSection: some View {
         HStack {
             HStack(spacing: 8) {
-                // 精致的 logo 显示，去除白边毛刺
-                if let appIcon = NSApp.applicationIconImage {
-                    Image(nsImage: appIcon)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 20, height: 20)
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
-                        .shadow(color: .black.opacity(0.1), radius: 1, x: 0, y: 0.5)
-                }
+                Image("InternalLogo")
+                    .resizable()
+                    .frame(width: 20, height: 20)
                 Text("Studio")
                     .font(.custom("Georgia", size: 15).bold().italic())
                     .foregroundStyle(LiquidGlassColors.primaryPink)

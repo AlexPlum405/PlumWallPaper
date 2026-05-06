@@ -78,19 +78,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let settingsWindow = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 800, height: 550),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            styleMask: [.borderless, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        settingsWindow.title = "设置"
-        settingsWindow.titlebarAppearsTransparent = true
-        settingsWindow.titleVisibility = .hidden
         settingsWindow.isMovableByWindowBackground = true
-        
-        // ✅ 隐藏红绿灯按钮
-        settingsWindow.standardWindowButton(.closeButton)?.isHidden = true
-        settingsWindow.standardWindowButton(.miniaturizeButton)?.isHidden = true
-        settingsWindow.standardWindowButton(.zoomButton)?.isHidden = true
         
         settingsWindow.backgroundColor = .clear
         settingsWindow.hasShadow = true

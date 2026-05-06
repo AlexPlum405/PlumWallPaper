@@ -62,7 +62,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 6) {
             // 品牌标识
             HStack(spacing: 12) {
-                Image(nsImage: NSApp.applicationIconImage ?? NSImage()).resizable().frame(width: 32, height: 32)
+                Image("InternalLogo").resizable().frame(width: 32, height: 32)
                 Text("Studio")
                     .font(.custom("Georgia", size: 18).bold().italic())
                     .foregroundStyle(LiquidGlassColors.primaryPink)

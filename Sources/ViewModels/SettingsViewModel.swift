@@ -148,11 +148,14 @@ final class SettingsViewModel {
 
     func applyProxySettings() {
         guard let settings else { return }
+        let mode = settings.proxyMode
+        let host = settings.proxyHost.isEmpty ? "127.0.0.1" : settings.proxyHost
+        let port = settings.proxyPort > 0 ? settings.proxyPort : 7897
         Task {
             await NetworkService.shared.applyProxySettings(
-                mode: settings.proxyMode,
-                host: settings.proxyHost,
-                port: settings.proxyPort
+                mode: mode,
+                host: host,
+                port: port
             )
         }
     }
