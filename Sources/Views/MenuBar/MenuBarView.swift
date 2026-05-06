@@ -226,7 +226,6 @@ struct MenuBarView: View {
     private var artisanQuickNav: some View {
         VStack(spacing: 8) {
             artisanNavRow(title: "管理壁纸库", icon: "archivebox.fill") { viewModel.openLibrary() }
-            artisanNavRow(title: "实验室后期", icon: "sparkles") { viewModel.openLaboratory() }
         }
     }
 

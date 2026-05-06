@@ -68,11 +68,6 @@ final class MenuBarViewModel {
         NotificationCenter.default.post(name: .plumSwitchMainTab, object: MainTab.myLibrary.rawValue)
     }
 
-    func openLaboratory() {
-        NotificationCenter.default.post(name: .plumOpenLaboratory, object: nil)
-        openMainWindow()
-    }
-
     func nextWallpaper() {
         SlideshowScheduler.shared.next()
     }

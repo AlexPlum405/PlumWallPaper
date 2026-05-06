@@ -66,9 +66,8 @@ struct WallpaperDetailView: View {
     @State var weatherRain: Double = 0
     @State var weatherThunder: Double = 0
     @State var weatherSnow: Double = 0
-    @State private var lightningFlash: Double = 0 
+    @State private var lightningFlash: Double = 0
 
-    @State var isShowingShaderEditor = false
     @State private var studioIntensity: Double = 0
     @State private var isExpertExpanded = false
     @State private var activeWeatherScene: LabWeatherScene = .dust

@@ -31,8 +31,4 @@ extension WallpaperDetailView {
             particleStyle = ParticleMaterial.dust.rawValue
         }
     }
-
-    func openShaderEditor() {
-        isShowingShaderEditor = true
-    }
 }

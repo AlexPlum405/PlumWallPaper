@@ -13,7 +13,6 @@ struct ContentView: View {
     @State private var selectedWallpaper: Wallpaper?
     @State private var hasInitialized = false
     @State private var exploreSection: ExploreSection?
-    @State private var showLaboratory = false
     @StateObject private var downloadManager = DownloadManager.shared
 
     var body: some View {
@@ -88,13 +87,6 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .plumOpenMainWindow)) { _ in
             NSApp.activate(ignoringOtherApps: true)
             NSApp.windows.first { $0.title == "PlumWallPaper" }?.makeKeyAndOrderFront(nil)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .plumOpenLaboratory)) { _ in
-            showLaboratory = true
-        }
-        .sheet(isPresented: $showLaboratory) {
-            ShaderEditorView()
-                .frame(width: 980, height: 680)
         }
         .onAppear {
             // 确保只初始化一次

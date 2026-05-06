@@ -325,7 +325,6 @@ extension Notification.Name {
     static let plumMenuBarVisibilityChanged = Notification.Name("plumMenuBarVisibilityChanged")
     static let plumOpenMainWindow = Notification.Name("plumOpenMainWindow")
     static let plumSwitchMainTab = Notification.Name("plumSwitchMainTab")
-    static let plumOpenLaboratory = Notification.Name("plumOpenLaboratory")
     static let plumOpenLibrary = Notification.Name("plumOpenLibrary")
     static let plumTogglePlayback = Notification.Name("plumTogglePlayback")
     static let plumNextWallpaper = Notification.Name("plumNextWallpaper")

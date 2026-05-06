@@ -151,7 +151,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             // 主要操作
             menu.addItem(NSMenuItem(title: "显示主窗口", action: #selector(handleOpenMainWindow), keyEquivalent: "o"))
-            menu.addItem(NSMenuItem(title: "着色器编辑器", action: #selector(openLaboratory), keyEquivalent: ""))
 
             menu.addItem(NSMenuItem.separator())
 
@@ -176,11 +175,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             statusMenu = menu
             self.statusItem?.menu = menu
         }
-    }
-
-    @objc private func openLaboratory() {
-        NotificationCenter.default.post(name: .plumOpenLaboratory, object: nil)
-        handleOpenMainWindow()
     }
 
     @objc private func togglePlayback() {
