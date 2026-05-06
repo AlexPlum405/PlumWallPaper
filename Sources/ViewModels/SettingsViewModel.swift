@@ -77,6 +77,16 @@ final class SettingsViewModel {
 
     func setDisplayTopology(_ topology: DisplayTopology) {
         settings?.displayTopology = topology
+        if topology == .independent,
+           let settings,
+           settings.independentScreenId == nil {
+            settings.independentScreenId = WallpaperTopologyCoordinator.shared.resolvedIndependentScreenId(settings: settings)
+        }
+        save()
+    }
+
+    func setIndependentScreenId(_ screenId: String) {
+        settings?.independentScreenId = screenId
         save()
     }
 
@@ -84,6 +94,48 @@ final class SettingsViewModel {
         settings?.menuBarEnabled = enabled
         save()
         NotificationCenter.default.post(name: .plumMenuBarVisibilityChanged, object: enabled)
+    }
+
+    func setSuperResolutionEnabled(_ enabled: Bool) {
+        settings?.superResolutionEnabled = enabled
+        save()
+        NotificationCenter.default.post(name: .plumSuperResolutionChanged, object: enabled)
+    }
+
+    func setSuperResolutionScale(_ scale: Int) {
+        settings?.superResolutionScale = min(max(scale, 2), 4)
+        save()
+        NotificationCenter.default.post(name: .plumSuperResolutionScaleChanged, object: settings?.superResolutionScale)
+    }
+
+    func setSuperResolutionSharpen(_ enabled: Bool) {
+        settings?.superResolutionSharpen = enabled
+        save()
+        NotificationCenter.default.post(name: .plumSuperResolutionSharpenChanged, object: enabled)
+    }
+
+    func setVideoEnhancementEnabled(_ enabled: Bool) {
+        settings?.videoEnhancementEnabled = enabled
+        save()
+        NotificationCenter.default.post(name: .plumVideoEnhancementChanged, object: enabled)
+    }
+
+    func setStatusBarShowFPS(_ enabled: Bool) {
+        settings?.statusBarShowFPS = enabled
+        save()
+        NotificationCenter.default.post(name: .plumStatusBarConfigChanged, object: nil)
+    }
+
+    func setStatusBarShowMemory(_ enabled: Bool) {
+        settings?.statusBarShowMemory = enabled
+        save()
+        NotificationCenter.default.post(name: .plumStatusBarConfigChanged, object: nil)
+    }
+
+    func setStatusBarShowGPU(_ enabled: Bool) {
+        settings?.statusBarShowGPU = enabled
+        save()
+        NotificationCenter.default.post(name: .plumStatusBarConfigChanged, object: nil)
     }
 
     func setLibraryPath(_ path: String) {
@@ -170,9 +222,9 @@ final class SettingsViewModel {
         SlideshowScheduler.shared.activeWallpaperIdsProvider = {
             RenderPipeline.shared.activeWallpaperIds
         }
-        SlideshowScheduler.shared.onSwitchWallpaper = { wallpaper in
+        SlideshowScheduler.shared.onSwitchWallpaper = { [weak self] wallpaper in
             Task { @MainActor in
-                await Self.applySlideshowWallpaper(wallpaper)
+                await self?.applySlideshowWallpaper(wallpaper)
             }
         }
 
@@ -222,22 +274,25 @@ final class SettingsViewModel {
         SlideshowScheduler.shared.rebuildPlaylist()
     }
 
-    private static func applySlideshowWallpaper(_ wallpaper: Wallpaper) async {
-        guard let url = url(from: wallpaper.filePath) else { return }
+    private func applySlideshowWallpaper(_ wallpaper: Wallpaper) async {
+        guard let settings else { return }
         do {
-            if wallpaper.type == .video {
-                try await RenderPipeline.shared.setWallpaper(url: url, wallpaperId: wallpaper.id)
-            } else {
-                RenderPipeline.shared.cleanup()
-                try WallpaperSetter.shared.setWallpaper(imageURL: url)
-            }
+            _ = try await WallpaperTopologyCoordinator.shared.apply(
+                wallpaper: wallpaper,
+                renderedURL: Self.url(from: wallpaper.filePath),
+                effects: nil,
+                settings: settings
+            )
+            RestoreManager.shared.saveSession(
+                mapping: WallpaperTopologyCoordinator.shared.sessionMapping(for: wallpaper.id, settings: settings)
+            )
             SlideshowScheduler.shared.onWallpaperChanged(wallpaper.id)
         } catch {
             NSLog("[SettingsViewModel] 轮播切换失败: \(error.localizedDescription)")
         }
     }
 
-    private static func url(from path: String) -> URL? {
+    private static func url(from path: String) -> URL {
         let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
         if let url = URL(string: trimmed), url.scheme != nil {
             return url
@@ -271,4 +326,14 @@ extension Notification.Name {
     static let plumOpenMainWindow = Notification.Name("plumOpenMainWindow")
     static let plumSwitchMainTab = Notification.Name("plumSwitchMainTab")
     static let plumOpenLaboratory = Notification.Name("plumOpenLaboratory")
+    static let plumOpenLibrary = Notification.Name("plumOpenLibrary")
+    static let plumTogglePlayback = Notification.Name("plumTogglePlayback")
+    static let plumNextWallpaper = Notification.Name("plumNextWallpaper")
+    static let plumToggleSuperResolution = Notification.Name("plumToggleSuperResolution")
+    static let plumToggleVideoEnhancement = Notification.Name("plumToggleVideoEnhancement")
+    static let plumSuperResolutionChanged = Notification.Name("plumSuperResolutionChanged")
+    static let plumSuperResolutionScaleChanged = Notification.Name("plumSuperResolutionScaleChanged")
+    static let plumSuperResolutionSharpenChanged = Notification.Name("plumSuperResolutionSharpenChanged")
+    static let plumVideoEnhancementChanged = Notification.Name("plumVideoEnhancementChanged")
+    static let plumStatusBarConfigChanged = Notification.Name("plumStatusBarConfigChanged")
 }

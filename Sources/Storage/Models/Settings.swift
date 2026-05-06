@@ -31,6 +31,7 @@ final class Settings {
     var pauseBeforeSleep: Bool = true
     var pauseOnOcclusion: Bool = false
     var displayTopology: DisplayTopology = DisplayTopology.independent
+    var independentScreenId: String?
     var colorSpace: ColorSpaceOption = ColorSpaceOption.p3
     var screenOrder: [String]?
     var themeMode: ThemeMode = ThemeMode.auto
@@ -38,6 +39,13 @@ final class Settings {
     var animationsEnabled: Bool = true
     var launchAtLogin: Bool = false
     var menuBarEnabled: Bool = true
+    var superResolutionEnabled: Bool = false
+    var superResolutionScale: Int = 2
+    var superResolutionSharpen: Bool = true
+    var videoEnhancementEnabled: Bool = false
+    var statusBarShowFPS: Bool = true
+    var statusBarShowMemory: Bool = true
+    var statusBarShowGPU: Bool = true
     var libraryPath: String = NSHomeDirectory() + "/Pictures/PlumWallPaper"
     var wallpaperOpacity: Int = 100
     var appRulesJSON: String?
@@ -68,12 +76,20 @@ final class Settings {
         self.pauseBeforeSleep = true
         self.pauseOnOcclusion = false
         self.displayTopology = .independent
+        self.independentScreenId = nil
         self.colorSpace = .p3
         self.themeMode = .auto
         self.thumbnailSize = .medium
         self.animationsEnabled = true
         self.launchAtLogin = false
         self.menuBarEnabled = true
+        self.superResolutionEnabled = false
+        self.superResolutionScale = 2
+        self.superResolutionSharpen = true
+        self.videoEnhancementEnabled = false
+        self.statusBarShowFPS = true
+        self.statusBarShowMemory = true
+        self.statusBarShowGPU = true
         self.libraryPath = NSHomeDirectory() + "/Pictures/PlumWallPaper"
         self.wallpaperOpacity = 100
     }

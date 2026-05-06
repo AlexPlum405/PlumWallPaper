@@ -95,7 +95,7 @@ actor NetworkService {
         }
     }
 
-    /// 下载文件到本地
+    /// 下载文件到本地（支持断点续传，手动重试避免进度重置）
     func downloadFile(
         from url: URL,
         to destinationURL: URL,
@@ -104,10 +104,107 @@ actor NetworkService {
         retryConfig: RetryConfiguration? = nil
     ) async throws {
         let config = effectiveRetryConfiguration(retryConfig)
+        let fileManager = FileManager.default
+        var lastError: Error?
 
-        try await executeWithRetry(config: config) { attempt in
-            let data = try await self.fetchDataInternal(from: url, headers: headers, attempt: attempt, progressHandler: progressHandler, useCache: false)
-            try data.write(to: destinationURL, options: .atomic)
+        // 首次尝试：检查 URLCache 是否有完整缓存
+        if let cachedData = try? await checkCache(for: url) {
+            NSLog("[NetworkService] 使用缓存数据，大小: \(cachedData.count) 字节")
+            try cachedData.write(to: destinationURL, options: .atomic)
+            progressHandler?(1.0)
+            return
+        }
+
+        for attempt in 1...(config.maxRetries + 1) {
+            // 检查是否有部分下载的文件
+            var existingSize: Int64 = 0
+            var resumeHeaders = headers
+
+            // 只在重试时才尝试断点续传（首次下载删除旧文件）
+            if attempt > 1 && fileManager.fileExists(atPath: destinationURL.path) {
+                if let attributes = try? fileManager.attributesOfItem(atPath: destinationURL.path),
+                   let size = attributes[.size] as? Int64, size > 0 {
+                    existingSize = size
+                    // 添加 Range 头支持断点续传
+                    resumeHeaders["Range"] = "bytes=\(existingSize)-"
+                    NSLog("[NetworkService] 重试 #\(attempt)，尝试从 \(existingSize) 字节处续传")
+                }
+            } else if attempt == 1 {
+                // 首次下载，删除可能存在的旧文件
+                try? fileManager.removeItem(at: destinationURL)
+            }
+
+            do {
+                let data = try await self.fetchDataInternal(
+                    from: url,
+                    headers: resumeHeaders,
+                    attempt: attempt,
+                    progressHandler: { progress in
+                        progressHandler?(progress)
+                    },
+                    useCache: false,
+                    resumeOffset: existingSize
+                )
+
+                // 如果是续传，追加数据；否则覆盖写入
+                if existingSize > 0 {
+                    if let fileHandle = try? FileHandle(forWritingTo: destinationURL) {
+                        fileHandle.seekToEndOfFile()
+                        fileHandle.write(data)
+                        try? fileHandle.close()
+                        NSLog("[NetworkService] 续传完成，追加了 \(data.count) 字节")
+                    } else {
+                        // 如果无法打开文件句柄，删除旧文件重新下载
+                        try? fileManager.removeItem(at: destinationURL)
+                        try data.write(to: destinationURL, options: .atomic)
+                    }
+                } else {
+                    try data.write(to: destinationURL, options: .atomic)
+                }
+
+                // 下载成功，返回
+                if attempt > 1 {
+                    NSLog("[NetworkService] 重试成功，attempt=\(attempt)")
+                }
+                return
+
+            } catch let error as NetworkError {
+                lastError = error
+
+                // 如果是 416 错误（Range Not Satisfiable），删除本地文件后重试
+                if case .httpError(416) = error {
+                    NSLog("[NetworkService] 收到 416 错误，删除本地文件")
+                    try? fileManager.removeItem(at: destinationURL)
+                }
+
+                // 检查是否可重试
+                guard error.isRetryable else {
+                    NSLog("[NetworkService] 错误不可重试: \(error)")
+                    throw error
+                }
+
+                // 检查是否还有重试机会
+                guard attempt <= config.maxRetries else {
+                    NSLog("[NetworkService] 达到最大重试次数 (\(config.maxRetries))")
+                    throw error
+                }
+
+                // 计算延迟时间
+                let delay = config.delayForRetry(attempt: attempt)
+                NSLog("[NetworkService] 将在 \(delay)s 后重试 (\(attempt)/\(config.maxRetries))")
+
+                // 等待后重试
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+
+            } catch {
+                lastError = error
+                throw error
+            }
+        }
+
+        // 如果所有重试都失败，抛出最后一个错误
+        if let error = lastError {
+            throw error
         }
     }
 
@@ -118,7 +215,8 @@ actor NetworkService {
         headers: [String: String] = [:],
         attempt: Int = 1,
         progressHandler: (@Sendable (Double) -> Void)? = nil,
-        useCache: Bool = true
+        useCache: Bool = true,
+        resumeOffset: Int64 = 0
     ) async throws -> Data {
 
         var request = URLRequest(url: url)
@@ -129,13 +227,14 @@ actor NetworkService {
             request.setValue(value, forHTTPHeaderField: key)
         }
 
-        return try await performRequest(request: request, progressHandler: progressHandler)
+        return try await performRequest(request: request, progressHandler: progressHandler, resumeOffset: resumeOffset)
     }
 
     /// 执行网络请求
     private func performRequest(
         request: URLRequest,
-        progressHandler: (@Sendable (Double) -> Void)? = nil
+        progressHandler: (@Sendable (Double) -> Void)? = nil,
+        resumeOffset: Int64 = 0
     ) async throws -> Data {
 
         if let progressHandler {
@@ -153,8 +252,9 @@ actor NetworkService {
             }
 
             let expectedLength = response.expectedContentLength
+            let totalLength = resumeOffset + expectedLength
             let chunkSize = 64 * 1024
-            var receivedLength: Int64 = 0
+            var receivedLength: Int64 = resumeOffset
             var data = Data()
             var buffer: [UInt8] = []
             buffer.reserveCapacity(chunkSize)
@@ -162,7 +262,14 @@ actor NetworkService {
             var lastReportedProgress: Double = 0
             let progressThreshold = 0.01
 
-            progressHandler(expectedLength > 0 ? 0.0 : 0.08)
+            // 初始进度考虑已下载的部分
+            if totalLength > 0 {
+                let initialProgress = Double(resumeOffset) / Double(totalLength)
+                progressHandler(initialProgress)
+                lastReportedProgress = initialProgress
+            } else {
+                progressHandler(0.08)
+            }
 
             for try await byte in bytes {
                 buffer.append(byte)
@@ -172,8 +279,8 @@ actor NetworkService {
                     receivedLength += Int64(buffer.count)
                     buffer.removeAll(keepingCapacity: true)
 
-                    if expectedLength > 0 {
-                        let currentProgress = min(max(Double(receivedLength) / Double(expectedLength), 0.0), 1.0)
+                    if totalLength > 0 {
+                        let currentProgress = min(max(Double(receivedLength) / Double(totalLength), 0.0), 1.0)
                         if currentProgress - lastReportedProgress >= progressThreshold || currentProgress >= 0.99 {
                             lastReportedProgress = currentProgress
                             progressHandler(currentProgress)
@@ -187,7 +294,7 @@ actor NetworkService {
                 receivedLength += Int64(buffer.count)
             }
 
-            if expectedLength > 0 {
+            if totalLength > 0 {
                 progressHandler(1.0)
             }
 
@@ -219,6 +326,35 @@ actor NetworkService {
     ) async throws -> String {
         let data = try await fetchData(from: url, headers: headers, retryConfig: retryConfig)
         return String(decoding: data, as: UTF8.self)
+    }
+
+    /// 检查 URLCache 中是否有完整的缓存数据
+    private func checkCache(for url: URL) async throws -> Data? {
+        let request = URLRequest(url: url, cachePolicy: .returnCacheDataDontLoad)
+
+        // 尝试从缓存获取
+        do {
+            let (data, response) = try await session.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                return nil
+            }
+
+            // 验证数据完整性：检查 Content-Length
+            if let contentLength = httpResponse.value(forHTTPHeaderField: "Content-Length"),
+               let expectedSize = Int64(contentLength),
+               Int64(data.count) != expectedSize {
+                NSLog("[NetworkService] 缓存数据不完整: \(data.count)/\(expectedSize) 字节")
+                return nil
+            }
+
+            NSLog("[NetworkService] 找到完整缓存: \(data.count) 字节")
+            return data
+        } catch {
+            // 缓存未命中或其他错误
+            return nil
+        }
     }
 
     // MARK: - Retry Logic

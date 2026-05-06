@@ -22,8 +22,8 @@ struct WallpaperDetailView: View {
     @State private var toastMessage: String?
     @State private var showToast = false
     @State private var isNavigatingWallpaper = false
-    @StateObject private var downloadManager = DownloadManager.shared
     @StateObject private var viewModel = WallpaperDetailViewModel()
+    @StateObject private var downloadManager = DownloadManager.shared
 
     // 侧翼导航悬停
     @State internal var isLeftEdgeHovered = false
@@ -73,6 +73,7 @@ struct WallpaperDetailView: View {
     @State private var isExpertExpanded = false
     @State private var activeWeatherScene: LabWeatherScene = .dust
     @State private var activeParticleLayer: LabParticleLayer = .middle
+    @State private var isChoosingApplyScreen = false
     
     var body: some View {
         ZStack {
@@ -97,6 +98,13 @@ struct WallpaperDetailView: View {
         .onAppear {
             viewModel.syncFavoriteDisplayState(for: wallpaper, in: modelContext)
             loadSavedStudioPreset()
+        }
+        .confirmationDialog("选择要应用的屏幕", isPresented: $isChoosingApplyScreen, titleVisibility: .visible) {
+            ForEach(DisplayManager.shared.availableScreens) { screen in
+                Button("\(screen.name) · \(screen.resolution)") {
+                    Task { await applyWallpaper(to: screen.id) }
+                }
+            }
         }
     }
     
@@ -812,8 +820,21 @@ struct WallpaperDetailView: View {
     }
 
     private func applyWallpaper() async {
+        if shouldPromptForIndependentScreenSelection() {
+            isChoosingApplyScreen = true
+            return
+        }
+        await applyWallpaper(to: nil)
+    }
+
+    private func applyWallpaper(to screenId: String?) async {
         do {
-            let result = try await viewModel.applyWallpaper(wallpaper, effects: currentRenderEffects, in: modelContext)
+            let result = try await viewModel.applyWallpaper(
+                wallpaper,
+                effects: currentRenderEffects,
+                targetScreenId: screenId,
+                in: modelContext
+            )
             wallpaper = result.wallpaper
             if let downloaded = result.downloadedWallpaper {
                 onDownload?(downloaded)
@@ -851,6 +872,12 @@ struct WallpaperDetailView: View {
     private func showToastMessage(_ message: String) {
         toastMessage = message; showToast = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { withAnimation { showToast = false } }
+    }
+
+    private func shouldPromptForIndependentScreenSelection() -> Bool {
+        guard DisplayManager.shared.availableScreens.count > 1 else { return false }
+        let settings = (try? PreferencesStore(modelContext: modelContext).fetchSettings()) ?? Settings()
+        return settings.displayTopology == .independent
     }
 }
 

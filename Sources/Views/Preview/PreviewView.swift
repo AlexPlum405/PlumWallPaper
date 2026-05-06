@@ -12,6 +12,7 @@ struct PreviewView: View {
     @State private var isHoveringNext = false
     @State private var toast: ToastConfig?
     @State private var isApplying = false
+    @State private var isChoosingApplyScreen = false
 
     var body: some View {
         ZStack {
@@ -102,6 +103,13 @@ struct PreviewView: View {
             .opacity(isVisible ? 1 : 0)
         }
         .onAppear { withAnimation(.easeInOut(duration: 0.3)) { isVisible = true } }
+        .confirmationDialog("选择要应用的屏幕", isPresented: $isChoosingApplyScreen, titleVisibility: .visible) {
+            ForEach(DisplayManager.shared.availableScreens) { screen in
+                Button("\(screen.name) · \(screen.resolution)") {
+                    Task { await setAsWallpaper(targetScreenId: screen.id) }
+                }
+            }
+        }
         .toast($toast)
     }
 
@@ -134,29 +142,42 @@ struct PreviewView: View {
     }
 
     private func setAsWallpaper() async {
+        if shouldPromptForIndependentScreenSelection() {
+            isChoosingApplyScreen = true
+            return
+        }
+        await setAsWallpaper(targetScreenId: nil)
+    }
+
+    private func setAsWallpaper(targetScreenId: String?) async {
         guard !isApplying else { return }
         isApplying = true
         defer { isApplying = false }
 
-        let url = URL(fileURLWithPath: wallpaper.filePath)
         do {
-            switch wallpaper.type {
-            case .video:
-                try await RenderPipeline.shared.setWallpaper(url: url, wallpaperId: wallpaper.id)
-            case .image, .heic:
-                RenderPipeline.shared.cleanup()
-                try WallpaperSetter.shared.setWallpaper(imageURL: url)
+            let settings = try PreferencesStore(modelContext: modelContext).fetchSettings()
+            if let targetScreenId {
+                WallpaperTopologyCoordinator.shared.saveIndependentScreenSelection(targetScreenId, settings: settings)
+                try modelContext.save()
             }
-
-            var mapping: [String: UUID] = [:]
-            for screen in DisplayManager.shared.availableScreens {
-                mapping[screen.id] = wallpaper.id
-            }
-            RestoreManager.shared.saveSession(mapping: mapping)
+            let message = try await WallpaperTopologyCoordinator.shared.apply(
+                wallpaper: wallpaper,
+                effects: nil,
+                settings: settings
+            )
+            RestoreManager.shared.saveSession(
+                mapping: WallpaperTopologyCoordinator.shared.sessionMapping(for: wallpaper.id, settings: settings)
+            )
             SlideshowScheduler.shared.onWallpaperChanged(wallpaper.id)
-            toast = ToastConfig(message: "设置成功", type: .success)
+            toast = ToastConfig(message: message, type: .success)
         } catch {
             toast = ToastConfig(message: "设置失败: \(error.localizedDescription)", type: .error)
         }
+    }
+
+    private func shouldPromptForIndependentScreenSelection() -> Bool {
+        guard DisplayManager.shared.availableScreens.count > 1 else { return false }
+        let settings = (try? PreferencesStore(modelContext: modelContext).fetchSettings()) ?? Settings()
+        return settings.displayTopology == .independent
     }
 }

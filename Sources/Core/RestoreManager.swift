@@ -35,31 +35,14 @@ final class RestoreManager {
         let mapping = loadSession()
         guard !mapping.isEmpty else { return }
 
-        // 恢复前同步渲染配置
         let preferencesStore = PreferencesStore(modelContext: context)
         let settings = (try? preferencesStore.fetchSettings()) ?? Settings()
-
-        // 应用壁纸透明度
         RenderPipeline.shared.updateWallpaperOpacity(settings.wallpaperOpacity)
-
-        for screen in displayManager.availableScreens {
-            guard let wallpaperID = mapping[screen.id] else { continue }
-            let descriptor = FetchDescriptor<Wallpaper>(
-                predicate: #Predicate { $0.id == wallpaperID }
-            )
-            do {
-                if let wallpaper = try context.fetch(descriptor).first {
-                    let url = URL(fileURLWithPath: wallpaper.filePath)
-                    switch wallpaper.type {
-                    case .video:
-                        try await RenderPipeline.shared.setWallpaper(url: url, screenId: screen.id, wallpaperId: wallpaper.id)
-                    case .image, .heic:
-                        try await RenderPipeline.shared.setImageWallpaper(url: url, screenId: screen.id, wallpaperId: wallpaper.id)
-                    }
-                }
-            } catch {
-                continue
-            }
-        }
+        await WallpaperTopologyCoordinator.shared.restore(
+            mapping: mapping,
+            context: context,
+            settings: settings,
+            displayManager: displayManager
+        )
     }
 }

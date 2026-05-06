@@ -22,6 +22,30 @@ struct DisplayTab: View {
                         .frame(width: 180)
                     }
 
+                    if viewModel.settings?.displayTopology == .independent {
+                        artisanSettingsRow(title: "独立模式默认屏幕", subtitle: "点击设为壁纸时，优先落到这个屏幕") {
+                            Picker("", selection: Binding(
+                                get: {
+                                    viewModel.settings?.independentScreenId
+                                        ?? displayManager.availableScreens.first(where: { $0.isMain })?.id
+                                        ?? displayManager.availableScreens.first?.id
+                                        ?? ""
+                                },
+                                set: { setIndependentScreenId($0) }
+                            )) {
+                                ForEach(displayManager.availableScreens) { screen in
+                                    Text("\(screen.name) · \(screen.resolution)").tag(screen.id)
+                                }
+                            }
+                            .frame(width: 220)
+                            .disabled(displayManager.availableScreens.isEmpty)
+                        }
+                    }
+
+                    artisanSettingsRow(title: "模式行为", subtitle: topologyBehaviorDescription, showDivider: false) {
+                        EmptyView()
+                    }
+
                     artisanSettingsRow(title: "色彩空间规范", subtitle: "匹配显示器硬件的色彩表现能力") {
                         Picker("", selection: Binding(
                             get: { viewModel.settings?.colorSpace ?? .srgb },
@@ -169,6 +193,19 @@ struct DisplayTab: View {
             .padding(.top, 32)
             .padding(.horizontal, 40)
             .padding(.bottom, 40)
+        }
+    }
+}
+
+private extension DisplayTab {
+    var topologyBehaviorDescription: String {
+        switch viewModel.settings?.displayTopology ?? .independent {
+        case .independent:
+            return "每次应用只更新一个屏幕；默认落到你选定的目标屏幕，也可在设为壁纸时临时改选。"
+        case .mirror:
+            return "一张壁纸同步到所有屏幕，适合双屏内容保持一致的办公和演示场景。"
+        case .panorama:
+            return "将整张壁纸按多屏总画布连续铺开，适合横向双屏或带鱼屏拼接场景。"
         }
     }
 }

@@ -30,11 +30,19 @@ struct PlumWallPaperApp {
         window.minSize = NSSize(width: 1100, height: 750)
         window.center() // 确保窗口在屏幕正中间
 
+        // 设置窗口委托，让关闭时只隐藏而不是真正关闭
+        let windowDelegate = MainWindowDelegate()
+        window.delegate = windowDelegate
+
         // 保留系统红绿灯按钮（不隐藏）
 
         // 使用 EdgeToEdgeHostingView 强制零安全区域
         let hostingView = EdgeToEdgeHostingView(rootView: contentView)
         window.contentView = hostingView
+
+        // 将窗口引用传递给 AppDelegate
+        delegate.mainWindow = window
+        delegate.windowDelegate = windowDelegate
 
         window.makeKeyAndOrderFront(nil)
         app.activate(ignoringOtherApps: true)

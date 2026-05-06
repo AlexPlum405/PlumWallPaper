@@ -1,6 +1,7 @@
 // Sources/ViewModels/PreviewViewModel.swift
 import Foundation
 import Observation
+import SwiftData
 
 @Observable
 @MainActor
@@ -49,23 +50,18 @@ final class PreviewViewModel {
         isMuted.toggle()
     }
 
-    func setAsWallpaper() {
+    func setAsWallpaper(modelContext: ModelContext) {
         guard let wallpaper else { return }
-        let url = URL(fileURLWithPath: wallpaper.filePath)
         Task {
-            switch wallpaper.type {
-            case .video:
-                try? await RenderPipeline.shared.setWallpaper(url: url, wallpaperId: wallpaper.id)
-            case .image, .heic:
-                RenderPipeline.shared.cleanup()
-                try? WallpaperSetter.shared.setWallpaper(imageURL: url)
-            }
-            // 将当前映射写入 RestoreManager（默认对所有屏幕）
-            var mapping: [String: UUID] = [:]
-            for screen in DisplayManager.shared.availableScreens {
-                mapping[screen.id] = wallpaper.id
-            }
-            RestoreManager.shared.saveSession(mapping: mapping)
+            guard let settings = try? PreferencesStore(modelContext: modelContext).fetchSettings() else { return }
+            _ = try? await WallpaperTopologyCoordinator.shared.apply(
+                wallpaper: wallpaper,
+                effects: nil,
+                settings: settings
+            )
+            RestoreManager.shared.saveSession(
+                mapping: WallpaperTopologyCoordinator.shared.sessionMapping(for: wallpaper.id, settings: settings)
+            )
         }
     }
 }

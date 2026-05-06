@@ -5,8 +5,11 @@ import SwiftUI
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindowController: NSWindowController?
     private var statusItem: NSStatusItem?
-    private var menuPopover: NSPopover?
+    private var statusMenu: NSMenu?
     private var runtimeSettingsViewModel: SettingsViewModel?
+
+    var mainWindow: NSWindow?
+    var windowDelegate: MainWindowDelegate?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         if let window = NSApplication.shared.windows.first {
@@ -25,6 +28,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             settingsViewModel.configure(modelContext: context)
             runtimeSettingsViewModel = settingsViewModel
             setupMenuBar(visible: settingsViewModel.settings?.menuBarEnabled ?? true)
+
+            _ = SuperResolutionService.shared
+            _ = VideoEnhancementService.shared
 
             await RestoreManager.shared.restoreSession(
                 context: context,
@@ -114,40 +120,93 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 NSStatusBar.system.removeStatusItem(statusItem)
             }
             statusItem = nil
-            menuPopover = nil
+            statusMenu = nil
             return
         }
 
         if statusItem == nil {
             let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-            item.button?.image = NSImage(systemSymbolName: "sparkles.rectangle.stack", accessibilityDescription: "PlumWallPaper")
+            if let appIcon = NSApp.applicationIconImage {
+                let smallIcon = NSImage(size: NSSize(width: 18, height: 18))
+                smallIcon.lockFocus()
+                appIcon.draw(in: NSRect(x: 0, y: 0, width: 18, height: 18))
+                smallIcon.unlockFocus()
+                item.button?.image = smallIcon
+            } else {
+                item.button?.image = NSImage(systemSymbolName: "sparkles.rectangle.stack", accessibilityDescription: "PlumWallPaper")
+            }
             item.button?.imagePosition = .imageOnly
-            item.button?.target = self
-            item.button?.action = #selector(toggleMenuPopover(_:))
             statusItem = item
         }
 
-        if menuPopover == nil {
-            let popover = NSPopover()
-            popover.behavior = .transient
-            popover.contentSize = NSSize(width: 360, height: 620)
-            popover.contentViewController = NSHostingController(
-                rootView: MenuBarView()
-                    .preferredColorScheme(.dark)
-            )
-            menuPopover = popover
+        if statusMenu == nil {
+            let menu = NSMenu()
+
+            // 状态显示
+            let statusItem = NSMenuItem(title: "PlumWallPaper", action: nil, keyEquivalent: "")
+            statusItem.isEnabled = false
+            menu.addItem(statusItem)
+
+            menu.addItem(NSMenuItem.separator())
+
+            // 主要操作
+            menu.addItem(NSMenuItem(title: "显示主窗口", action: #selector(handleOpenMainWindow), keyEquivalent: "o"))
+            menu.addItem(NSMenuItem(title: "着色器编辑器", action: #selector(openLaboratory), keyEquivalent: ""))
+
+            menu.addItem(NSMenuItem.separator())
+
+            // 播放控制
+            menu.addItem(NSMenuItem(title: "播放/暂停", action: #selector(togglePlayback), keyEquivalent: "p"))
+            menu.addItem(NSMenuItem(title: "下一张壁纸", action: #selector(nextWallpaper), keyEquivalent: "n"))
+
+            menu.addItem(NSMenuItem.separator())
+
+            // 增强功能
+            let superResItem = NSMenuItem(title: "超分辨率增强", action: #selector(toggleSuperResolution), keyEquivalent: "")
+            menu.addItem(superResItem)
+
+            let videoEnhanceItem = NSMenuItem(title: "视频增强", action: #selector(toggleVideoEnhancement), keyEquivalent: "")
+            menu.addItem(videoEnhanceItem)
+
+            menu.addItem(NSMenuItem.separator())
+
+            // 底部操作
+            menu.addItem(NSMenuItem(title: "退出", action: #selector(quitApp), keyEquivalent: "q"))
+
+            statusMenu = menu
+            self.statusItem?.menu = menu
         }
     }
 
-    @objc private func toggleMenuPopover(_ sender: Any?) {
-        setupMenuBar(visible: true)
-        guard let button = statusItem?.button, let popover = menuPopover else { return }
-        if popover.isShown {
-            popover.performClose(sender)
-        } else {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            NSApp.activate(ignoringOtherApps: false)
+    @objc private func openLaboratory() {
+        NotificationCenter.default.post(name: .plumOpenLaboratory, object: nil)
+        handleOpenMainWindow()
+    }
+
+    @objc private func togglePlayback() {
+        NotificationCenter.default.post(name: .plumTogglePlayback, object: nil)
+    }
+
+    @objc private func nextWallpaper() {
+        NotificationCenter.default.post(name: .plumNextWallpaper, object: nil)
+    }
+
+    @objc private func toggleSuperResolution() {
+        NotificationCenter.default.post(name: .plumToggleSuperResolution, object: nil)
+    }
+
+    @objc private func toggleVideoEnhancement() {
+        NotificationCenter.default.post(name: .plumToggleVideoEnhancement, object: nil)
+    }
+
+    @objc private func openFeedback() {
+        if let url = URL(string: "https://github.com/yourusername/plumwallpaper/issues") {
+            NSWorkspace.shared.open(url)
         }
+    }
+
+    @objc private func quitApp() {
+        NSApp.terminate(nil)
     }
 
     @objc private func handleMenuBarVisibilityChange(_ notification: Notification) {
@@ -157,8 +216,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func handleOpenMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
-        if let window = NSApp.windows.first(where: { $0.title == "PlumWallPaper" }) ?? NSApp.windows.first {
+        if let window = mainWindow {
             window.makeKeyAndOrderFront(nil)
         }
+    }
+}
+
+// 窗口委托：让窗口关闭时只隐藏而不是真正关闭
+class MainWindowDelegate: NSObject, NSWindowDelegate {
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        sender.orderOut(nil)
+        return false
     }
 }

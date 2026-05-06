@@ -7,6 +7,10 @@ extension DisplayTab {
         viewModel.setDisplayTopology(topology)
     }
 
+    func setIndependentScreenId(_ screenId: String) {
+        viewModel.setIndependentScreenId(screenId)
+    }
+
     func setColorSpace(_ option: ColorSpaceOption) {
         viewModel.setColorSpace(option)
     }

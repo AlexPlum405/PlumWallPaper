@@ -7,6 +7,7 @@ final class DesktopWindow: NSWindow {
     private let imageLayer = CALayer()
     private let environmentLayer = CALayer()
     private let flashLayer = CALayer()
+    private let debugLayer = CATextLayer()
     let player: AVPlayer
 
     init(screen: NSScreen) {
@@ -58,10 +59,24 @@ final class DesktopWindow: NSWindow {
         flashLayer.backgroundColor = NSColor.white.cgColor
         flashLayer.opacity = 0
         flashLayer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
+
+        debugLayer.frame = CGRect(x: 40, y: 40, width: 400, height: 120)
+        debugLayer.contentsScale = scale
+        debugLayer.fontSize = 16
+        debugLayer.foregroundColor = NSColor.white.cgColor
+        debugLayer.backgroundColor = NSColor.black.withAlphaComponent(0.85).cgColor
+        debugLayer.cornerRadius = 12
+        debugLayer.borderWidth = 2
+        debugLayer.borderColor = NSColor.systemPink.cgColor
+        debugLayer.isWrapped = true
+        debugLayer.alignmentMode = .left
+        debugLayer.isHidden = true
+
         view.layer?.addSublayer(playerLayer)
         view.layer?.addSublayer(imageLayer)
         view.layer?.addSublayer(environmentLayer)
         view.layer?.addSublayer(flashLayer)
+        view.layer?.addSublayer(debugLayer)
         self.contentView = view
 
         NSLog("[DesktopWindow] init screen=\(screen.localizedName) frame=\(screen.frame) scale=\(scale) level=\(self.level.rawValue)")
@@ -139,6 +154,62 @@ final class DesktopWindow: NSWindow {
 
     func hide() {
         orderOut(nil)
+    }
+
+    func updateDebugInfo(superResolution: Bool, videoEnhancement: Bool, wallpaperType: String) {
+        var info = "  🎨 增强状态\n"
+        info += "  壁纸类型: \(wallpaperType)\n"
+        if superResolution {
+            info += "  ✅ 超分辨率已启用\n"
+        } else {
+            info += "  ❌ 超分辨率未启用\n"
+        }
+        if videoEnhancement {
+            info += "  ✅ 视频增强已启用  "
+        } else {
+            info += "  ❌ 视频增强未启用  "
+        }
+
+        NSLog("[DesktopWindow] updateDebugInfo called: SR=\(superResolution), VE=\(videoEnhancement), type=\(wallpaperType)")
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        debugLayer.string = info
+        debugLayer.isHidden = false
+        debugLayer.opacity = 1.0
+        CATransaction.commit()
+
+        NSLog("[DesktopWindow] debugLayer updated: frame=\(debugLayer.frame), isHidden=\(debugLayer.isHidden)")
+    }
+
+    func hideDebugInfo() {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        debugLayer.isHidden = true
+        CATransaction.commit()
+    }
+
+    func configurePanoramaLayout(canvasFrame: CGRect, screenFrame: CGRect) {
+        guard let contentView else { return }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        let localFrame = CGRect(
+            x: screenFrame.minX - canvasFrame.minX,
+            y: screenFrame.minY - canvasFrame.minY,
+            width: screenFrame.width,
+            height: screenFrame.height
+        )
+        let playerFrame = CGRect(
+            x: -localFrame.minX,
+            y: -localFrame.minY,
+            width: canvasFrame.width,
+            height: canvasFrame.height
+        )
+        playerLayer.frame = playerFrame
+        imageLayer.frame = contentView.bounds
+        environmentLayer.frame = contentView.bounds
+        flashLayer.frame = contentView.bounds
+        CATransaction.commit()
     }
 
     private func layoutRenderLayers() {

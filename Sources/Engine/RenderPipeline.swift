@@ -406,6 +406,25 @@ final class RenderPipeline {
         renderers.removeAll()
     }
 
+    func cleanup(screenId: String) {
+        renderers[screenId]?.cleanup()
+        renderers.removeValue(forKey: screenId)
+    }
+
+    func configurePanoramaLayout(screenFrames: [String: CGRect]) {
+        if renderers.isEmpty {
+            setupRenderers()
+        }
+        let canvasFrame = screenFrames.values.reduce(into: CGRect.null) { partial, frame in
+            partial = partial.union(frame)
+        }
+        guard !canvasFrame.isNull else { return }
+        for (screenId, renderer) in renderers {
+            guard let screenFrame = screenFrames[screenId] else { continue }
+            renderer.configurePanoramaLayout(canvasFrame: canvasFrame, screenFrame: screenFrame)
+        }
+    }
+
     // MARK: - 音频控制
 
     /// 获取每个屏幕的静音状态

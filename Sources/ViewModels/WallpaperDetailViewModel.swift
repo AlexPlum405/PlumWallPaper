@@ -125,31 +125,52 @@ final class WallpaperDetailViewModel: ObservableObject {
         return .downloaded(downloaded)
     }
 
-    func applyWallpaper(_ wallpaper: Wallpaper, effects: WallpaperRenderEffects, in modelContext: ModelContext) async throws -> DetailApplyResult {
+    func applyWallpaper(
+        _ wallpaper: Wallpaper,
+        effects: WallpaperRenderEffects,
+        targetScreenId: String?,
+        in modelContext: ModelContext
+    ) async throws -> DetailApplyResult {
         isApplying = true
         defer { isApplying = false }
 
         let localResult = try await ensureLocalWallpaperForApply(wallpaper, in: modelContext)
         let localWallpaper = localResult.wallpaper
 
-        if localWallpaper.type == .video {
-            let videoURL = URL(fileURLWithPath: localWallpaper.filePath)
-            try await RenderPipeline.shared.setWallpaper(url: videoURL, wallpaperId: localWallpaper.id, effects: effects)
-        } else {
+        let preferencesStore = PreferencesStore(modelContext: modelContext)
+        let settings = try preferencesStore.fetchSettings()
+
+        let renderedURL: URL
+        if localWallpaper.type == .image || localWallpaper.type == .heic {
             let imageURL = URL(fileURLWithPath: localWallpaper.filePath)
-            let renderedURL = try WallpaperRenderEffectRenderer.renderImage(sourceURL: imageURL, effects: effects)
-            if effects.hasDynamicEnvironment {
-                try await RenderPipeline.shared.setImageWallpaper(url: renderedURL, wallpaperId: localWallpaper.id, effects: effects)
-            } else {
-                RenderPipeline.shared.cleanup()
-                try WallpaperSetter.shared.setWallpaper(imageURL: renderedURL)
-            }
+            renderedURL = try WallpaperRenderEffectRenderer.renderImage(sourceURL: imageURL, effects: effects)
+        } else {
+            renderedURL = URL(fileURLWithPath: localWallpaper.filePath)
         }
+
+        NSLog("[WallpaperDetailViewModel] 应用壁纸，targetScreenId=\(targetScreenId ?? "nil")")
+
+        let message = try await WallpaperTopologyCoordinator.shared.apply(
+            wallpaper: localWallpaper,
+            renderedURL: renderedURL,
+            effects: effects,
+            settings: settings,
+            targetScreenId: targetScreenId
+        )
+
+        RestoreManager.shared.saveSession(
+            mapping: WallpaperTopologyCoordinator.shared.sessionMapping(
+                for: localWallpaper.id,
+                settings: settings,
+                targetScreenId: targetScreenId
+            )
+        )
+        SlideshowScheduler.shared.onWallpaperChanged(localWallpaper.id)
 
         return DetailApplyResult(
             wallpaper: localWallpaper,
             downloadedWallpaper: localResult.downloadedWallpaper,
-            message: effects.hasDynamicEnvironment ? "已应用基础调校，动态天气/粒子已保存" : "设置成功"
+            message: effects.hasDynamicEnvironment ? "\(message)，动态天气/粒子已保存" : message
         )
     }
 

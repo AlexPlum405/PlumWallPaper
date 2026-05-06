@@ -21,6 +21,7 @@ struct HomeView: View {
     @State private var isHeroRightHovered = false
     @State private var readyHeroVideoURL: URL?
     @State private var toast: ToastConfig?
+    @State private var isChoosingApplyScreen = false
 
     private let mainPadding: CGFloat = 88
 
@@ -76,6 +77,8 @@ struct HomeView: View {
             preheatHomeVideos()
         }
         .onChange(of: currentHeroIndex) { _, _ in
+            isApplying = false
+            isHeroDownloading = false
             preheatHeroVideos()
         }
         .onReceive(timer) { _ in
@@ -117,6 +120,13 @@ struct HomeView: View {
                     NSLog("[HomeView] 壁纸已下载: \(downloadedWallpaper.name)")
                 }
             )
+        }
+        .confirmationDialog("选择要应用的屏幕", isPresented: $isChoosingApplyScreen, titleVisibility: .visible) {
+            ForEach(DisplayManager.shared.availableScreens) { screen in
+                Button("\(screen.name) · \(screen.resolution)") {
+                    Task { await applyCurrentHeroAsWallpaper(targetScreenId: screen.id) }
+                }
+            }
         }
         .toast($toast)
     }
@@ -724,9 +734,14 @@ struct HomeView: View {
     }
 
     private func downloadHero(_ item: MediaItem) async {
-        guard !isHeroDownloading else { return }
+        NSLog("[HomeView] downloadHero 开始: \(item.title), isHeroDownloading=\(isHeroDownloading)")
+        guard !isHeroDownloading else {
+            NSLog("[HomeView] downloadHero 已有下载任务，跳过")
+            return
+        }
 
         if let existing = DownloadManager.shared.isAlreadyDownloaded(remoteId: item.id, context: modelContext) {
+            NSLog("[HomeView] downloadHero 壁纸已存在: \(existing.name)")
             if existing.isFavorite {
                 toast = ToastConfig(message: "这张壁纸已在本地库中", type: .info)
             } else {
@@ -736,13 +751,19 @@ struct HomeView: View {
         }
 
         isHeroDownloading = true
-        defer { isHeroDownloading = false }
+        NSLog("[HomeView] downloadHero 设置 isHeroDownloading=true")
+        defer {
+            isHeroDownloading = false
+            NSLog("[HomeView] downloadHero defer 设置 isHeroDownloading=false")
+        }
 
         do {
-            _ = try await downloadHeroIfNeeded(item)
+            let wallpaper = try await downloadHeroIfNeeded(item)
+            NSLog("[HomeView] downloadHero 下载成功: \(wallpaper.name)")
             SlideshowScheduler.shared.rebuildPlaylist()
             toast = ToastConfig(message: "下载完成，已加入本地库", type: .success)
         } catch {
+            NSLog("[HomeView] downloadHero 下载失败: \(error.localizedDescription)")
             toast = ToastConfig(message: "下载失败: \(error.localizedDescription)", type: .error)
         }
     }
@@ -899,6 +920,14 @@ struct HomeView: View {
     // MARK: - Hero 壁纸设置
 
     private func applyCurrentHeroAsWallpaper() async {
+        if shouldPromptForIndependentScreenSelection() {
+            isChoosingApplyScreen = true
+            return
+        }
+        await applyCurrentHeroAsWallpaper(targetScreenId: nil)
+    }
+
+    private func applyCurrentHeroAsWallpaper(targetScreenId: String?) async {
         guard !isApplying, !viewModel.heroItems.isEmpty else { return }
 
         let currentItem = viewModel.heroItems[currentHeroIndex]
@@ -910,31 +939,37 @@ struct HomeView: View {
             NSLog("[HomeView] 开始设置壁纸: \(currentItem.title)")
 
             let wallpaper = try await downloadHeroIfNeeded(currentItem)
-            try await applyDownloadedWallpaper(wallpaper)
+            let message = try await applyDownloadedWallpaper(wallpaper, targetScreenId: targetScreenId)
             SlideshowScheduler.shared.rebuildPlaylist()
-            toast = ToastConfig(message: "已下载并应用最高质量壁纸", type: .success)
+            toast = ToastConfig(message: message, type: .success)
         } catch {
             NSLog("[HomeView] ❌ 设置壁纸失败: \(error.localizedDescription)")
             toast = ToastConfig(message: "设置失败: \(error.localizedDescription)", type: .error)
         }
     }
 
-    private func applyDownloadedWallpaper(_ wallpaper: Wallpaper) async throws {
-        let url = URL(fileURLWithPath: wallpaper.filePath)
-        switch wallpaper.type {
-        case .video:
-            try await RenderPipeline.shared.setWallpaper(url: url, wallpaperId: wallpaper.id)
-        case .image, .heic:
-            RenderPipeline.shared.cleanup()
-            try WallpaperSetter.shared.setWallpaper(imageURL: url)
+    private func applyDownloadedWallpaper(_ wallpaper: Wallpaper, targetScreenId: String?) async throws -> String {
+        let settings = try PreferencesStore(modelContext: modelContext).fetchSettings()
+        if let targetScreenId {
+            WallpaperTopologyCoordinator.shared.saveIndependentScreenSelection(targetScreenId, settings: settings)
+            try modelContext.save()
         }
-
-        var mapping: [String: UUID] = [:]
-        for screen in DisplayManager.shared.availableScreens {
-            mapping[screen.id] = wallpaper.id
-        }
-        RestoreManager.shared.saveSession(mapping: mapping)
+        let message = try await WallpaperTopologyCoordinator.shared.apply(
+            wallpaper: wallpaper,
+            effects: nil,
+            settings: settings
+        )
+        RestoreManager.shared.saveSession(
+            mapping: WallpaperTopologyCoordinator.shared.sessionMapping(for: wallpaper.id, settings: settings)
+        )
         SlideshowScheduler.shared.onWallpaperChanged(wallpaper.id)
+        return wallpaper.source == .downloaded ? "已下载并\(message)" : message
+    }
+
+    private func shouldPromptForIndependentScreenSelection() -> Bool {
+        guard DisplayManager.shared.availableScreens.count > 1 else { return false }
+        let settings = (try? PreferencesStore(modelContext: modelContext).fetchSettings()) ?? Settings()
+        return settings.displayTopology == .independent
     }
 }
 

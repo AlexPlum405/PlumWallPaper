@@ -9,6 +9,9 @@ final class DownloadManager: ObservableObject {
 
     @Published var activeDownloads: [String: DownloadTask] = [:]
 
+    let maxConcurrentDownloads = 2
+    private var runningDownloads: Set<String> = []
+
     private let networkService = NetworkService.shared
     private let fileManager = FileManager.default
 
@@ -31,6 +34,14 @@ final class DownloadManager: ObservableObject {
         downloadURL: URL,
         context: ModelContext
     ) async throws -> Wallpaper {
+        NSLog("[DownloadManager] 开始下载: \(item.title), 当前运行数: \(runningDownloads.count)")
+
+        // 检查并发限制
+        if runningDownloads.count >= maxConcurrentDownloads {
+            NSLog("[DownloadManager] 达到并发限制: \(runningDownloads.count)/\(maxConcurrentDownloads)")
+            throw DownloadError.tooManyDownloads
+        }
+
         let taskId = UUID().uuidString
 
         // 创建下载任务
@@ -45,13 +56,21 @@ final class DownloadManager: ObservableObject {
         )
 
         activeDownloads[taskId] = task
+        runningDownloads.insert(taskId)
+        NSLog("[DownloadManager] 任务已创建: \(taskId), 运行数: \(runningDownloads.count)")
+
+        defer {
+            runningDownloads.remove(taskId)
+            NSLog("[DownloadManager] 任务已移除: \(taskId), 剩余运行数: \(runningDownloads.count)")
+        }
 
         do {
             // 生成文件名
             let filename = generateFilename(for: item, quality: quality)
             let destinationURL = downloadsDirectory.appendingPathComponent(filename)
+            NSLog("[DownloadManager] 下载到: \(destinationURL.path)")
 
-            // 下载文件
+            // 下载文件（启用重试和断点续传）
             try await networkService.downloadFile(
                 from: downloadURL,
                 to: destinationURL,
@@ -63,6 +82,8 @@ final class DownloadManager: ObservableObject {
                     }
                 }
             )
+
+            NSLog("[DownloadManager] 下载完成，开始导入到 SwiftData")
 
             // 更新任务状态
             updateTask(taskId) { task in
@@ -78,10 +99,13 @@ final class DownloadManager: ObservableObject {
                 context: context
             )
 
+            NSLog("[DownloadManager] 导入成功: \(wallpaper.name), source=\(wallpaper.source)")
+
             scheduleRemoval(for: taskId)
 
             return wallpaper
         } catch {
+            NSLog("[DownloadManager] 下载失败: \(error.localizedDescription)")
             updateTask(taskId) { task in
                 task.status = .failed
                 task.error = error.localizedDescription
@@ -261,14 +285,24 @@ final class DownloadManager: ObservableObject {
     }
 
     private func updateTask(_ taskId: String, mutate: (inout DownloadTask) -> Void) {
-        guard var task = activeDownloads[taskId] else { return }
+        guard var task = activeDownloads[taskId] else {
+            NSLog("[DownloadManager] updateTask 失败: 任务不存在 \(taskId)")
+            return
+        }
+        let oldProgress = task.progress
+        let oldStatus = task.status
         mutate(&task)
         activeDownloads[taskId] = task
+        if task.progress != oldProgress || task.status != oldStatus {
+            NSLog("[DownloadManager] updateTask: \(taskId), progress: \(oldProgress) -> \(task.progress), status: \(oldStatus) -> \(task.status)")
+        }
     }
 
     private func scheduleRemoval(for taskId: String, delay: TimeInterval = 3.5) {
+        NSLog("[DownloadManager] scheduleRemoval: \(taskId), delay: \(delay)s")
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            NSLog("[DownloadManager] 移除任务: \(taskId)")
             activeDownloads.removeValue(forKey: taskId)
         }
     }
@@ -292,4 +326,15 @@ enum DownloadStatus {
     case downloading
     case completed
     case failed
+}
+
+enum DownloadError: LocalizedError {
+    case tooManyDownloads
+
+    var errorDescription: String? {
+        switch self {
+        case .tooManyDownloads:
+            return "同时下载数量已达上限（\(DownloadManager.shared.maxConcurrentDownloads)个），请等待当前下载完成"
+        }
+    }
 }

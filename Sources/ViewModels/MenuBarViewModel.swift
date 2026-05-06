@@ -1,6 +1,7 @@
 // Sources/ViewModels/MenuBarViewModel.swift
 import Foundation
 import AppKit
+import SwiftData
 import Observation
 
 @Observable
@@ -16,6 +17,15 @@ final class MenuBarViewModel {
     var fps: Double = 0
     var gpuUsage: Double = 0
     var memoryUsage: Double = 0
+    var superResolutionEnabled: Bool = false
+    var videoEnhancementEnabled: Bool = false
+    var statusBarShowFPS: Bool = true
+    var statusBarShowMemory: Bool = true
+    var statusBarShowGPU: Bool = true
+
+    init() {
+        syncFromSettings()
+    }
 
     // MARK: - Actions
 
@@ -67,6 +77,31 @@ final class MenuBarViewModel {
         SlideshowScheduler.shared.next()
     }
 
+    func toggleSuperResolution() {
+        guard let settings = currentSettings() else { return }
+        settings.superResolutionEnabled.toggle()
+        superResolutionEnabled = settings.superResolutionEnabled
+        try? currentContext()?.save()
+        NotificationCenter.default.post(name: .plumSuperResolutionChanged, object: settings.superResolutionEnabled)
+    }
+
+    func toggleVideoEnhancement() {
+        guard let settings = currentSettings() else { return }
+        settings.videoEnhancementEnabled.toggle()
+        videoEnhancementEnabled = settings.videoEnhancementEnabled
+        try? currentContext()?.save()
+        NotificationCenter.default.post(name: .plumVideoEnhancementChanged, object: settings.videoEnhancementEnabled)
+    }
+
+    func syncFromSettings() {
+        guard let settings = currentSettings() else { return }
+        superResolutionEnabled = settings.superResolutionEnabled
+        videoEnhancementEnabled = settings.videoEnhancementEnabled
+        statusBarShowFPS = settings.statusBarShowFPS
+        statusBarShowMemory = settings.statusBarShowMemory
+        statusBarShowGPU = settings.statusBarShowGPU
+    }
+
     func openFeedback() {
         if let url = URL(string: "mailto:feedback@plumstudio.art?subject=PlumWallPaper%20Feedback") {
             NSWorkspace.shared.open(url)
@@ -76,5 +111,15 @@ final class MenuBarViewModel {
     func quit() {
         RenderPipeline.shared.cleanup()
         NSApp.terminate(nil)
+    }
+
+    private func currentContext() -> ModelContext? {
+        PlumWallPaperApp.sharedModelContainer.mainContext
+    }
+
+    private func currentSettings() -> Settings? {
+        guard let context = currentContext() else { return nil }
+        let store = PreferencesStore(modelContext: context)
+        return try? store.fetchSettings()
     }
 }

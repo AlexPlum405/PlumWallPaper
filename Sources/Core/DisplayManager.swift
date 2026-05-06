@@ -20,26 +20,41 @@ final class DisplayManager {
 
     /// 刷新当前可用显示器列表
     func refreshScreens() {
+        let mainScreen = NSScreen.main
         availableScreens = NSScreen.screens.enumerated().map { index, screen in
             let description = screen.deviceDescription
             let screenNumber = description[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
             let screenID = screenNumber?.stringValue ?? "screen-\(index)"
-            let displayID = screenNumber?.uint32Value ?? 0
             let frame = screen.frame
             let resolution = "\(Int(frame.width))×\(Int(frame.height))"
-            let isBuiltIn = CGDisplayIsBuiltin(displayID) != 0
+            let isMain = screen == mainScreen
             let name = screen.localizedName
-            return ScreenInfo(id: screenID, name: name, resolution: resolution, isMain: isBuiltIn)
+            return ScreenInfo(id: screenID, name: name, resolution: resolution, isMain: isMain)
         }
     }
 
     /// 根据 ScreenInfo 查找 NSScreen
     func screen(for screenInfo: ScreenInfo) -> NSScreen? {
+        screen(byID: screenInfo.id)
+    }
+
+    func screen(byID screenID: String) -> NSScreen? {
         NSScreen.screens.first { screen in
             let description = screen.deviceDescription
             let screenNumber = description[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
-            return screenNumber?.stringValue == screenInfo.id
+            return screenNumber?.stringValue == screenID
         }
+    }
+
+    func screenFramesById() -> [String: CGRect] {
+        var frames: [String: CGRect] = [:]
+        for (index, screen) in NSScreen.screens.enumerated() {
+            let description = screen.deviceDescription
+            let screenNumber = description[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
+            let screenID = screenNumber?.stringValue ?? "screen-\(index)"
+            frames[screenID] = screen.frame
+        }
+        return frames
     }
 
     /// 获取所有显示器的刷新率

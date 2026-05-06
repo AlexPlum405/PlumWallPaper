@@ -102,6 +102,7 @@ struct SettingsView: View {
         case .playback: PlaybackTab(viewModel: viewModel)
         case .performance: PerformanceTab(viewModel: viewModel)
         case .display: DisplayTab(viewModel: viewModel)
+        case .enhancement: EnhancementTab(viewModel: viewModel)
         case .advanced: AdvancedSettingsTab(viewModel: viewModel)
         case .about: AboutSettingsTab()
         }
@@ -110,7 +111,7 @@ struct SettingsView: View {
 
 // MARK: - 设置标签枚举 (重构精简版)
 private enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, playback, display, performance, advanced, about
+    case general, playback, display, performance, enhancement, advanced, about
     var id: Self { self }
     var title: String {
         switch self {
@@ -118,6 +119,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .playback: return "播放与音频"
         case .display: return "显示与多屏"
         case .performance: return "性能"
+        case .enhancement: return "增强"
         case .advanced: return "高级"
         case .about: return "关于"
         }
@@ -128,6 +130,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .playback: return "play.circle.fill"
         case .display: return "display.2"
         case .performance: return "gauge.medium"
+        case .enhancement: return "sparkles"
         case .advanced: return "slider.horizontal.3"
         case .about: return "info.circle.fill"
         }
