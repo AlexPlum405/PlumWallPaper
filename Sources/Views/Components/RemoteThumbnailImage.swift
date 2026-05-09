@@ -87,15 +87,17 @@ struct RemoteThumbnailImage: View {
 
     private static func loadImage(from url: URL) async throws -> NSImage {
         if url.isFileURL {
-            guard let image = NSImage(contentsOf: url), image.isValid else {
-                throw URLError(.cannotDecodeContentData)
-            }
-            return image
+            return try await Task.detached(priority: .utility) {
+                guard let image = NSImage(contentsOf: url), image.isValid else {
+                    throw URLError(.cannotDecodeContentData)
+                }
+                return image
+            }.value
         }
 
         var lastError: Error?
 
-        for attempt in 0..<3 {
+        for attempt in 0..<2 {
             do {
                 let data = try await fetchImageData(from: url, forceRefresh: attempt > 0)
                 guard let image = NSImage(data: data), image.isValid else {
@@ -104,7 +106,7 @@ struct RemoteThumbnailImage: View {
                 return image
             } catch {
                 lastError = error
-                if attempt < 2 {
+                if attempt < 1 {
                     let delay = UInt64(250_000_000 * UInt64(attempt + 1))
                     try? await Task.sleep(nanoseconds: delay)
                 }
@@ -117,7 +119,7 @@ struct RemoteThumbnailImage: View {
     private static func fetchImageData(from url: URL, forceRefresh: Bool) async throws -> Data {
         var request = URLRequest(url: url)
         request.cachePolicy = forceRefresh ? .reloadIgnoringLocalCacheData : .returnCacheDataElseLoad
-        request.timeoutInterval = 20
+        request.timeoutInterval = 8
         request.setValue(
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
             forHTTPHeaderField: "User-Agent"
@@ -131,17 +133,22 @@ struct RemoteThumbnailImage: View {
             request.setValue(referer, forHTTPHeaderField: "Referer")
         }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw URLError(.badServerResponse)
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw URLError(.badServerResponse)
+            }
+            guard (200...299).contains(httpResponse.statusCode) else {
+                throw URLError(.badServerResponse)
+            }
+            return data
+        } catch {
+            guard shouldUseCurlFallback(for: url) else { throw error }
+            return try await fetchImageDataWithCurl(from: url)
         }
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw URLError(.badServerResponse)
-        }
-        return data
     }
 
-    private static func referer(for url: URL) -> String? {
+    nonisolated private static func referer(for url: URL) -> String? {
         guard let host = url.host?.lowercased() else { return nil }
         if host.contains("pexels.com") { return "https://www.pexels.com/" }
         if host.contains("pixabay.com") { return "https://pixabay.com/" }
@@ -151,6 +158,51 @@ struct RemoteThumbnailImage: View {
         if host.contains("desktophut.com") { return "https://www.desktophut.com/" }
         if host.contains("motionbgs.com") { return "https://motionbgs.com/" }
         return nil
+    }
+
+    private static func shouldUseCurlFallback(for url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else { return false }
+        return host.contains("desktophut.com")
+    }
+
+    private static func fetchImageDataWithCurl(from url: URL) async throws -> Data {
+        try await Task.detached(priority: .utility) {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/curl")
+
+            var arguments = [
+                "--location",
+                "--silent",
+                "--show-error",
+                "--fail",
+                "--max-time", "12",
+                "--user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                "--header", "Accept: image/jpeg,image/png,image/webp,image/*;q=0.8,*/*;q=0.5"
+            ]
+
+            if let referer = referer(for: url) {
+                arguments.append(contentsOf: ["--referer", referer])
+            }
+
+            arguments.append(url.absoluteString)
+            process.arguments = arguments
+
+            let output = Pipe()
+            let errorOutput = Pipe()
+            process.standardOutput = output
+            process.standardError = errorOutput
+
+            try process.run()
+            let data = output.fileHandleForReading.readDataToEndOfFile()
+            process.waitUntilExit()
+
+            guard process.terminationStatus == 0, !data.isEmpty else {
+                _ = errorOutput.fileHandleForReading.readDataToEndOfFile()
+                throw URLError(.cannotLoadFromNetwork)
+            }
+
+            return data
+        }.value
     }
 
     private var loadingPlaceholder: some View {

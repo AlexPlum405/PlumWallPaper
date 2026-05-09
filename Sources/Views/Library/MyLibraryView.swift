@@ -2,6 +2,12 @@ import SwiftUI
 import AppKit
 import SwiftData
 
+private struct ThumbnailRepairCandidate: Sendable {
+    let id: UUID
+    let filePath: String
+    let typeRawValue: String
+}
+
 // MARK: - Artisan Studio View (Scheme C: Pure Edition with Two-Layer Filtering)
 struct MyLibraryView: View {
     @State var viewModel = LibraryViewModel()
@@ -20,6 +26,7 @@ struct MyLibraryView: View {
     @State private var dragSelectionAnchorID: UUID?
     @State private var dragSelectionBaseIDs = Set<UUID>()
     @State private var dragSelectionShouldSelect = true
+    @State private var thumbnailRepairAttemptedIDs = Set<UUID>()
     let mainPadding: CGFloat = 88
 
     var body: some View {
@@ -97,6 +104,7 @@ struct MyLibraryView: View {
         }
         .onChange(of: allWallpapers) { oldValue, newValue in
             NSLog("[MyLibraryView] allWallpapers 变化: \(oldValue.count) -> \(newValue.count)")
+            regenerateMissingThumbnailsIfNeeded()
         }
         .onChange(of: filteredWallpapers) { _, _ in
             preloadVisibleVideos()
@@ -403,33 +411,63 @@ struct MyLibraryView: View {
         }
     }
 
-    /// 检测并修复因系统清理 Caches 而失效的本地缩略图
+    /// 检测并修复缺失、远程兜底或因系统清理 Caches 而失效的本地缩略图
     private func regenerateMissingThumbnailsIfNeeded() {
         let fm = FileManager.default
-        let stale = allWallpapers.filter { wallpaper in
-            guard wallpaper.source != .online else { return false }
-            guard let thumbPath = wallpaper.thumbnailPath, !thumbPath.isEmpty else { return false }
-            // 跳过远程 URL 缩略图
-            if thumbPath.hasPrefix("http") { return false }
-            return !fm.fileExists(atPath: thumbPath)
+        let candidates = allWallpapers.compactMap { wallpaper -> ThumbnailRepairCandidate? in
+            guard wallpaper.source != .online else { return nil }
+            guard !thumbnailRepairAttemptedIDs.contains(wallpaper.id) else { return nil }
+            guard !isRemotePath(wallpaper.filePath), fm.fileExists(atPath: wallpaper.filePath) else { return nil }
+
+            let thumbPath = wallpaper.thumbnailPath?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let needsRepair = thumbPath.isEmpty
+                || isRemotePath(thumbPath)
+                || !fm.fileExists(atPath: thumbPath)
+
+            guard needsRepair else { return nil }
+
+            return ThumbnailRepairCandidate(
+                id: wallpaper.id,
+                filePath: wallpaper.filePath,
+                typeRawValue: wallpaper.type.rawValue
+            )
         }
-        guard !stale.isEmpty else { return }
+        guard !candidates.isEmpty else { return }
 
-        NSLog("[MyLibraryView] 发现 \(stale.count) 个失效缩略图，开始重建")
+        thumbnailRepairAttemptedIDs.formUnion(candidates.map(\.id))
+        NSLog("[MyLibraryView] 发现 \(candidates.count) 个缺失或失效缩略图，开始重建")
 
-        Task.detached(priority: .utility) {
-            for wallpaper in stale {
-                let sourceURL = URL(fileURLWithPath: wallpaper.filePath)
-                guard fm.fileExists(atPath: sourceURL.path) else { continue }
-                let type = wallpaper.type
-                if let newPath = try? await ThumbnailGenerator.shared.generateThumbnail(for: sourceURL, type: type) {
-                    await MainActor.run {
-                        wallpaper.thumbnailPath = newPath
-                        try? modelContext.save()
-                    }
+        Task(priority: .utility) {
+            var repaired: [(id: UUID, path: String)] = []
+
+            for candidate in candidates {
+                let sourceURL = URL(fileURLWithPath: candidate.filePath)
+                guard fm.fileExists(atPath: sourceURL.path),
+                      let type = WallpaperType(rawValue: candidate.typeRawValue),
+                      let newPath = try? await ThumbnailGenerator.shared.generateThumbnail(for: sourceURL, type: type) else {
+                    continue
                 }
+                repaired.append((candidate.id, newPath))
+            }
+
+            guard !repaired.isEmpty else { return }
+
+            await MainActor.run {
+                for item in repaired {
+                    guard let wallpaper = allWallpapers.first(where: { $0.id == item.id }) else { continue }
+                    wallpaper.thumbnailPath = item.path
+                }
+                try? modelContext.save()
+                NSLog("[MyLibraryView] 已重建 \(repaired.count) 个本地缩略图")
             }
         }
+    }
+
+    private func isRemotePath(_ path: String) -> Bool {
+        guard let url = URL(string: path), let scheme = url.scheme?.lowercased() else {
+            return false
+        }
+        return scheme == "http" || scheme == "https"
     }
 
     // MARK: - Actions

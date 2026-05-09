@@ -319,26 +319,40 @@ struct WallpaperCard: View {
 
     private var thumbnailCandidateURLs: [URL] {
         var urls: [URL] = []
-        if let thumbPath = item.thumbnailPath, !thumbPath.isEmpty, let url = url(from: thumbPath) {
-            // 本地缩略图缓存有可能被系统清理，命中前先确认文件存在
-            if url.isFileURL {
-                if FileManager.default.fileExists(atPath: url.path) {
-                    urls.append(url)
-                }
-            } else {
-                urls.append(url)
+
+        let thumbnailURL = item.thumbnailPath.flatMap(url(from:))
+        let contentURL = item.filePath.isEmpty ? nil : url(from: item.filePath)
+
+        if item.source != .online {
+            appendIfLoadable(thumbnailURL, to: &urls, localOnly: true)
+
+            if item.type != .video {
+                appendIfLoadable(contentURL, to: &urls)
+                appendIfLoadable(thumbnailURL, to: &urls)
             }
+
+            return urls
         }
+
+        appendIfLoadable(thumbnailURL, to: &urls)
+
         // 静态图片可降级到原图渲染；视频不行（需要专门的视频帧抽取）。
-        if item.type != .video, !item.filePath.isEmpty, let url = url(from: item.filePath) {
-            if url.isFileURL {
-                if FileManager.default.fileExists(atPath: url.path) {
-                    urls.append(url)
-                }
-            } else {
-                urls.append(url)
-            }
+        if item.type != .video {
+            appendIfLoadable(contentURL, to: &urls)
         }
+
         return urls
+    }
+
+    private func appendIfLoadable(_ url: URL?, to urls: inout [URL], localOnly: Bool = false) {
+        guard let url else { return }
+        if url.isFileURL {
+            guard FileManager.default.fileExists(atPath: url.path) else { return }
+            urls.append(url)
+            return
+        }
+
+        guard !localOnly else { return }
+        urls.append(url)
     }
 }
