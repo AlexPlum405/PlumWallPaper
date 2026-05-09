@@ -4,9 +4,11 @@ struct DetailActionDock: View {
     let isFavorite: Bool
     let isApplying: Bool
     let isStudioActive: Bool
+    let isCleanPreviewActive: Bool
     let isDownloading: Bool
     let onPreviewMode: () -> Void
     let onStudioMode: () -> Void
+    let onCleanPreviewMode: () -> Void
     let onFavorite: () -> Void
     let onApply: () -> Void
     let onDownload: () -> Void
@@ -52,15 +54,22 @@ struct DetailActionDock: View {
             modeButton(
                 title: "预览",
                 icon: "eye",
-                isSelected: !isStudioActive,
+                isSelected: !isStudioActive && !isCleanPreviewActive,
                 action: onPreviewMode
             )
 
             modeButton(
                 title: "调校",
                 icon: "camera.aperture",
-                isSelected: isStudioActive,
+                isSelected: isStudioActive && !isCleanPreviewActive,
                 action: onStudioMode
+            )
+
+            modeButton(
+                title: "纯净",
+                icon: "rectangle.inset.filled",
+                isSelected: isCleanPreviewActive,
+                action: onCleanPreviewMode
             )
         }
         .padding(4)

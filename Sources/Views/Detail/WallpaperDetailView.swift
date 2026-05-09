@@ -9,11 +9,13 @@ import SwiftData
 private enum DetailExperienceMode {
     case preview
     case studio
+    case clean
 
     var title: String {
         switch self {
         case .preview: return "预览模式"
         case .studio: return "调校模式"
+        case .clean: return "纯净预览"
         }
     }
 
@@ -21,6 +23,7 @@ private enum DetailExperienceMode {
         switch self {
         case .preview: return "浏览、收藏、下载与应用"
         case .studio: return "实时调校色彩、环境与粒子"
+        case .clean: return "隐藏界面，只看壁纸"
         }
     }
 
@@ -28,6 +31,7 @@ private enum DetailExperienceMode {
         switch self {
         case .preview: return "eye"
         case .studio: return "camera.aperture"
+        case .clean: return "rectangle.inset.filled"
         }
     }
 }
@@ -99,9 +103,11 @@ struct WallpaperDetailView: View {
     @State private var activeWeatherScene: LabWeatherScene = .dust
     @State private var activeParticleLayer: LabParticleLayer = .middle
     @State private var isChoosingApplyScreen = false
+    @State private var isCleanPreviewActive = false
 
     private var detailMode: DetailExperienceMode {
-        isStudioActive ? .studio : .preview
+        if isCleanPreviewActive { return .clean }
+        return isStudioActive ? DetailExperienceMode.studio : DetailExperienceMode.preview
     }
     
     var body: some View {
@@ -115,12 +121,33 @@ struct WallpaperDetailView: View {
                 .windowDragGesture()
         }
         .frame(minWidth: 1200, minHeight: 800)
-        .overlay { chromeOverlay }
-        .overlay(alignment: .bottomLeading) {
-            DownloadProgressOverlay(downloadManager: downloadManager)
+        .overlay {
+            if isCleanPreviewActive {
+                cleanPreviewExitHUD
+                    .transition(.opacity)
+            } else {
+                chromeOverlay
+                    .transition(.opacity)
+            }
         }
-        .overlay { toastOverlay }
+        .overlay(alignment: .bottomLeading) {
+            if !isCleanPreviewActive {
+                DownloadProgressOverlay(downloadManager: downloadManager)
+            }
+        }
+        .overlay {
+            if !isCleanPreviewActive {
+                toastOverlay
+            }
+        }
         .preferredColorScheme(.dark)
+        .onKeyPress(.escape) {
+            if isCleanPreviewActive {
+                switchToPreviewMode()
+                return .handled
+            }
+            return .ignored
+        }
         .task(id: previewCacheTaskID) {
             await viewModel.prepareFullResolutionPreview(for: wallpaper)
         }
@@ -217,6 +244,35 @@ struct WallpaperDetailView: View {
                 .transition(.opacity)
             }
         }
+    }
+
+    private var cleanPreviewExitHUD: some View {
+        VStack {
+            HStack {
+                Spacer()
+                Button {
+                    switchToPreviewMode()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "rectangle.inset.filled.and.person.filled")
+                            .font(.system(size: 12, weight: .bold))
+                        Text("退出纯净")
+                            .font(.system(size: 12, weight: .bold))
+                    }
+                    .foregroundStyle(.white.opacity(0.74))
+                    .padding(.horizontal, 14)
+                    .frame(height: 38)
+                    .background(.ultraThinMaterial, in: Capsule(style: .continuous))
+                    .overlay(Capsule(style: .continuous).stroke(Color.white.opacity(0.14), lineWidth: 0.5))
+                }
+                .buttonStyle(.plain)
+                .help("退出纯净预览，也可以按 Esc")
+                .padding(.top, 40)
+                .padding(.trailing, 40)
+            }
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var fullscreenCanvas: some View {
@@ -445,9 +501,11 @@ struct WallpaperDetailView: View {
             isFavorite: viewModel.isFavoriteDisplayed,
             isApplying: viewModel.isApplying,
             isStudioActive: isStudioActive,
+            isCleanPreviewActive: isCleanPreviewActive,
             isDownloading: viewModel.isDownloading,
             onPreviewMode: switchToPreviewMode,
             onStudioMode: switchToStudioMode,
+            onCleanPreviewMode: switchToCleanPreviewMode,
             onFavorite: toggleFavorite,
             onApply: { Task { await applyWallpaper() } },
             onDownload: { Task { await downloadWallpaper() } }
@@ -456,6 +514,7 @@ struct WallpaperDetailView: View {
 
     private func switchToPreviewMode() {
         withAnimation(.gallerySpring) {
+            isCleanPreviewActive = false
             isStudioActive = false
             NSColorPanel.shared.orderOut(nil)
         }
@@ -463,7 +522,16 @@ struct WallpaperDetailView: View {
 
     private func switchToStudioMode() {
         withAnimation(.gallerySpring) {
+            isCleanPreviewActive = false
             isStudioActive = true
+        }
+    }
+
+    private func switchToCleanPreviewMode() {
+        withAnimation(.gallerySpring) {
+            isCleanPreviewActive = true
+            isStudioActive = false
+            NSColorPanel.shared.orderOut(nil)
         }
     }
 
