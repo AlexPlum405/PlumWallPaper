@@ -6,6 +6,32 @@ import SwiftData
 // MARK: - Artisan Exhibition Hall (Scheme C: Artisan Gallery)
 // 沉浸式壁纸鉴赏厅，UI 仅在鼠标触碰功能区时如雾般浮现。
 
+private enum DetailExperienceMode {
+    case preview
+    case studio
+
+    var title: String {
+        switch self {
+        case .preview: return "预览模式"
+        case .studio: return "调校模式"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .preview: return "浏览、收藏、下载与应用"
+        case .studio: return "实时调校色彩、环境与粒子"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .preview: return "eye"
+        case .studio: return "camera.aperture"
+        }
+    }
+}
+
 struct WallpaperDetailView: View {
     @State var wallpaper: Wallpaper
     var onPrevious: ((Wallpaper, @escaping (Wallpaper) -> Void) -> Void)? = nil
@@ -73,6 +99,10 @@ struct WallpaperDetailView: View {
     @State private var activeWeatherScene: LabWeatherScene = .dust
     @State private var activeParticleLayer: LabParticleLayer = .middle
     @State private var isChoosingApplyScreen = false
+
+    private var detailMode: DetailExperienceMode {
+        isStudioActive ? .studio : .preview
+    }
     
     var body: some View {
         ZStack {
@@ -132,6 +162,11 @@ struct WallpaperDetailView: View {
                         .frame(maxWidth: 720, alignment: .leading)
                         .padding(.leading, 80)
                         .padding(.top, 80)
+
+                    Spacer(minLength: 24)
+
+                    detailModeHUD
+                        .padding(.top, 48)
 
                     Spacer(minLength: 24)
 
@@ -341,14 +376,30 @@ struct WallpaperDetailView: View {
         }
     }
 
-    private func metadataTag(icon: String, text: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon).font(.system(size: 10))
-            Text(text).font(.system(size: 10, weight: .bold))
+    private var detailModeHUD: some View {
+        PlumHUDSurface(cornerRadius: 24, padding: 12) {
+            HStack(spacing: 12) {
+                Image(systemName: detailMode.icon)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(LiquidGlassColors.primaryPink)
+                    .frame(width: 28, height: 28)
+                    .background(Circle().fill(LiquidGlassColors.primaryPink.opacity(0.12)))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(detailMode.title)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(LiquidGlassColors.textPrimary)
+                    Text(detailMode.subtitle)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(LiquidGlassColors.textSecondary)
+                }
+            }
+            .frame(width: 190, alignment: .leading)
         }
-        .foregroundStyle(.white.opacity(0.6))
-        .padding(.horizontal, 12).padding(.vertical, 6)
-        .background(Capsule().fill(Color.white.opacity(0.1)))
+    }
+
+    private func metadataTag(icon: String, text: String) -> some View {
+        PlumMetadataChip(icon: icon, text: text)
     }
 
     private func formatFileSize(_ bytes: Int64) -> String {
@@ -395,16 +446,25 @@ struct WallpaperDetailView: View {
             isApplying: viewModel.isApplying,
             isStudioActive: isStudioActive,
             isDownloading: viewModel.isDownloading,
+            onPreviewMode: switchToPreviewMode,
+            onStudioMode: switchToStudioMode,
             onFavorite: toggleFavorite,
             onApply: { Task { await applyWallpaper() } },
-            onToggleStudio: {
-                withAnimation(.gallerySpring) {
-                    isStudioActive.toggle()
-                    if !isStudioActive { NSColorPanel.shared.orderOut(nil) }
-                }
-            },
             onDownload: { Task { await downloadWallpaper() } }
         )
+    }
+
+    private func switchToPreviewMode() {
+        withAnimation(.gallerySpring) {
+            isStudioActive = false
+            NSColorPanel.shared.orderOut(nil)
+        }
+    }
+
+    private func switchToStudioMode() {
+        withAnimation(.gallerySpring) {
+            isStudioActive = true
+        }
     }
 
     private var artisanStudioHUD: some View {

@@ -167,6 +167,140 @@ struct LiquidGlassEmptyState: View {
     }
 }
 
+// MARK: - Plum HUD Surface
+struct PlumHUDSurface<Content: View>: View {
+    var cornerRadius: CGFloat = 28
+    var padding: CGFloat = 10
+    let content: Content
+
+    init(
+        cornerRadius: CGFloat = 28,
+        padding: CGFloat = 10,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.cornerRadius = cornerRadius
+        self.padding = padding
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .padding(padding)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(LiquidGlassColors.deepBackground.opacity(0.28))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+            )
+            .artisanShadow(color: .black.opacity(0.24), radius: 34, y: 18)
+    }
+}
+
+// MARK: - Plum Action Components
+struct PlumPrimaryActionButton: View {
+    let title: String
+    var icon: String? = nil
+    var isBusy: Bool = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                if isBusy {
+                    CustomProgressView(tint: .white, scale: 0.72)
+                } else if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 13, weight: .bold))
+                }
+
+                Text(title)
+                    .font(.system(size: 13, weight: .bold))
+                    .kerning(0.6)
+            }
+            .foregroundStyle(.black.opacity(0.86))
+            .padding(.horizontal, 28)
+            .frame(height: 48)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [LiquidGlassColors.primaryPink, LiquidGlassColors.tertiaryBlue],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+            )
+            .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.24), radius: 18, y: 8)
+        }
+        .buttonStyle(.plain)
+        .disabled(isBusy)
+    }
+}
+
+struct PlumIconActionButton: View {
+    let icon: String
+    var title: String? = nil
+    var isActive: Bool = false
+    var isBusy: Bool = false
+    var help: String? = nil
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: title == nil ? 0 : 3) {
+                if isBusy {
+                    CustomProgressView(tint: iconColor, scale: 0.58)
+                        .frame(width: 18, height: 18)
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 17, weight: .semibold))
+                }
+
+                if let title {
+                    Text(title)
+                        .font(.system(size: 9, weight: .bold))
+                        .lineLimit(1)
+                }
+            }
+            .foregroundStyle(iconColor)
+            .frame(width: 52, height: 52)
+            .background(Circle().fill(isActive ? LiquidGlassColors.primaryPink.opacity(0.14) : Color.white.opacity(0.055)))
+            .overlay(Circle().stroke(isActive ? LiquidGlassColors.primaryPink.opacity(0.42) : Color.white.opacity(0.12), lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
+        .disabled(isBusy)
+        .help(help ?? title ?? "")
+    }
+
+    private var iconColor: Color {
+        isActive ? LiquidGlassColors.primaryPink : .white.opacity(0.66)
+    }
+}
+
+struct PlumMetadataChip: View {
+    let icon: String
+    let text: String
+    var tint: Color = .white.opacity(0.68)
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .semibold))
+            Text(text)
+                .font(.system(size: 10, weight: .bold))
+                .lineLimit(1)
+        }
+        .foregroundStyle(tint)
+        .padding(.horizontal, 11)
+        .frame(height: 26)
+        .background(Capsule(style: .continuous).fill(Color.white.opacity(0.095)))
+        .overlay(Capsule(style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+    }
+}
+
 // MARK: - FlowLayout (流式布局)
 struct FlowLayout: Layout {
     var spacing: CGFloat

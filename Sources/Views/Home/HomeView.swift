@@ -448,6 +448,17 @@ struct HomeView: View {
                         }
                     }
                 }
+                .frame(maxWidth: min(680, size.width - mainPadding * 2), alignment: .leading)
+                .padding(22)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
+                .background(
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .fill(LiquidGlassColors.deepBackground.opacity(0.24))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+                )
                 .padding(.leading, mainPadding).padding(.trailing, mainPadding).padding(.bottom, 80)
                 .zIndex(2)
             }

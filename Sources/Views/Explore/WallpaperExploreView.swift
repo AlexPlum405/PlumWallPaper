@@ -95,6 +95,8 @@ struct WallpaperExploreView: View {
 
                 HStack {
                     Spacer()
+                    advancedFiltersButton
+
                     Button {
                         withAnimation(.gallerySpring) {
                             showAdvancedFilters.toggle()

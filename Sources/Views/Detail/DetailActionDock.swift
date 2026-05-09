@@ -5,80 +5,86 @@ struct DetailActionDock: View {
     let isApplying: Bool
     let isStudioActive: Bool
     let isDownloading: Bool
+    let onPreviewMode: () -> Void
+    let onStudioMode: () -> Void
     let onFavorite: () -> Void
     let onApply: () -> Void
-    let onToggleStudio: () -> Void
     let onDownload: () -> Void
 
     var body: some View {
-        HStack(spacing: 24) {
-            actionCircleButton(
-                icon: isFavorite ? "heart.fill" : "heart",
-                color: isFavorite ? LiquidGlassColors.primaryPink : .white.opacity(0.6),
-                action: onFavorite
-            )
+        PlumHUDSurface(cornerRadius: 34, padding: 10) {
+            HStack(spacing: 14) {
+                modeSwitcher
 
-            Button(action: onApply) {
-                HStack(spacing: 16) {
-                    if isApplying {
-                        CustomProgressView(tint: .white, scale: 0.8)
-                    } else {
-                        Text("设为壁纸")
-                            .font(.system(size: 14, weight: .bold))
-                            .kerning(2)
-                    }
-                }
-                .padding(.horizontal, 60)
-                .frame(height: 52)
-                .background(LiquidGlassColors.primaryPink)
-                .clipShape(Capsule())
-                .foregroundStyle(.black)
-                .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.3), radius: 20)
-            }
-            .buttonStyle(.plain)
-            .disabled(isApplying)
+                Rectangle()
+                    .fill(Color.white.opacity(0.12))
+                    .frame(width: 0.5, height: 34)
+                    .padding(.horizontal, 2)
 
-            Button(action: onToggleStudio) {
-                VStack(spacing: 4) {
-                    Image(systemName: "camera.aperture")
-                        .font(.system(size: 18))
-                    Text("实验室")
-                        .font(.system(size: 10, weight: .bold))
-                }
-                .foregroundStyle(isStudioActive ? LiquidGlassColors.primaryPink : .white.opacity(0.6))
-                .frame(width: 52, height: 52)
-                .background(Circle().fill(Color.white.opacity(0.05)))
-                .overlay(
-                    Circle()
-                        .stroke(
-                            isStudioActive ? LiquidGlassColors.primaryPink.opacity(0.5) : Color.white.opacity(0.1),
-                            lineWidth: 1
-                        )
+                PlumIconActionButton(
+                    icon: isFavorite ? "heart.fill" : "heart",
+                    title: "收藏",
+                    isActive: isFavorite,
+                    help: isFavorite ? "取消收藏" : "收藏",
+                    action: onFavorite
+                )
+
+                PlumPrimaryActionButton(
+                    title: isApplying ? "正在应用" : "设为壁纸",
+                    icon: "macwindow.on.rectangle",
+                    isBusy: isApplying,
+                    action: onApply
+                )
+
+                PlumIconActionButton(
+                    icon: "arrow.down.to.line.compact",
+                    title: isDownloading ? "下载中" : "下载",
+                    isBusy: isDownloading,
+                    help: "下载原片",
+                    action: onDownload
                 )
             }
-            .buttonStyle(.plain)
-
-            actionCircleButton(
-                icon: "arrow.down.to.line.compact",
-                color: .white.opacity(0.6),
-                action: onDownload
-            )
-            .disabled(isDownloading)
         }
-        .padding(12)
-        .background(.ultraThinMaterial, in: Capsule())
-        .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
-        .artisanShadow(color: .black.opacity(0.2), radius: 30)
     }
 
-    private func actionCircleButton(icon: String, color: Color, action: @escaping () -> Void) -> some View {
+    private var modeSwitcher: some View {
+        HStack(spacing: 4) {
+            modeButton(
+                title: "预览",
+                icon: "eye",
+                isSelected: !isStudioActive,
+                action: onPreviewMode
+            )
+
+            modeButton(
+                title: "调校",
+                icon: "camera.aperture",
+                isSelected: isStudioActive,
+                action: onStudioMode
+            )
+        }
+        .padding(4)
+        .background(Capsule(style: .continuous).fill(Color.white.opacity(0.045)))
+        .overlay(Capsule(style: .continuous).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+    }
+
+    private func modeButton(title: String, icon: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundStyle(color)
-                .frame(width: 52, height: 52)
-                .background(Circle().fill(Color.white.opacity(0.05)))
-                .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 1))
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .bold))
+                Text(title)
+                    .font(.system(size: 11, weight: .bold))
+            }
+            .foregroundStyle(isSelected ? .black.opacity(0.84) : LiquidGlassColors.textSecondary)
+            .padding(.horizontal, 13)
+            .frame(height: 40)
+            .background {
+                if isSelected {
+                    Capsule(style: .continuous)
+                        .fill(LiquidGlassColors.primaryPink)
+                }
+            }
         }
         .buttonStyle(.plain)
     }
