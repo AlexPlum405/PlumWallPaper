@@ -42,7 +42,7 @@ struct HomeView: View {
                                 artisanFullscreenHero(size: windowGeo.size)
                             }
 
-                            VStack(alignment: .leading, spacing: 80) {
+                            VStack(alignment: .leading, spacing: 92) {
                                 if !viewModel.latestStills.isEmpty {
                                     artisanStillsSection()
                                 }
@@ -50,7 +50,7 @@ struct HomeView: View {
                                     artisanMotionsSection()
                                 }
                             }
-                            .padding(.top, viewModel.heroItems.isEmpty ? 120 : 80)
+                            .padding(.top, viewModel.heroItems.isEmpty ? 120 : 92)
                             .padding(.bottom, 160)
                             .background(LiquidGlassColors.deepBackground)
                         }
@@ -305,7 +305,7 @@ struct HomeView: View {
     // MARK: - Hero Section
 
     private func artisanFullscreenHero(size: CGSize) -> some View {
-        let heroHeight = max(520, size.height * 0.68)
+        let heroHeight = max(560, size.height * 0.72)
 
         return ZStack(alignment: .bottomLeading) {
             // 视频层 - 只预加载当前和前后各1个视频
@@ -341,15 +341,28 @@ struct HomeView: View {
             .frame(width: size.width, height: heroHeight).clipped()
             .animation(.easeInOut(duration: 0.8), value: currentHeroIndex)
 
-            LinearGradient(
-                colors: [.clear, LiquidGlassColors.deepBackground.opacity(0.82), LiquidGlassColors.deepBackground],
-                startPoint: .init(x: 0.5, y: 0.55),
-                endPoint: .bottom
-            ).frame(height: 320)
+            VStack(spacing: 0) {
+                LinearGradient(
+                    colors: [Color.black.opacity(0.2), .clear],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 180)
+
+                Spacer(minLength: 0)
+
+                LinearGradient(
+                    colors: [.clear, LiquidGlassColors.deepBackground.opacity(0.8), LiquidGlassColors.deepBackground],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 360)
+            }
+            .allowsHitTesting(false)
 
             if !viewModel.heroItems.isEmpty {
                 let item = viewModel.heroItems[currentHeroIndex]
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 15) {
                     HStack(spacing: 8) {
                         Text(item.collectionTitle?.uppercased() ?? "TODAY'S PICK")
                             .font(.system(size: 10, weight: .bold))
@@ -365,9 +378,11 @@ struct HomeView: View {
                     }
 
                     Text(item.title)
-                        .font(.system(size: 42, weight: .bold, design: .default))
+                        .font(GalleryTypography.cinematicDisplay(52, weight: .semibold))
+                        .kerning(0.35)
                         .foregroundStyle(.white)
                         .lineLimit(2)
+                        .shadow(color: .black.opacity(0.62), radius: 18, x: 0, y: 8)
 
                     HStack(spacing: 10) {
                         artisanHeroMetaChip(text: bestHeroResolutionLabel(for: item), icon: "rectangle.expand.vertical")
@@ -380,7 +395,7 @@ struct HomeView: View {
                         artisanHeroMetaChip(text: "ORIGINAL", icon: "sparkles")
                     }
 
-                    HStack(spacing: 16) {
+                    HStack(spacing: 14) {
                         Button(action: {
                             Task {
                                 await applyCurrentHeroAsWallpaper()
@@ -396,16 +411,10 @@ struct HomeView: View {
                             }
                             .padding(.horizontal, 28).frame(height: 44)
                             .background(
-                                Capsule().fill(
-                                    LinearGradient(
-                                        colors: [LiquidGlassColors.primaryPink, LiquidGlassColors.tertiaryBlue],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
+                                Capsule().fill(LiquidGlassColors.primaryPink)
                             )
                             .foregroundStyle(.black.opacity(0.85))
-                            .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.25), radius: 18)
+                            .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.22), radius: 18, y: 8)
                         }
                         .buttonStyle(.plain)
                         .disabled(isApplying)
@@ -422,7 +431,10 @@ struct HomeView: View {
                                 Text(isHeroDownloaded(item) ? "已下载" : "下载原片")
                                     .font(.system(size: 12, weight: .medium))
                             }
-                            .foregroundStyle(LiquidGlassColors.textSecondary)
+                            .foregroundStyle(.white.opacity(0.7))
+                            .padding(.horizontal, 12)
+                            .frame(height: 36)
+                            .background(Capsule().fill(Color.black.opacity(0.18)))
                         }
                         .buttonStyle(.plain)
                         .disabled(isHeroDownloading)
@@ -448,7 +460,7 @@ struct HomeView: View {
                         }
                     }
                 }
-                .padding(.leading, mainPadding).padding(.trailing, mainPadding).padding(.bottom, 80)
+                .padding(.leading, mainPadding).padding(.trailing, mainPadding).padding(.bottom, 86)
                 .zIndex(2)
             }
 
@@ -478,12 +490,12 @@ struct HomeView: View {
             Text(text)
                 .font(.system(size: 10, weight: .black, design: .monospaced))
         }
-        .foregroundStyle(.white.opacity(0.82))
+        .foregroundStyle(.white.opacity(0.74))
         .padding(.horizontal, 11)
         .frame(height: 24)
-        .background(.ultraThinMaterial)
+        .background(Color.black.opacity(0.24))
         .clipShape(Capsule())
-        .overlay(Capsule().stroke(Color.white.opacity(0.16), lineWidth: 0.5))
+        .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
     }
 
     private func heroActionIconButton(
@@ -558,11 +570,11 @@ struct HomeView: View {
 
                 HStack(alignment: .firstTextBaseline) {
                     Text("最新静态壁纸")
-                        .font(.system(size: 28, weight: .bold))
+                        .font(GalleryTypography.cinematicDisplay(31, weight: .semibold))
                     Text("适合快速浏览与直接应用")
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(LiquidGlassColors.textSecondary)
-                        .padding(.leading, 12)
+                        .foregroundStyle(LiquidGlassColors.textTertiary)
+                        .padding(.leading, 14)
                     Spacer()
                     Button("查看全部") {
                         onSwitchToWallpaperTab?()
@@ -574,7 +586,7 @@ struct HomeView: View {
             }.padding(.horizontal, mainPadding)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 32) {
+                HStack(spacing: 30) {
                     ForEach(viewModel.latestStills) { remoteWallpaper in
                         let item = WallpaperPreviewItem(remote: remoteWallpaper)
                         WallpaperCard(previewItem: item, onTap: {
@@ -596,7 +608,7 @@ struct HomeView: View {
                             }
                         }
                     }
-                }.padding(.horizontal, mainPadding).padding(.bottom, 20)
+                }.padding(.horizontal, mainPadding).padding(.bottom, 24)
             }
         }
     }
@@ -613,11 +625,11 @@ struct HomeView: View {
 
                 HStack(alignment: .firstTextBaseline) {
                     Text("热门动态壁纸")
-                        .font(.system(size: 28, weight: .bold))
+                        .font(GalleryTypography.cinematicDisplay(31, weight: .semibold))
                     Text("关注时长、音频与分辨率")
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(LiquidGlassColors.textSecondary)
-                        .padding(.leading, 12)
+                        .foregroundStyle(LiquidGlassColors.textTertiary)
+                        .padding(.leading, 14)
                     Spacer()
                     Button("查看全部") {
                         onSwitchToMediaTab?()
@@ -629,7 +641,7 @@ struct HomeView: View {
             }.padding(.horizontal, mainPadding)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 32) {
+                HStack(spacing: 30) {
                     ForEach(viewModel.popularMotions) { mediaItem in
                         let item = WallpaperPreviewItem(media: mediaItem)
                         WallpaperCard(previewItem: item, onTap: {
@@ -652,7 +664,7 @@ struct HomeView: View {
                             }
                         }
                     }
-                }.padding(.horizontal, mainPadding).padding(.bottom, 20)
+                }.padding(.horizontal, mainPadding).padding(.bottom, 24)
             }
         }
     }

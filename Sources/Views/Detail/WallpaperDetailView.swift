@@ -6,36 +6,6 @@ import SwiftData
 // MARK: - Artisan Exhibition Hall (Scheme C: Artisan Gallery)
 // 沉浸式壁纸鉴赏厅，UI 仅在鼠标触碰功能区时如雾般浮现。
 
-private enum DetailExperienceMode {
-    case preview
-    case studio
-    case clean
-
-    var title: String {
-        switch self {
-        case .preview: return "预览模式"
-        case .studio: return "调校模式"
-        case .clean: return "纯净预览"
-        }
-    }
-
-    var subtitle: String {
-        switch self {
-        case .preview: return "浏览、收藏、下载与应用"
-        case .studio: return "实时调校色彩、环境与粒子"
-        case .clean: return "隐藏界面，只看壁纸"
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .preview: return "eye"
-        case .studio: return "camera.aperture"
-        case .clean: return "rectangle.inset.filled"
-        }
-    }
-}
-
 struct WallpaperDetailView: View {
     @State var wallpaper: Wallpaper
     var onPrevious: ((Wallpaper, @escaping (Wallpaper) -> Void) -> Void)? = nil
@@ -105,11 +75,6 @@ struct WallpaperDetailView: View {
     @State private var isChoosingApplyScreen = false
     @State private var isCleanPreviewActive = false
 
-    private var detailMode: DetailExperienceMode {
-        if isCleanPreviewActive { return .clean }
-        return isStudioActive ? DetailExperienceMode.studio : DetailExperienceMode.preview
-    }
-    
     var body: some View {
         ZStack {
             fullscreenCanvas
@@ -186,13 +151,13 @@ struct WallpaperDetailView: View {
             VStack(spacing: 0) {
                 HStack(alignment: .top) {
                     artisanTitleHUD
-                        .frame(maxWidth: 720, alignment: .leading)
+                        .frame(maxWidth: isStudioActive ? 500 : 720, alignment: .leading)
                         .padding(.leading, 80)
                         .padding(.top, 80)
 
                     Spacer(minLength: 24)
 
-                    detailModeHUD
+                    detailModeControls
                         .padding(.top, 48)
 
                     Spacer(minLength: 24)
@@ -393,8 +358,15 @@ struct WallpaperDetailView: View {
 
     private var artisanTitleHUD: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("精选画廊").font(.system(size: 12, weight: .black)).kerning(5).foregroundStyle(LiquidGlassColors.primaryPink)
-            Text(wallpaper.name).artisanTitleStyle(size: 48, kerning: 1).shadow(color: .black.opacity(0.5), radius: 20)
+            Text(isStudioActive ? "STUDIO LAB" : "CINEMA PREVIEW")
+                .font(.system(size: 12, weight: .black))
+                .kerning(5)
+                .foregroundStyle(LiquidGlassColors.primaryPink.opacity(isStudioActive ? 0.78 : 1))
+            Text(wallpaper.name)
+                .artisanTitleStyle(size: isStudioActive ? 40 : 48, kerning: 1)
+                .foregroundStyle(.white.opacity(isStudioActive ? 0.74 : 0.96))
+                .lineLimit(2)
+                .shadow(color: .black.opacity(0.66), radius: 22, x: 0, y: 8)
 
             // 元信息标签组
             HStack(spacing: 12) {
@@ -432,26 +404,48 @@ struct WallpaperDetailView: View {
         }
     }
 
-    private var detailModeHUD: some View {
-        PlumHUDSurface(cornerRadius: 24, padding: 12) {
-            HStack(spacing: 12) {
-                Image(systemName: detailMode.icon)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(LiquidGlassColors.primaryPink)
-                    .frame(width: 28, height: 28)
-                    .background(Circle().fill(LiquidGlassColors.primaryPink.opacity(0.12)))
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(detailMode.title)
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(LiquidGlassColors.textPrimary)
-                    Text(detailMode.subtitle)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(LiquidGlassColors.textSecondary)
+    private var detailModeControls: some View {
+        HStack(spacing: 8) {
+            detailModeIconButton(
+                icon: "camera.aperture",
+                isActive: isStudioActive,
+                help: isStudioActive ? "退出调校" : "进入调校"
+            ) {
+                if isStudioActive {
+                    switchToPreviewMode()
+                } else {
+                    switchToStudioMode()
                 }
             }
-            .frame(width: 190, alignment: .leading)
+
+            detailModeIconButton(
+                icon: "rectangle.inset.filled",
+                isActive: isCleanPreviewActive,
+                help: "进入纯净预览"
+            ) {
+                switchToCleanPreviewMode()
+            }
         }
+    }
+
+    private func detailModeIconButton(icon: String, isActive: Bool, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(isActive ? LiquidGlassColors.primaryPink : .white.opacity(0.5))
+                .frame(width: 38, height: 38)
+                .background(
+                    Circle()
+                        .fill(isActive ? LiquidGlassColors.primaryPink.opacity(0.13) : Color.black.opacity(0.16))
+                )
+                .overlay(
+                    Circle()
+                        .stroke(isActive ? LiquidGlassColors.primaryPink.opacity(0.38) : Color.white.opacity(0.1), lineWidth: 0.5)
+                )
+                .shadow(color: .black.opacity(0.2), radius: 14, x: 0, y: 8)
+        }
+        .buttonStyle(.plain)
+        .help(help)
     }
 
     private func metadataTag(icon: String, text: String) -> some View {
@@ -500,12 +494,7 @@ struct WallpaperDetailView: View {
         DetailActionDock(
             isFavorite: viewModel.isFavoriteDisplayed,
             isApplying: viewModel.isApplying,
-            isStudioActive: isStudioActive,
-            isCleanPreviewActive: isCleanPreviewActive,
             isDownloading: viewModel.isDownloading,
-            onPreviewMode: switchToPreviewMode,
-            onStudioMode: switchToStudioMode,
-            onCleanPreviewMode: switchToCleanPreviewMode,
             onFavorite: toggleFavorite,
             onApply: { Task { await applyWallpaper() } },
             onDownload: { Task { await downloadWallpaper() } }

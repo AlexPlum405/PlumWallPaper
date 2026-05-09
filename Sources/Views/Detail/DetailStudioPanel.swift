@@ -155,12 +155,18 @@ struct DetailStudioPanel: View {
     var body: some View {
         HStack(spacing: 0) {
             studioRail
-                .frame(width: 112)
-                .background(Color.white.opacity(0.018))
+                .frame(width: 104)
+                .background(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.035), Color.white.opacity(0.012)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
 
             Divider()
                 .frame(width: 1)
-                .opacity(0.08)
+                .opacity(0.1)
 
             VStack(alignment: .leading, spacing: 0) {
                 studioHeader
@@ -175,26 +181,44 @@ struct DetailStudioPanel: View {
 
                 studioActionBar
             }
-            .frame(width: 430)
+            .frame(width: 456)
         }
-        .frame(width: 544, height: 570)
-        .background(LiquidGlassColors.deepBackground.opacity(0.74))
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+        .frame(width: 560, height: 588)
+        .background(
+            ZStack {
+                LiquidGlassColors.elevatedBackground.opacity(0.96)
+                LinearGradient(
+                    colors: [
+                        LiquidGlassColors.primaryPink.opacity(0.08),
+                        Color.clear,
+                        Color.black.opacity(0.18)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
         )
-        .artisanShadow(color: .black.opacity(0.44), radius: 64, y: 26)
+        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(Color.white.opacity(0.14), lineWidth: 0.5)
+        )
+        .artisanShadow(color: .black.opacity(0.52), radius: 58, y: 24)
     }
 
     private var studioRail: some View {
         VStack(spacing: 12) {
-            Text("实验室")
+            Text("STUDIO")
                 .font(.system(size: 11, weight: .black))
-                .kerning(1.6)
+                .kerning(1.8)
                 .foregroundStyle(LiquidGlassColors.primaryPink)
                 .padding(.top, 24)
+                .padding(.bottom, 4)
+
+            Text("LAB")
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .kerning(1.8)
+                .foregroundStyle(.white.opacity(0.26))
                 .padding(.bottom, 10)
 
             ForEach(LabTab.allCases) { tab in
@@ -218,15 +242,16 @@ struct DetailStudioPanel: View {
                     .font(.system(size: 11, weight: .black))
                     .kerning(0.8)
             }
-            .foregroundStyle(isSelected ? LiquidGlassColors.primaryPink : .white.opacity(0.28))
-            .frame(width: 84, height: 70)
+            .foregroundStyle(isSelected ? .black.opacity(0.86) : .white.opacity(0.34))
+            .frame(width: 76, height: 68)
             .background {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(isSelected ? Color.white.opacity(0.055) : Color.clear)
+                    .fill(isSelected ? LiquidGlassColors.primaryPink : Color.clear)
+                    .shadow(color: isSelected ? LiquidGlassColors.primaryPink.opacity(0.22) : .clear, radius: 14, x: 0, y: 8)
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(isSelected ? LiquidGlassColors.primaryPink.opacity(0.28) : Color.clear, lineWidth: 0.5)
+                    .stroke(isSelected ? Color.white.opacity(0.16) : Color.clear, lineWidth: 0.5)
             }
         }
         .buttonStyle(.plain)
@@ -234,17 +259,17 @@ struct DetailStudioPanel: View {
 
     private var studioHeader: some View {
         HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("实时调校")
+            VStack(alignment: .leading, spacing: 7) {
+                Text("LIVE CONTROL")
                     .font(.system(size: 10, weight: .black))
-                    .kerning(1.5)
-                    .foregroundStyle(.white.opacity(0.24))
+                    .kerning(1.8)
+                    .foregroundStyle(LiquidGlassColors.primaryPink.opacity(0.78))
                 Text(selectedLabTab.headerTitle)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.88))
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.9))
                 Text(selectedLabTab.subtitle)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.36))
+                    .foregroundStyle(.white.opacity(0.42))
                     .lineLimit(1)
             }
 
@@ -264,9 +289,10 @@ struct DetailStudioPanel: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 22)
-        .padding(.vertical, 20)
-        .border(width: 0.5, edges: [.bottom], color: .white.opacity(0.06))
+        .padding(.horizontal, 24)
+        .padding(.vertical, 22)
+        .background(Color.black.opacity(0.08))
+        .border(width: 0.5, edges: [.bottom], color: .white.opacity(0.08))
     }
 
     private var selectedLabTab: LabTab {
@@ -275,8 +301,8 @@ struct DetailStudioPanel: View {
 
     private var compactDialColumns: [GridItem] {
         [
-            GridItem(.fixed(180), spacing: 20),
-            GridItem(.fixed(180), spacing: 20)
+            GridItem(.fixed(190), spacing: 20),
+            GridItem(.fixed(190), spacing: 20)
         ]
     }
 
@@ -409,8 +435,8 @@ struct DetailStudioPanel: View {
                 .tint(LiquidGlassColors.primaryPink)
         }
         .padding(18)
-        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white.opacity(0.035)))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.black.opacity(0.18)))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.white.opacity(0.09), lineWidth: 0.5))
     }
 
     private var expertParameterShelf: some View {
@@ -434,7 +460,7 @@ struct DetailStudioPanel: View {
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(.white.opacity(0.32))
                     .frame(width: 42, height: 42)
-                    .background(Circle().fill(Color.white.opacity(0.04)))
+                    .background(Circle().fill(Color.black.opacity(0.16)))
             }
             .buttonStyle(.plain)
 
@@ -447,7 +473,7 @@ struct DetailStudioPanel: View {
                     .foregroundStyle(isExpertExpanded ? LiquidGlassColors.primaryPink : .white.opacity(0.45))
                     .frame(maxWidth: .infinity)
                     .frame(height: 42)
-                    .background(Capsule().fill(Color.white.opacity(isExpertExpanded ? 0.07 : 0.035)))
+                    .background(Capsule().fill(isExpertExpanded ? LiquidGlassColors.primaryPink.opacity(0.12) : Color.black.opacity(0.15)))
                     .overlay(Capsule().stroke(isExpertExpanded ? LiquidGlassColors.primaryPink.opacity(0.28) : Color.white.opacity(0.08), lineWidth: 0.5))
             }
             .buttonStyle(.plain)
@@ -461,16 +487,17 @@ struct DetailStudioPanel: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 22)
+        .padding(.horizontal, 24)
         .padding(.vertical, 16)
-        .border(width: 0.5, edges: [.top], color: .white.opacity(0.06))
+        .background(Color.black.opacity(0.08))
+        .border(width: 0.5, edges: [.top], color: .white.opacity(0.08))
     }
 
     private func sectionKicker(_ title: String) -> some View {
         Text(title)
             .font(.system(size: 10, weight: .black))
             .kerning(1.3)
-            .foregroundStyle(.white.opacity(0.24))
+            .foregroundStyle(.white.opacity(0.34))
     }
 
     private func lookButton(_ preset: BuiltInPreset) -> some View {
@@ -482,10 +509,10 @@ struct DetailStudioPanel: View {
                 .font(.system(size: 13, weight: .bold))
                 .frame(maxWidth: .infinity)
                 .frame(height: 46)
-                .background(isActive ? LiquidGlassColors.primaryPink.opacity(0.14) : Color.white.opacity(0.035))
-                .foregroundStyle(isActive ? LiquidGlassColors.primaryPink : .white.opacity(0.45))
-                .clipShape(Capsule())
-                .overlay(Capsule().stroke(isActive ? LiquidGlassColors.primaryPink.opacity(0.35) : Color.white.opacity(0.08), lineWidth: 0.5))
+                .background(isActive ? LiquidGlassColors.primaryPink.opacity(0.16) : Color.black.opacity(0.16))
+                .foregroundStyle(isActive ? LiquidGlassColors.primaryPink : .white.opacity(0.55))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(isActive ? LiquidGlassColors.primaryPink.opacity(0.35) : Color.white.opacity(0.08), lineWidth: 0.5))
         }
         .buttonStyle(.plain)
     }
@@ -508,11 +535,11 @@ struct DetailStudioPanel: View {
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .foregroundStyle(isActive ? LiquidGlassColors.primaryPink : .white.opacity(0.48))
+            .foregroundStyle(isActive ? LiquidGlassColors.primaryPink : .white.opacity(0.56))
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: 88, alignment: .topLeading)
             .padding(14)
-            .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(isActive ? LiquidGlassColors.primaryPink.opacity(0.09) : Color.white.opacity(0.035)))
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(isActive ? LiquidGlassColors.primaryPink.opacity(0.1) : Color.black.opacity(0.16)))
             .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(isActive ? LiquidGlassColors.primaryPink.opacity(0.3) : Color.white.opacity(0.08), lineWidth: 0.5))
         }
         .buttonStyle(.plain)
@@ -534,7 +561,7 @@ struct DetailStudioPanel: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
-            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(isActive ? LiquidGlassColors.primaryPink.opacity(0.09) : Color.white.opacity(0.035)))
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(isActive ? LiquidGlassColors.primaryPink.opacity(0.1) : Color.black.opacity(0.16)))
             .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(isActive ? LiquidGlassColors.primaryPink.opacity(0.3) : Color.white.opacity(0.075), lineWidth: 0.5))
         }
         .buttonStyle(.plain)
@@ -576,7 +603,7 @@ struct DetailStudioPanel: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: 66)
             .padding(.horizontal, 12)
-            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(isActive ? LiquidGlassColors.primaryPink.opacity(0.09) : Color.white.opacity(0.035)))
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(isActive ? LiquidGlassColors.primaryPink.opacity(0.1) : Color.black.opacity(0.16)))
             .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(isActive ? LiquidGlassColors.primaryPink.opacity(0.32) : Color.white.opacity(0.08), lineWidth: 0.5))
         }
         .buttonStyle(.plain)

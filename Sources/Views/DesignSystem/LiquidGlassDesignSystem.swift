@@ -48,9 +48,14 @@ enum GallerySpacing {
 
 // MARK: - 排版系统 (Typography)
 enum GalleryTypography {
-    // 核心：系统标题，保留力量感与可读性
+    // 核心：影像画廊标题，使用系统 serif 建立更强的展览/电影感。
+    static func cinematicDisplay(_ size: CGFloat = 32, weight: Font.Weight = .semibold) -> Font {
+        .system(size: size, weight: weight, design: .serif)
+    }
+
+    // 核心：艺术标题，保留力量感与可读性
     static func artisticTitle(_ size: CGFloat = 32) -> Font {
-        .system(size: size, weight: .bold, design: .default)
+        cinematicDisplay(size)
     }
 
     // 功能：系统默认 SF 字体
@@ -189,4 +194,3 @@ struct VisualEffectView: NSViewRepresentable {
 }
 
 // MARK: - 工具
-

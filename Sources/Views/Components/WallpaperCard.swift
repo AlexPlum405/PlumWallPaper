@@ -11,7 +11,7 @@ struct WallpaperCard: View {
     @Environment(\.modelContext) private var modelContext
     @State private var isHovered = false
     @State private var downloadStatusVersion = 0
-    private let cardCornerRadius: CGFloat = 24
+    private let cardCornerRadius: CGFloat = 20
 
     init(wallpaper: Wallpaper, onTap: @escaping () -> Void, onDownload: (() -> Void)? = nil) {
         self.item = WallpaperPreviewItem(wallpaper: wallpaper)
@@ -32,11 +32,10 @@ struct WallpaperCard: View {
                 infoSection
             }
             // 严格遵循 LAYOUT ORDER RULE
-            .frame(width: 220) // 方案 C 增加呼吸感
+            .frame(width: 226)
             .background {
                 RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
-                    .fill(LiquidGlassColors.surfaceBackground.opacity(0.6))
-                    .background(.ultraThinMaterial)
+                    .fill(LiquidGlassColors.surfaceBackground.opacity(0.82))
             }
             .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
             .overlay {
@@ -44,8 +43,8 @@ struct WallpaperCard: View {
                     .stroke(
                         LinearGradient(
                             colors: [
-                                .white.opacity(isHovered ? 0.2 : 0.1),
-                                .white.opacity(0.05)
+                                .white.opacity(isHovered ? 0.18 : 0.08),
+                                .white.opacity(0.035)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -53,8 +52,8 @@ struct WallpaperCard: View {
                         lineWidth: 0.5
                     )
             }
-            .shadow(color: .black.opacity(isHovered ? 0.2 : 0.1), radius: isHovered ? 40 : 15, x: 0, y: isHovered ? 20 : 10)
-            .scaleEffect(isHovered ? 1.04 : 1.0)
+            .shadow(color: .black.opacity(isHovered ? 0.22 : 0.12), radius: isHovered ? 34 : 18, x: 0, y: isHovered ? 18 : 10)
+            .scaleEffect(isHovered ? 1.025 : 1.0)
         }
         .buttonStyle(.plain)
         .animation(.gallerySpring, value: isHovered)
@@ -81,10 +80,10 @@ struct WallpaperCard: View {
                     RemoteThumbnailImage(urls: thumbnailCandidateURLs)
                 }
             }
-            .frame(width: 220, height: 140)
+            .frame(width: 226, height: 150)
             .clipped()
 
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 if item.type == .video {
                     stateChip(text: "动态", icon: "play.fill", color: LiquidGlassColors.primaryPink)
                 }
@@ -93,7 +92,7 @@ struct WallpaperCard: View {
                     stateChip(text: "本地", icon: "internaldrive", color: LiquidGlassColors.onlineGreen)
                 }
             }
-            .padding(12)
+            .padding(11)
 
             VStack {
                 Spacer()
@@ -120,11 +119,10 @@ struct WallpaperCard: View {
 
                     Text(item.resolution ?? "N/A")
                         .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.82))
+                        .foregroundStyle(Color.white.opacity(0.72))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color.black.opacity(0.22))
-                        .background(.ultraThinMaterial)
+                        .background(Color.black.opacity(0.26))
                         .clipShape(Capsule())
                 }
                 .padding(10)
@@ -134,10 +132,11 @@ struct WallpaperCard: View {
                 VStack {
                     HStack {
                         Button(action: { onDownload?() }) {
-                            Image(systemName: isDownloaded ? "checkmark.circle.fill" : "arrow.down.circle")
-                                .font(.system(size: 20, weight: .medium))
+                            Image(systemName: isDownloaded ? "checkmark.circle.fill" : "arrow.down.to.line.compact")
+                                .font(.system(size: 14, weight: .bold))
                                 .foregroundStyle(isDownloaded ? LiquidGlassColors.onlineGreen : .white.opacity(0.9))
-                                .shadow(color: .black.opacity(0.3), radius: 4)
+                                .frame(width: 30, height: 30)
+                                .background(Circle().fill(Color.black.opacity(0.28)))
                         }
                         .buttonStyle(.plain)
                         .opacity(isHovered ? 1 : 0)
@@ -154,23 +153,24 @@ struct WallpaperCard: View {
     
     // MARK: - 信息区域 (Gallery Tag)
     private var infoSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(item.title.isEmpty ? "Untitled" : item.title)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(isHovered ? LiquidGlassColors.textPrimary : LiquidGlassColors.textPrimary)
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(LiquidGlassColors.textPrimary)
                 .lineLimit(2)
+                .frame(minHeight: 38, alignment: .topLeading)
 
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 if let resolution = item.resolution {
-                    metaChip(icon: "rectangle.expand.vertical", text: resolution, color: LiquidGlassColors.primaryPink)
+                    quietMeta(icon: "rectangle.expand.vertical", text: resolution)
                 }
 
                 if item.fileSize > 0 {
-                    metaChip(icon: "externaldrive", text: formatFileSize(item.fileSize), color: LiquidGlassColors.accentGold)
+                    quietMeta(icon: "internaldrive", text: formatFileSize(item.fileSize))
                 }
 
                 if item.type == .video, let duration = item.duration {
-                    metaChip(icon: "clock", text: formatDuration(duration), color: LiquidGlassColors.primaryViolet)
+                    quietMeta(icon: "clock", text: formatDuration(duration))
                 }
             }
 
@@ -184,13 +184,14 @@ struct WallpaperCard: View {
                 Spacer()
                 Image(systemName: isHovered ? "arrow.up.right" : "circle.fill")
                     .font(.system(size: isHovered ? 10 : 6, weight: .bold))
-                    .foregroundStyle(isHovered ? LiquidGlassColors.primaryPink : LiquidGlassColors.textQuaternary)
+                    .foregroundStyle(isHovered ? LiquidGlassColors.primaryPink : Color.white.opacity(0.18))
             }
             .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(LiquidGlassColors.textSecondary)
+            .foregroundStyle(LiquidGlassColors.textTertiary)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.top, 14)
+        .padding(.bottom, 15)
     }
 
     private var isDownloaded: Bool {
@@ -224,25 +225,20 @@ struct WallpaperCard: View {
             }
             Text(text).font(.system(size: 8, weight: .bold))
         }
-        .foregroundStyle(.white)
+        .foregroundStyle(.white.opacity(0.86))
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(color.opacity(0.6))
-        .background(.ultraThinMaterial)
+        .background(color.opacity(0.36))
         .clipShape(Capsule())
-        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+        .overlay(Capsule().stroke(Color.white.opacity(0.11), lineWidth: 0.5))
     }
 
-    private func metaChip(icon: String, text: String, color: Color) -> some View {
+    private func quietMeta(icon: String, text: String) -> some View {
         HStack(spacing: 3) {
-            Image(systemName: icon).font(.system(size: 7, weight: .bold))
-            Text(text).font(.system(size: 9, weight: .bold))
+            Image(systemName: icon).font(.system(size: 8, weight: .bold))
+            Text(text).font(.system(size: 9, weight: .bold, design: .monospaced))
         }
-        .foregroundStyle(color)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(color.opacity(0.1))
-        .clipShape(Capsule())
+        .foregroundStyle(LiquidGlassColors.textTertiary)
     }
 
     // MARK: - 辅助子视图
