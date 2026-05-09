@@ -72,8 +72,8 @@ struct LiquidGlassSectionHeader: View {
                     .foregroundStyle(color)
             }
             Text(title)
-                .font(.custom("Georgia", size: 18).bold())
-                .kerning(1.5)
+                .font(.system(size: 18, weight: .bold))
+                .kerning(0.6)
                 .foregroundStyle(LiquidGlassColors.textPrimary)
             Spacer()
         }
@@ -140,7 +140,7 @@ struct LiquidGlassLoadingView: View {
         VStack(spacing: 20) {
             CustomProgressView(tint: LiquidGlassColors.primaryPink, scale: 1.5)
             Text(message)
-                .font(.custom("Georgia", size: 14).italic())
+                .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(LiquidGlassColors.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -159,8 +159,8 @@ struct LiquidGlassEmptyState: View {
                 .foregroundStyle(LiquidGlassColors.textQuaternary)
 
             Text(message)
-                .font(.custom("Georgia", size: 18).bold())
-                .kerning(1.0)
+                .font(.system(size: 18, weight: .semibold))
+                .kerning(0.4)
                 .foregroundStyle(LiquidGlassColors.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

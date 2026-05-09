@@ -5,6 +5,8 @@ struct WallpaperExploreView: View {
     @StateObject private var viewModel = WallpaperExploreViewModel()
     @State private var detailItem: WallpaperPreviewItem?
     @State private var showFilters = false
+    @State private var showAdvancedFilters = false
+    @FocusState private var isSearchFocused: Bool
 
     let mainPadding: CGFloat = 88
 
@@ -53,6 +55,9 @@ struct WallpaperExploreView: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .plumFocusSearch)) { _ in
+            isSearchFocused = true
+        }
     }
 
     // MARK: - Navigation Logic
@@ -86,20 +91,34 @@ struct WallpaperExploreView: View {
 
             // Wallhaven 专属筛选（分类、纯度、排序）
             if viewModel.showWallhavenFilters {
-                // 分类筛选
                 categoryFilters
 
-                // 高级筛选按钮和选项
-                VStack(alignment: .leading, spacing: 20) {
-                    purityFilters
-                    sortingFilters
-                    HStack {
-                        Spacer()
-                        advancedFiltersButton
+                HStack {
+                    Spacer()
+                    Button {
+                        withAnimation(.gallerySpring) {
+                            showAdvancedFilters.toggle()
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(showAdvancedFilters ? "收起筛选" : "更多筛选")
+                                .font(.system(size: 12, weight: .semibold))
+                            Image(systemName: showAdvancedFilters ? "chevron.up" : "chevron.down")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .foregroundStyle(LiquidGlassColors.textSecondary)
                     }
+                    .buttonStyle(.plain)
                 }
 
-                // 展开的高级筛选
+                if showAdvancedFilters {
+                    VStack(alignment: .leading, spacing: 20) {
+                        purityFilters
+                        sortingFilters
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+
                 if showFilters {
                     advancedFiltersSection
                 }
@@ -158,6 +177,7 @@ struct WallpaperExploreView: View {
                 .textFieldStyle(.plain)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(LiquidGlassColors.textPrimary)
+                .focused($isSearchFocused)
                 .onSubmit {
                     Task { await viewModel.applyFilters() }
                 }

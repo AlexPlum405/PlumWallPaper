@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-// MARK: - 主标签类型 (画廊版)
+// MARK: - 主标签类型 (工作台版)
 enum MainTab: Int, CaseIterable {
     case home           // 精选
     case wallpaper      // 静态
@@ -19,10 +19,10 @@ enum MainTab: Int, CaseIterable {
 
     var icon: String {
         switch self {
-        case .home: return "safari"
-        case .wallpaper: return "rectangle.on.rectangle.angled"
-        case .media: return "film.stack"
-        case .myLibrary: return "archivebox"
+        case .home: return "sparkles"
+        case .wallpaper: return "rectangle.grid.2x2"
+        case .media: return "play.rectangle.on.rectangle"
+        case .myLibrary: return "square.stack.3d.up"
         }
     }
 }
@@ -36,25 +36,24 @@ struct TopNavigationBar: View {
     let onMinimize: () -> Void
     let onMaximize: () -> Void
     let onZoom: () -> Void
-    
+
     private let controlHeight: CGFloat = 40
 
     var body: some View {
         HStack(alignment: .center, spacing: 0) {
-            // 左侧避让区
             Color.clear.frame(width: 80, height: controlHeight)
 
             Spacer()
 
-            // 核心控制区 (修复：材质与圆角绝对对齐)
-            artisanTabControl
-            
+            studioTabControl
+
             Spacer()
 
-            // 右侧功能区
             HStack(spacing: 12) {
                 TopBarCircleButton(icon: "magnifyingglass", size: controlHeight) { onSearch() }
+                    .help("搜索内容")
                 TopBarCircleButton(icon: "slider.horizontal.3", size: controlHeight) { onOpenSettings() }
+                    .help("打开设置")
             }
             .frame(width: 100, alignment: .trailing)
         }
@@ -62,26 +61,24 @@ struct TopNavigationBar: View {
         .padding(.top, 16)
         .padding(.bottom, 8)
     }
-    
-    private var artisanTabControl: some View {
-        HStack(spacing: 32) {
+
+    private var studioTabControl: some View {
+        HStack(spacing: 28) {
             ForEach(MainTab.allCases, id: \.self) { tab in
                 Button {
                     withAnimation(.gallerySpring) { selectedTab = tab }
                 } label: {
                     VStack(spacing: 6) {
-                        HStack(spacing: 6) {
-                            Image(systemName: tab.icon).font(.system(size: 11, weight: .medium))
-                            Text(tab.title).font(.system(size: 13, weight: .bold)).kerning(1.5)
+                        HStack(spacing: 7) {
+                            Image(systemName: tab.icon).font(.system(size: 11, weight: .semibold))
+                            Text(tab.title).font(.system(size: 13, weight: .semibold))
                         }
-                        .foregroundStyle(selectedTab == tab ? LiquidGlassColors.textPrimary : LiquidGlassColors.textQuaternary)
+                        .foregroundStyle(selectedTab == tab ? LiquidGlassColors.textPrimary : LiquidGlassColors.textSecondary)
 
-                        if selectedTab == tab {
-                            Capsule().fill(LiquidGlassColors.primaryPink).frame(width: 14, height: 2)
-                                .transition(.scale.combined(with: .opacity))
-                        } else {
-                            Capsule().fill(Color.clear).frame(width: 14, height: 2)
-                        }
+                        Capsule()
+                            .fill(selectedTab == tab ? LiquidGlassColors.primaryPink : Color.clear)
+                            .frame(width: selectedTab == tab ? 18 : 14, height: 2)
+                            .animation(.gallerySpring, value: selectedTab)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
@@ -90,13 +87,14 @@ struct TopNavigationBar: View {
                 .contentShape(Rectangle())
             }
         }
-        .padding(.horizontal, 28)
+        .padding(.horizontal, 24)
         .padding(.vertical, 8)
         .background(.ultraThinMaterial, in: Capsule())
         .background(Capsule().fill(Color.white.opacity(0.02)))
         .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
         .clipShape(Capsule())
     }
+
 }
 
 struct TopBarCircleButton: View {

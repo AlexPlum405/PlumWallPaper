@@ -103,6 +103,8 @@ final class DownloadManager: ObservableObject {
 
             scheduleRemoval(for: taskId)
 
+            NotificationCenter.default.post(name: .plumDownloadCompleted, object: wallpaper.remoteId)
+
             return wallpaper
         } catch {
             NSLog("[DownloadManager] 下载失败: \(error.localizedDescription)")

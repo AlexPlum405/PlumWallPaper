@@ -48,83 +48,88 @@ struct RemoteWallpaperCard: View {
         }
     }
 
-    // MARK: - 图片区域
     private var imageSection: some View {
         ZStack(alignment: .topLeading) {
-            // 壁纸渲染核心
             if let thumbURL = wallpaper.thumbURL {
                 artisanAsyncImage(url: thumbURL)
             } else {
                 fallbackPlaceholder
             }
 
-            // 艺术标签
             HStack(spacing: 8) {
-                artisanChip(
+                stateChip(
                     text: wallpaper.purity.uppercased(),
                     icon: "shield.check.fill",
                     color: wallpaper.purity == "sfw" ? LiquidGlassColors.onlineGreen : LiquidGlassColors.warningOrange
                 )
             }
             .padding(12)
-            .opacity(isHovered ? 1.0 : 0.6)
 
-            // 分辨率指示器
             VStack {
                 Spacer()
                 HStack {
                     Spacer()
+
                     Text(wallpaper.resolution)
-                        .font(.system(size: 9, weight: .black, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.4))
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.82))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
+                        .background(Color.black.opacity(0.22))
                         .background(.ultraThinMaterial)
                         .clipShape(Capsule())
                 }
                 .padding(10)
             }
-            .opacity(isHovered ? 1.0 : 0)
         }
         .frame(width: 220, height: 140)
         .clipped()
     }
 
-    // MARK: - 信息区域
     private var infoSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // 标题
             Text(wallpaper.tags?.first?.name ?? "Wallpaper \(wallpaper.id)")
-                .font(.custom("Georgia", size: 15).bold())
-                .foregroundStyle(isHovered ? LiquidGlassColors.primaryPink : LiquidGlassColors.textPrimary)
-                .lineLimit(1)
-                .kerning(0.5)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(LiquidGlassColors.textPrimary)
+                .lineLimit(2)
 
-            // 元信息行1：分辨率 + 文件大小
             HStack(spacing: 8) {
-                metaChip(icon: "square.resize", text: wallpaper.resolution, color: LiquidGlassColors.primaryPink)
+                metaChip(icon: "rectangle.expand.vertical", text: wallpaper.resolution, color: LiquidGlassColors.primaryPink)
 
                 if wallpaper.fileSize > 0 {
-                    metaChip(icon: "doc", text: formatFileSize(wallpaper.fileSize), color: LiquidGlassColors.accentGold)
+                    metaChip(icon: "externaldrive", text: formatFileSize(wallpaper.fileSize), color: LiquidGlassColors.accentGold)
                 }
             }
 
-            // 元信息行2：统计数据
             HStack(spacing: 12) {
                 Label("\(formatNumber(wallpaper.views))", systemImage: "eye")
                 Label("\(formatNumber(wallpaper.favorites))", systemImage: "heart")
                 Spacer()
-                if isHovered {
-                    Image(systemName: "arrow.up.right")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(LiquidGlassColors.textQuaternary)
-                }
+                Image(systemName: isHovered ? "arrow.up.right" : "circle.fill")
+                    .font(.system(size: isHovered ? 10 : 6, weight: .bold))
+                    .foregroundStyle(isHovered ? LiquidGlassColors.primaryPink : LiquidGlassColors.textQuaternary)
             }
-            .font(.system(size: 10, weight: .bold))
+            .font(.system(size: 10, weight: .semibold))
             .foregroundStyle(LiquidGlassColors.textSecondary)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+    }
+
+    private func stateChip(text: String, icon: String? = nil, color: Color) -> some View {
+        HStack(spacing: 4) {
+            if let icon {
+                Image(systemName: icon).font(.system(size: 7, weight: .bold))
+            }
+            Text(text).font(.system(size: 8, weight: .bold))
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(color.opacity(0.6))
+        .background(.ultraThinMaterial)
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
     }
 
     private func metaChip(icon: String, text: String, color: Color) -> some View {

@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var viewModel = SettingsViewModel()
     @State private var selectedTab: SettingsTab = .general
     @State private var toast: ToastConfig?
+    @State private var hostingWindow: NSWindow?
 
     private let sidebarWidth: CGFloat = 200 
 
@@ -28,7 +29,7 @@ struct SettingsView: View {
 
                     Spacer()
 
-                    Button { NSApp.keyWindow?.performClose(nil) } label: {
+                    Button { hostingWindow?.performClose(nil) } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 14, weight: .light))
                             .foregroundStyle(LiquidGlassColors.textQuaternary)
@@ -53,6 +54,7 @@ struct SettingsView: View {
         .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 32, style: .continuous).stroke(LiquidGlassColors.glassBorder, lineWidth: 0.5))
         .toast($toast)
+        .captureWindow($hostingWindow)
         .onAppear { viewModel.configure(modelContext: modelContext) }
     }
 
@@ -64,8 +66,8 @@ struct SettingsView: View {
             HStack(spacing: 12) {
                 Image("InternalLogo").resizable().frame(width: 32, height: 32)
                 Text("Studio")
-                    .font(.custom("Georgia", size: 18).bold().italic())
-                    .foregroundStyle(LiquidGlassColors.primaryPink)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(LiquidGlassColors.textPrimary)
             }
             .padding(.leading, 12)
             .padding(.bottom, 20)
@@ -315,7 +317,7 @@ private struct AboutSettingsTab: View {
                     
                     VStack(spacing: 8) {
                         Text("PlumWallPaper")
-                            .font(.custom("Georgia", size: 32).bold().italic())
+                            .font(.system(size: 30, weight: .bold))
                             .foregroundStyle(LiquidGlassColors.textPrimary)
                         
                         Text("CRAFTSMANSHIP EDITION")

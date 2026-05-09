@@ -62,6 +62,19 @@ final class HomeFeedViewModel: ObservableObject {
 
         isLoading = false
         NSLog("[HomeFeedViewModel] 加载完成")
+
+        if !heroItems.isEmpty {
+            preheatHeroVideos()
+        }
+    }
+
+    private func preheatHeroVideos() {
+        Task {
+            for item in heroItems {
+                PreviewResourcePipeline.shared.preloadVideo(for: item, preferFullResolution: false)
+                try? await Task.sleep(nanoseconds: 200_000_000)
+            }
+        }
     }
 
     func refresh() async {

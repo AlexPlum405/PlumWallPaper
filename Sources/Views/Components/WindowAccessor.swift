@@ -15,6 +15,28 @@ extension View {
                 }
         )
     }
+
+    func captureWindow(_ window: Binding<NSWindow?>) -> some View {
+        background(WindowCaptureView(window: window))
+    }
+}
+
+private struct WindowCaptureView: NSViewRepresentable {
+    @Binding var window: NSWindow?
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            window = view.window
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            window = nsView.window
+        }
+    }
 }
 
 // MARK: - EdgeToEdgeHostingView (强制零安全区域)
@@ -56,4 +78,3 @@ final class EdgeToEdgeHostingView<Content: View>: NSHostingView<Content> {
         set { }
     }
 }
-

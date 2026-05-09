@@ -84,6 +84,7 @@ struct MyLibraryView: View {
         .onAppear {
             viewModel.configure(modelContext: modelContext)
             preloadVisibleVideos()
+            regenerateMissingThumbnailsIfNeeded()
 
             // 调试日志
             NSLog("[MyLibraryView] onAppear - 总壁纸数: \(allWallpapers.count)")
@@ -399,6 +400,35 @@ struct MyLibraryView: View {
         if !urls.isEmpty {
             NSLog("[MyLibraryView] 预加载 \(urls.count) 个视频")
             PreviewResourcePipeline.shared.preloadVideos(urls: urls, limit: 12)
+        }
+    }
+
+    /// 检测并修复因系统清理 Caches 而失效的本地缩略图
+    private func regenerateMissingThumbnailsIfNeeded() {
+        let fm = FileManager.default
+        let stale = allWallpapers.filter { wallpaper in
+            guard wallpaper.source != .online else { return false }
+            guard let thumbPath = wallpaper.thumbnailPath, !thumbPath.isEmpty else { return false }
+            // 跳过远程 URL 缩略图
+            if thumbPath.hasPrefix("http") { return false }
+            return !fm.fileExists(atPath: thumbPath)
+        }
+        guard !stale.isEmpty else { return }
+
+        NSLog("[MyLibraryView] 发现 \(stale.count) 个失效缩略图，开始重建")
+
+        Task.detached(priority: .utility) {
+            for wallpaper in stale {
+                let sourceURL = URL(fileURLWithPath: wallpaper.filePath)
+                guard fm.fileExists(atPath: sourceURL.path) else { continue }
+                let type = wallpaper.type
+                if let newPath = try? await ThumbnailGenerator.shared.generateThumbnail(for: sourceURL, type: type) {
+                    await MainActor.run {
+                        wallpaper.thumbnailPath = newPath
+                        try? modelContext.save()
+                    }
+                }
+            }
         }
     }
 

@@ -53,7 +53,14 @@ struct ContentView: View {
                 selectedTab: $selectedTab,
                 onSearch: {
                     withAnimation(.gallerySpring) {
-                        selectedTab = selectedTab == .wallpaper ? .media : .wallpaper
+                        if selectedTab == .wallpaper {
+                            selectedTab = .media
+                        } else {
+                            selectedTab = .wallpaper
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                NotificationCenter.default.post(name: .plumFocusSearch, object: nil)
+                            }
+                        }
                     }
                 },
                 onOpenSettings: {

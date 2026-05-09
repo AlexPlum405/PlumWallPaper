@@ -354,4 +354,6 @@ extension Notification.Name {
     static let plumSuperResolutionSharpenChanged = Notification.Name("plumSuperResolutionSharpenChanged")
     static let plumVideoEnhancementChanged = Notification.Name("plumVideoEnhancementChanged")
     static let plumStatusBarConfigChanged = Notification.Name("plumStatusBarConfigChanged")
+    static let plumFocusSearch = Notification.Name("plumFocusSearch")
+    static let plumDownloadCompleted = Notification.Name("plumDownloadCompleted")
 }

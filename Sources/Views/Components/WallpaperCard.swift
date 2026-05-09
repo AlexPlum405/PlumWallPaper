@@ -7,8 +7,10 @@ struct WallpaperCard: View {
     private let item: WallpaperPreviewItem
     let onTap: () -> Void
     var onDownload: (() -> Void)? = nil
-    
+
+    @Environment(\.modelContext) private var modelContext
     @State private var isHovered = false
+    @State private var downloadStatusVersion = 0
     private let cardCornerRadius: CGFloat = 24
 
     init(wallpaper: Wallpaper, onTap: @escaping () -> Void, onDownload: (() -> Void)? = nil) {
@@ -62,124 +64,116 @@ struct WallpaperCard: View {
                 prefetchFullResolutionPreview()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .plumDownloadCompleted)) { notification in
+            if let remoteId = notification.object as? String, remoteId == item.remoteId {
+                downloadStatusVersion += 1
+            }
+        }
     }
     
     // MARK: - 图片区域 (Gallery Canvas)
     private var imageSection: some View {
         ZStack(alignment: .topLeading) {
-            // 壁纸渲染核心 (遵守 ASYNC IMAGE STANDARDS)
-            // 只显示缩略图，不显示视频预览
             Group {
-                if let thumbPath = item.thumbnailPath, !thumbPath.isEmpty {
-                    if let thumbURL = url(from: thumbPath) {
-                        artisanAsyncImage(url: thumbURL)
-                    } else {
-                        fallbackPlaceholder
-                    }
-                } else if !item.filePath.isEmpty {
-                    if let fileURL = url(from: item.filePath) {
-                        artisanAsyncImage(url: fileURL)
-                    } else {
-                        fallbackPlaceholder
-                    }
-                } else {
+                if thumbnailCandidateURLs.isEmpty {
                     fallbackPlaceholder
+                } else {
+                    RemoteThumbnailImage(urls: thumbnailCandidateURLs)
                 }
             }
             .frame(width: 220, height: 140)
             .clipped()
 
-            // 艺术标签 (悬浮在画面之上)
             HStack(spacing: 8) {
-                if item.type == .video, let duration = item.duration {
-                    artisanChip(text: formatDuration(duration), icon: "play.fill", color: LiquidGlassColors.accentGold)
+                if item.type == .video {
+                    stateChip(text: "动态", icon: "play.fill", color: LiquidGlassColors.primaryPink)
                 }
-                
-                // 默认 SFW 标签，使用鼠尾草绿
-                artisanChip(text: "SFW", icon: "shield.check.fill", color: LiquidGlassColors.onlineGreen)
+
+                if item.source == .downloaded {
+                    stateChip(text: "本地", icon: "internaldrive", color: LiquidGlassColors.onlineGreen)
+                }
             }
             .padding(12)
-            .opacity(isHovered ? 1.0 : 0.6)
-            
-            // 分辨率指示器 (极简，悬停可见)
+
             VStack {
                 Spacer()
-                HStack {
+                HStack(alignment: .bottom, spacing: 8) {
+                    if item.hasAudio {
+                        Image(systemName: "waveform")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.7))
+                            .padding(6)
+                            .background(Circle().fill(Color.black.opacity(0.3)))
+                            .background(.ultraThinMaterial, in: Circle())
+                    }
+
+                    if item.isFavorite {
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(LiquidGlassColors.primaryPink)
+                            .padding(6)
+                            .background(Circle().fill(Color.black.opacity(0.3)))
+                            .background(.ultraThinMaterial, in: Circle())
+                    }
+
                     Spacer()
+
                     Text(item.resolution ?? "N/A")
-                        .font(.system(size: 9, weight: .black, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.4))
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.82))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
+                        .background(Color.black.opacity(0.22))
                         .background(.ultraThinMaterial)
                         .clipShape(Capsule())
                 }
                 .padding(10)
             }
-            .opacity(isHovered ? 1.0 : 0)
 
-            // 收藏指示器 (右下角)
-            if item.isFavorite {
+            if onDownload != nil {
                 VStack {
-                    Spacer()
                     HStack {
-                        Spacer()
-                        Image(systemName: "heart.fill")
-                            .font(.system(size: 10))
-                            .foregroundStyle(LiquidGlassColors.primaryPink)
-                            .padding(6)
-                            .background(Circle().fill(.ultraThinMaterial))
-                    }
-                }
-                .padding(10)
-            }
+                        Button(action: { onDownload?() }) {
+                            Image(systemName: isDownloaded ? "checkmark.circle.fill" : "arrow.down.circle")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundStyle(isDownloaded ? LiquidGlassColors.onlineGreen : .white.opacity(0.9))
+                                .shadow(color: .black.opacity(0.3), radius: 4)
+                        }
+                        .buttonStyle(.plain)
+                        .opacity(isHovered ? 1 : 0)
 
-            // 下载快捷按钮 (悬浮时显示)
-            VStack {
-                Spacer()
-                HStack {
-                    Button(action: { onDownload?() }) {
-                        Image(systemName: "arrow.down.to.line.compact")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .padding(6)
-                            .background(Circle().fill(.ultraThinMaterial))
+                        Spacer()
                     }
-                    .buttonStyle(.plain)
+                    .padding(12)
+
                     Spacer()
                 }
             }
-            .padding(10)
-            .opacity(isHovered ? 1 : 0)
         }
     }
     
     // MARK: - 信息区域 (Gallery Tag)
     private var infoSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // 衬线体标题
-            Text(item.title.isEmpty ? "Untitled Art" : item.title)
-                .font(.custom("Georgia", size: 15).bold())
-                .foregroundStyle(isHovered ? LiquidGlassColors.primaryPink : LiquidGlassColors.textPrimary)
-                .lineLimit(1)
-                .kerning(0.5)
+            Text(item.title.isEmpty ? "Untitled" : item.title)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(isHovered ? LiquidGlassColors.textPrimary : LiquidGlassColors.textPrimary)
+                .lineLimit(2)
 
-            // 元信息行1：分辨率 + 文件大小
             HStack(spacing: 8) {
                 if let resolution = item.resolution {
-                    metaChip(icon: "square.resize", text: resolution, color: LiquidGlassColors.primaryPink)
+                    metaChip(icon: "rectangle.expand.vertical", text: resolution, color: LiquidGlassColors.primaryPink)
                 }
 
                 if item.fileSize > 0 {
-                    metaChip(icon: "doc", text: formatFileSize(item.fileSize), color: LiquidGlassColors.accentGold)
+                    metaChip(icon: "externaldrive", text: formatFileSize(item.fileSize), color: LiquidGlassColors.accentGold)
                 }
 
                 if item.type == .video, let duration = item.duration {
-                    metaChip(icon: "clock", text: formatDuration(duration), color: LiquidGlassColors.accentGold)
+                    metaChip(icon: "clock", text: formatDuration(duration), color: LiquidGlassColors.primaryViolet)
                 }
             }
 
-            // 元信息行2：统计数据
             HStack(spacing: 12) {
                 if let views = item.metadata?.views {
                     Label(formatCount(views), systemImage: "eye")
@@ -188,17 +182,55 @@ struct WallpaperCard: View {
                     Label(formatCount(favorites), systemImage: "heart")
                 }
                 Spacer()
-                if isHovered {
-                    Image(systemName: "arrow.up.right")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(LiquidGlassColors.textQuaternary)
-                }
+                Image(systemName: isHovered ? "arrow.up.right" : "circle.fill")
+                    .font(.system(size: isHovered ? 10 : 6, weight: .bold))
+                    .foregroundStyle(isHovered ? LiquidGlassColors.primaryPink : LiquidGlassColors.textQuaternary)
             }
-            .font(.system(size: 10, weight: .bold))
+            .font(.system(size: 10, weight: .semibold))
             .foregroundStyle(LiquidGlassColors.textSecondary)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+    }
+
+    private var isDownloaded: Bool {
+        guard let remoteId = item.remoteId else {
+            return item.source == .downloaded
+        }
+        return DownloadManager.shared.isAlreadyDownloaded(remoteId: remoteId, context: modelContext) != nil || item.source == .downloaded
+    }
+
+    private var sourceLabel: String {
+        if let remoteSource = item.remoteSource {
+            switch remoteSource {
+            case .wallhaven: return "Wallhaven"
+            case .fourKWallpapers: return "4K"
+            case .pexels: return "Pexels"
+            case .unsplash: return "Unsplash"
+            case .pixabay: return "Pixabay"
+            case .bingDaily: return "Bing"
+            case .motionBG: return "MotionBG"
+            case .steamWorkshop: return "Workshop"
+            case .desktopHut: return "DesktopHut"
+            }
+        }
+        return item.source == .downloaded ? "本地" : "在线"
+    }
+
+    private func stateChip(text: String, icon: String? = nil, color: Color) -> some View {
+        HStack(spacing: 4) {
+            if let icon {
+                Image(systemName: icon).font(.system(size: 7, weight: .bold))
+            }
+            Text(text).font(.system(size: 8, weight: .bold))
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(color.opacity(0.6))
+        .background(.ultraThinMaterial)
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
     }
 
     private func metaChip(icon: String, text: String, color: Color) -> some View {
@@ -283,5 +315,30 @@ struct WallpaperCard: View {
             return url
         }
         return URL(fileURLWithPath: trimmed)
+    }
+
+    private var thumbnailCandidateURLs: [URL] {
+        var urls: [URL] = []
+        if let thumbPath = item.thumbnailPath, !thumbPath.isEmpty, let url = url(from: thumbPath) {
+            // 本地缩略图缓存有可能被系统清理，命中前先确认文件存在
+            if url.isFileURL {
+                if FileManager.default.fileExists(atPath: url.path) {
+                    urls.append(url)
+                }
+            } else {
+                urls.append(url)
+            }
+        }
+        // 静态图片可降级到原图渲染；视频不行（需要专门的视频帧抽取）。
+        if item.type != .video, !item.filePath.isEmpty, let url = url(from: item.filePath) {
+            if url.isFileURL {
+                if FileManager.default.fileExists(atPath: url.path) {
+                    urls.append(url)
+                }
+            } else {
+                urls.append(url)
+            }
+        }
+        return urls
     }
 }

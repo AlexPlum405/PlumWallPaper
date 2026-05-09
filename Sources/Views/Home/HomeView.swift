@@ -23,7 +23,7 @@ struct HomeView: View {
     @State private var toast: ToastConfig?
     @State private var isChoosingApplyScreen = false
 
-    private let mainPadding: CGFloat = 88
+    private let mainPadding: CGFloat = 72
 
     var body: some View {
         GeometryReader { windowGeo in
@@ -42,7 +42,7 @@ struct HomeView: View {
                                 artisanFullscreenHero(size: windowGeo.size)
                             }
 
-                            VStack(alignment: .leading, spacing: 100) {
+                            VStack(alignment: .leading, spacing: 80) {
                                 if !viewModel.latestStills.isEmpty {
                                     artisanStillsSection()
                                 }
@@ -50,7 +50,7 @@ struct HomeView: View {
                                     artisanMotionsSection()
                                 }
                             }
-                            .padding(.top, viewModel.heroItems.isEmpty ? 100 : 100)
+                            .padding(.top, viewModel.heroItems.isEmpty ? 120 : 80)
                             .padding(.bottom, 160)
                             .background(LiquidGlassColors.deepBackground)
                         }
@@ -305,7 +305,9 @@ struct HomeView: View {
     // MARK: - Hero Section
 
     private func artisanFullscreenHero(size: CGSize) -> some View {
-        ZStack(alignment: .bottomLeading) {
+        let heroHeight = max(520, size.height * 0.68)
+
+        return ZStack(alignment: .bottomLeading) {
             // 视频层 - 只预加载当前和前后各1个视频
             ZStack {
                 if !viewModel.heroItems.isEmpty {
@@ -314,7 +316,7 @@ struct HomeView: View {
                     // 只渲染当前视频。前后项通过 VideoPreloader 预热，避免 AppKit 视频层透出旧画面。
                     if let videoURL = bestHeroVideoURL(for: item) {
                         RemoteThumbnailImage(urls: [bestHeroImageURL(for: item)], contentMode: .fill)
-                            .frame(width: size.width, height: size.height)
+                            .frame(width: size.width, height: heroHeight)
                             .clipped()
 
                         HeroVideoPlayer(url: videoURL, isActive: true) { isReady in
@@ -325,95 +327,128 @@ struct HomeView: View {
                             }
                         }
                         .id(videoURL.absoluteString)
-                        .frame(width: size.width, height: size.height)
+                        .frame(width: size.width, height: heroHeight)
                         .clipped()
                         .opacity(readyHeroVideoURL == videoURL ? 1 : 0)
                         .animation(.easeInOut(duration: 0.18), value: readyHeroVideoURL)
                     } else {
                         RemoteThumbnailImage(urls: [bestHeroImageURL(for: item)], contentMode: .fill)
-                        .frame(width: size.width, height: size.height)
+                        .frame(width: size.width, height: heroHeight)
                         .clipped()
                     }
                 }
             }
-            .frame(width: size.width, height: size.height).clipped()
+            .frame(width: size.width, height: heroHeight).clipped()
             .animation(.easeInOut(duration: 0.8), value: currentHeroIndex)
 
             LinearGradient(
-                colors: [.clear, LiquidGlassColors.deepBackground.opacity(0.8), LiquidGlassColors.deepBackground],
-                startPoint: .init(x: 0.5, y: 0.7),
+                colors: [.clear, LiquidGlassColors.deepBackground.opacity(0.82), LiquidGlassColors.deepBackground],
+                startPoint: .init(x: 0.5, y: 0.55),
                 endPoint: .bottom
-            ).frame(height: 300)
+            ).frame(height: 320)
 
             if !viewModel.heroItems.isEmpty {
                 let item = viewModel.heroItems[currentHeroIndex]
-                VStack(alignment: .leading, spacing: 14) {
-                    Text(item.collectionTitle?.uppercased() ?? "FEATURED")
-                        .font(.system(size: 9, weight: .black))
-                        .kerning(4)
-                        .foregroundStyle(LiquidGlassColors.primaryPink)
-
-                    Text(item.title)
-                        .font(.custom("Georgia", size: 44).bold())
-                        .foregroundStyle(.white)
-
-                    HStack(spacing: 10) {
-                        artisanHeroMetaChip(text: "ORIGINAL", icon: "sparkles")
-                        artisanHeroMetaChip(text: bestHeroResolutionLabel(for: item), icon: "square.resize")
-                        artisanHeroMetaChip(text: item.sourceName.uppercased(), icon: "globe")
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(spacing: 8) {
+                        Text(item.collectionTitle?.uppercased() ?? "TODAY'S PICK")
+                            .font(.system(size: 10, weight: .bold))
+                            .kerning(3)
+                            .foregroundStyle(LiquidGlassColors.primaryPink)
+                        Circle()
+                            .fill(LiquidGlassColors.primaryPink.opacity(0.7))
+                            .frame(width: 3, height: 3)
+                        Text(item.sourceName.uppercased())
+                            .font(.system(size: 10, weight: .semibold))
+                            .kerning(2)
+                            .foregroundStyle(LiquidGlassColors.textSecondary)
                     }
 
-                    HStack(spacing: 24) {
+                    Text(item.title)
+                        .font(.system(size: 42, weight: .bold, design: .default))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+
+                    HStack(spacing: 10) {
+                        artisanHeroMetaChip(text: bestHeroResolutionLabel(for: item), icon: "rectangle.expand.vertical")
+                        if let duration = item.durationSeconds {
+                            artisanHeroMetaChip(text: formatHeroDuration(duration), icon: "clock")
+                        }
+                        if item.hasAudioTrack == true {
+                            artisanHeroMetaChip(text: "AUDIO", icon: "waveform")
+                        }
+                        artisanHeroMetaChip(text: "ORIGINAL", icon: "sparkles")
+                    }
+
+                    HStack(spacing: 16) {
                         Button(action: {
                             Task {
                                 await applyCurrentHeroAsWallpaper()
                             }
                         }) {
-                            HStack(spacing: 12) {
+                            HStack(spacing: 10) {
                                 if isApplying {
                                     CustomProgressView(tint: .white, scale: 0.8)
                                 } else {
-                                    Image(systemName: "macwindow.on.rectangle").font(.system(size: 14))
-                                    Text("设为壁纸").font(.system(size: 13, weight: .bold)).kerning(1.5)
+                                    Image(systemName: "macwindow.on.rectangle").font(.system(size: 13, weight: .bold))
+                                    Text("设为壁纸").font(.system(size: 13, weight: .bold)).kerning(1.2)
                                 }
                             }
-                            .padding(.horizontal, 32).frame(height: 44)
-                            .background(Capsule().fill(LiquidGlassColors.primaryPink))
-                            .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.3), radius: 15)
+                            .padding(.horizontal, 28).frame(height: 44)
+                            .background(
+                                Capsule().fill(
+                                    LinearGradient(
+                                        colors: [LiquidGlassColors.primaryPink, LiquidGlassColors.tertiaryBlue],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                            )
+                            .foregroundStyle(.black.opacity(0.85))
+                            .artisanShadow(color: LiquidGlassColors.primaryPink.opacity(0.25), radius: 18)
                         }
                         .buttonStyle(.plain)
                         .disabled(isApplying)
+                        .keyboardShortcut(.return, modifiers: [])
 
-                        HStack(spacing: 12) {
-                            heroActionIconButton(
-                                icon: isHeroFavorite(item) ? "heart.fill" : "heart",
-                                isActive: isHeroFavorite(item),
-                                isBusy: isHeroFavoriteUpdating,
-                                help: isHeroFavorite(item) ? "取消收藏" : "收藏"
-                            ) {
-                                Task { await toggleHeroFavorite(item) }
+                        Button(action: { Task { await downloadHero(item) } }) {
+                            HStack(spacing: 6) {
+                                if isHeroDownloading {
+                                    CustomProgressView(tint: LiquidGlassColors.textSecondary, scale: 0.55)
+                                } else {
+                                    Image(systemName: isHeroDownloaded(item) ? "checkmark" : "arrow.down.to.line.compact")
+                                        .font(.system(size: 11, weight: .semibold))
+                                }
+                                Text(isHeroDownloaded(item) ? "已下载" : "下载原片")
+                                    .font(.system(size: 12, weight: .medium))
                             }
+                            .foregroundStyle(LiquidGlassColors.textSecondary)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isHeroDownloading)
 
-                            heroActionIconButton(
-                                icon: "arrow.down.to.line.compact",
-                                isActive: isHeroDownloaded(item),
-                                isBusy: isHeroDownloading,
-                                help: isHeroDownloaded(item) ? "已下载" : "下载原片"
-                            ) {
-                                Task { await downloadHero(item) }
-                            }
+                        heroActionIconButton(
+                            icon: isHeroFavorite(item) ? "heart.fill" : "heart",
+                            isActive: isHeroFavorite(item),
+                            isBusy: isHeroFavoriteUpdating,
+                            help: isHeroFavorite(item) ? "取消收藏" : "收藏"
+                        ) {
+                            Task { await toggleHeroFavorite(item) }
                         }
 
-                        HStack(spacing: 8) {
+                        Spacer()
+
+                        HStack(spacing: 6) {
                             ForEach(0..<viewModel.heroItems.count, id: \.self) { index in
-                                Circle()
-                                    .fill(index == currentHeroIndex ? Color.white : Color.white.opacity(0.2))
-                                    .frame(width: 5, height: 5)
+                                Capsule()
+                                    .fill(index == currentHeroIndex ? LiquidGlassColors.primaryPink : Color.white.opacity(0.18))
+                                    .frame(width: index == currentHeroIndex ? 18 : 6, height: 4)
+                                    .animation(.gallerySpring, value: currentHeroIndex)
                             }
                         }
                     }
                 }
-                .padding(.leading, mainPadding).padding(.bottom, 100)
+                .padding(.leading, mainPadding).padding(.trailing, mainPadding).padding(.bottom, 80)
                 .zIndex(2)
             }
 
@@ -425,7 +460,15 @@ struct HomeView: View {
             }
             .zIndex(1)
         }
-        .frame(height: size.height)
+        .frame(height: heroHeight)
+    }
+
+    private func formatHeroDuration(_ seconds: Double) -> String {
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = [.minute, .second]
+        formatter.unitsStyle = .positional
+        formatter.zeroFormattingBehavior = .pad
+        return formatter.string(from: seconds) ?? "0:00"
     }
 
     private func artisanHeroMetaChip(text: String, icon: String) -> some View {
@@ -506,27 +549,26 @@ struct HomeView: View {
     // MARK: - Latest Stills Section
 
     private func artisanStillsSection() -> some View {
-        VStack(alignment: .leading, spacing: 32) {
+        VStack(alignment: .leading, spacing: 28) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("NEW ACQUISITIONS")
-                    .font(.system(size: 9, weight: .black))
+                Text("STATIC WALLPAPERS")
+                    .font(.system(size: 10, weight: .bold))
                     .kerning(3)
                     .foregroundStyle(LiquidGlassColors.primaryPink)
 
                 HStack(alignment: .firstTextBaseline) {
-                    Text("最新画作")
-                        .font(.custom("Georgia", size: 28).bold())
-                    Rectangle()
-                        .fill(LiquidGlassColors.glassBorder.opacity(0.2))
-                        .frame(width: 80, height: 0.5)
-                        .padding(.leading, 16)
+                    Text("最新静态壁纸")
+                        .font(.system(size: 28, weight: .bold))
+                    Text("适合快速浏览与直接应用")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(LiquidGlassColors.textSecondary)
+                        .padding(.leading, 12)
                     Spacer()
-                    Button("VIEW ALL") {
+                    Button("查看全部") {
                         onSwitchToWallpaperTab?()
                     }
-                        .font(.system(size: 10, weight: .black))
-                        .kerning(2)
-                        .foregroundStyle(LiquidGlassColors.textQuaternary)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(LiquidGlassColors.textSecondary)
                         .buttonStyle(.plain)
                 }
             }.padding(.horizontal, mainPadding)
@@ -542,11 +584,15 @@ struct HomeView: View {
                                 await downloadRemoteFromCard(remoteWallpaper)
                             }
                         })
-                        .onHover { hovering in
-                            if hovering {
+                        .onContinuousHover { phase in
+                            switch phase {
+                            case .active:
                                 Task {
+                                    try? await Task.sleep(nanoseconds: 400_000_000)
                                     await PreviewResourcePipeline.shared.prefetchFullResolution(for: item)
                                 }
+                            case .ended:
+                                break
                             }
                         }
                     }
@@ -558,27 +604,26 @@ struct HomeView: View {
     // MARK: - Popular Motions Section
 
     private func artisanMotionsSection() -> some View {
-        VStack(alignment: .leading, spacing: 32) {
+        VStack(alignment: .leading, spacing: 28) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("KINETIC ART")
-                    .font(.system(size: 9, weight: .black))
+                Text("MOTION WALLPAPERS")
+                    .font(.system(size: 10, weight: .bold))
                     .kerning(3)
                     .foregroundStyle(LiquidGlassColors.primaryPink)
 
                 HStack(alignment: .firstTextBaseline) {
-                    Text("热门动态")
-                        .font(.custom("Georgia", size: 28).bold())
-                    Rectangle()
-                        .fill(LiquidGlassColors.glassBorder.opacity(0.2))
-                        .frame(width: 80, height: 0.5)
-                        .padding(.leading, 16)
+                    Text("热门动态壁纸")
+                        .font(.system(size: 28, weight: .bold))
+                    Text("关注时长、音频与分辨率")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(LiquidGlassColors.textSecondary)
+                        .padding(.leading, 12)
                     Spacer()
-                    Button("VIEW ALL") {
+                    Button("查看全部") {
                         onSwitchToMediaTab?()
                     }
-                        .font(.system(size: 10, weight: .black))
-                        .kerning(2)
-                        .foregroundStyle(LiquidGlassColors.textQuaternary)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(LiquidGlassColors.textSecondary)
                         .buttonStyle(.plain)
                 }
             }.padding(.horizontal, mainPadding)
@@ -594,12 +639,16 @@ struct HomeView: View {
                                 await downloadMediaFromCard(mediaItem)
                             }
                         })
-                        .onHover { hovering in
-                            if hovering {
+                        .onContinuousHover { phase in
+                            switch phase {
+                            case .active:
                                 Task {
+                                    try? await Task.sleep(nanoseconds: 400_000_000)
                                     await PreviewResourcePipeline.shared.prefetchFullResolution(for: mediaItem)
+                                    PreviewResourcePipeline.shared.preloadVideo(for: mediaItem, preferFullResolution: true)
                                 }
-                                PreviewResourcePipeline.shared.preloadVideo(for: mediaItem, preferFullResolution: true)
+                            case .ended:
+                                break
                             }
                         }
                     }

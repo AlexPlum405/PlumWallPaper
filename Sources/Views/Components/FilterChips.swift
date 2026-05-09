@@ -19,15 +19,15 @@ struct FilterChip: View {
             Text(title)
                 .font(.system(size: 13, weight: .bold))
                 .kerning(1.0)
-                .foregroundStyle(isSelected ? LiquidGlassColors.primaryPink : (isHovered ? LiquidGlassColors.textPrimary : LiquidGlassColors.textSecondary))
+                .foregroundStyle(isSelected ? LiquidGlassColors.textPrimary : (isHovered ? LiquidGlassColors.textPrimary : LiquidGlassColors.textSecondary))
                 .padding(.horizontal, 18)
                 .padding(.vertical, 8)
                 .frame(minHeight: 32)
                 .background {
                     if isSelected {
                         Capsule()
-                            .fill(LiquidGlassColors.primaryPink.opacity(0.1))
-                            .overlay(Capsule().stroke(LiquidGlassColors.primaryPink.opacity(0.3), lineWidth: 0.5))
+                            .fill(LiquidGlassColors.primaryPink.opacity(0.14))
+                            .overlay(Capsule().stroke(LiquidGlassColors.primaryPink.opacity(0.34), lineWidth: 0.5))
                     } else {
                         Capsule()
                             .fill(Color.white.opacity(isHovered ? 0.05 : 0.02))

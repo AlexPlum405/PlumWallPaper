@@ -60,12 +60,12 @@ final class ScreenRenderer {
         player.play()
         NSLog("[ScreenRenderer] ✅ player.play() rate=\(player.rate)")
 
-        let settings = currentSettings()
-        desktopWindow.updateDebugInfo(
-            superResolution: false,
-            videoEnhancement: settings?.videoEnhancementEnabled ?? false,
-            wallpaperType: "视频"
-        )
+        // let settings = currentSettings()
+        // desktopWindow.updateDebugInfo(
+        //     superResolution: false,
+        //     videoEnhancement: settings?.videoEnhancementEnabled ?? false,
+        //     wallpaperType: "视频"
+        // )
     }
 
     func setImageWallpaper(url: URL, wallpaperId: UUID? = nil, effects: WallpaperRenderEffects? = nil) async throws {
@@ -81,12 +81,12 @@ final class ScreenRenderer {
         desktopWindow.alphaValue = 1.0
         desktopWindow.show()
 
-        let settings = currentSettings()
-        desktopWindow.updateDebugInfo(
-            superResolution: settings?.superResolutionEnabled ?? false,
-            videoEnhancement: false,
-            wallpaperType: "静态图片"
-        )
+        // let settings = currentSettings()
+        // desktopWindow.updateDebugInfo(
+        //     superResolution: settings?.superResolutionEnabled ?? false,
+        //     videoEnhancement: false,
+        //     wallpaperType: "静态图片"
+        // )
     }
 
     func updateEnvironment(effects: WallpaperRenderEffects?) {

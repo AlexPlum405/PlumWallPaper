@@ -1,37 +1,38 @@
 import SwiftUI
 
-// MARK: - Plum Artisan Design System (Scheme C: Artisan Gallery)
-// 这是一个专注于内容、排版与人文呼吸感的设计系统。
+// MARK: - Plum Studio Design System (Cool Studio Edition)
+// 从暖色艺术感收束到冷静、专业的工作台气质。
 
 // MARK: - 颜色系统 (Palette)
 enum LiquidGlassColors {
-    // 品牌色 - 匠心版 (Artisan Palette)
-    static let primaryPink = Color(hex: "F4C2C2")    // 柔和粉 (Soft Pink)
-    static let accentGold = Color(hex: "E5D1B0")     // 燕麦金 (Oatmeal Gold)
-    static let champagne = Color(hex: "F7E7CE")      // 香槟色
-    
-    // 状态色 - 艺术降噪版 (Muted Status)
-    static let onlineGreen = Color(hex: "A8D5BA")    // 鼠尾草绿
-    static let warningOrange = Color(hex: "EBCB8B")  // 复古黄
-    static let errorRed = Color(hex: "BF616A")       // 莫兰迪红
-    static let tertiaryBlue = Color(hex: "81A1C1")   // 冰川蓝
-    static let primaryViolet = Color(hex: "B4A0E5")  // 丁香紫
+    // 品牌色 - 冷调工作台 (Cool Studio Palette)
+    // 注：名称保持兼容，取值整体冷化。
+    static let primaryPink = Color(hex: "8AB4FF")    // Ice Blue — 主强调色
+    static let accentGold = Color(hex: "B7C7D9")     // Steel Mist — 次要元信息
+    static let champagne = Color(hex: "D8E2F2")      // Frost — 浅冷白
 
-    // 背景色层级 (Gallery Depth)
-    static let deepBackground = Color(hex: "1C1C1E")     // 基础深色 (macOS Standard)
-    static let surfaceBackground = Color(hex: "252528")   // 表面层
-    static let elevatedBackground = Color(hex: "2D2D30")  // 悬浮层
-    
-    // 玻璃效果颜色 (Artisan Glass)
+    // 状态色 (Muted Status)
+    static let onlineGreen = Color(hex: "8FD3B6")    // 薄荷绿
+    static let warningOrange = Color(hex: "E7C58A")  // 柔和琥珀
+    static let errorRed = Color(hex: "D57A80")       // 哑光红
+    static let tertiaryBlue = Color(hex: "7FA8D6")   // 冰川蓝
+    static let primaryViolet = Color(hex: "A8A6F2")  // 电光紫
+
+    // 背景色层级 (Studio Depth)
+    static let deepBackground = Color(hex: "101114")      // 近黑冷底
+    static let surfaceBackground = Color(hex: "161A21")   // 表面层
+    static let elevatedBackground = Color(hex: "1F2430")  // 悬浮层
+
+    // 玻璃效果颜色 (Studio Glass)
     static let glassWhiteSubtle = Color.white.opacity(0.03)
     static let glassWhiteRegular = Color.white.opacity(0.06)
-    static let glassBorder = Color.white.opacity(0.12)
+    static let glassBorder = Color.white.opacity(0.10)
 
-    // 文字颜色层级 (Gallery Standard)
+    // 文字颜色层级 (Studio Standard)
     static let textPrimary: Color = Color.white
-    static let textSecondary: Color = Color(hex: "A1A1A1") // 艺术灰 (Studio Gray)
-    static let textTertiary: Color = Color.white.opacity(0.4)
-    static let textQuaternary: Color = Color.white.opacity(0.2)
+    static let textSecondary: Color = Color(hex: "AEB4BF") // 冷中灰
+    static let textTertiary: Color = Color.white.opacity(0.45)
+    static let textQuaternary: Color = Color.white.opacity(0.22)
 }
 
 // MARK: - 间距系统 (Spacing)
@@ -47,11 +48,11 @@ enum GallerySpacing {
 
 // MARK: - 排版系统 (Typography)
 enum GalleryTypography {
-    // 核心：Georgia 衬线体标题
+    // 核心：系统标题，保留力量感与可读性
     static func artisticTitle(_ size: CGFloat = 32) -> Font {
-        .custom("Georgia", size: size).bold()
+        .system(size: size, weight: .bold, design: .default)
     }
-    
+
     // 功能：系统默认 SF 字体
     static func functionalText(_ size: CGFloat = 13, weight: Font.Weight = .medium) -> Font {
         .system(size: size, weight: weight)
@@ -63,30 +64,30 @@ struct LiquidGlassAtmosphereBackground: View {
     var body: some View {
         ZStack {
             LiquidGlassColors.deepBackground
-            
-            // 极简弥散光晕 (Scheme C 标准：极度柔和，避免干扰内容)
+
+            // 极简弥散光晕 (冷调版：更低对比，避免干扰内容)
             GeometryReader { geo in
                 ZStack {
                     Circle()
-                        .fill(LiquidGlassColors.primaryPink.opacity(0.06))
-                        .frame(width: geo.size.width * 1.0)
-                        .blur(radius: 140)
+                        .fill(LiquidGlassColors.primaryPink.opacity(0.04))
+                        .frame(width: geo.size.width * 0.9)
+                        .blur(radius: 160)
                         .offset(x: -geo.size.width * 0.3, y: -geo.size.height * 0.3)
-                    
+
                     Circle()
-                        .fill(LiquidGlassColors.accentGold.opacity(0.04))
-                        .frame(width: geo.size.width * 0.8)
-                        .blur(radius: 120)
+                        .fill(LiquidGlassColors.tertiaryBlue.opacity(0.03))
+                        .frame(width: geo.size.width * 0.7)
+                        .blur(radius: 140)
                         .offset(x: geo.size.width * 0.4, y: geo.size.height * 0.5)
                 }
             }
-            
-            // 背景艺术水印 (Artistic Watermark)
+
+            // 背景水印 (极度克制)
             VStack {
                 Spacer()
-                Text("GALLERY")
-                    .font(.custom("Georgia", size: 140).bold())
-                    .foregroundStyle(Color.white.opacity(0.015))
+                Text("STUDIO")
+                    .font(.system(size: 140, weight: .ultraLight, design: .default))
+                    .foregroundStyle(Color.white.opacity(0.012))
                     .kerning(30)
                     .padding(.bottom, 60)
             }
