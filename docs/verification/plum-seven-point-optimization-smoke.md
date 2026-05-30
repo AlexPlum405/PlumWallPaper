@@ -36,7 +36,7 @@ open Build/DerivedData/Build/Products/Debug/PlumWallPaper.app
 | 2 | Download queue and item feedback | Passed | Launch/local library smoke passed | Concurrent overflow now waits in queue instead of throwing immediately. |
 | 3 | Preview resource pipeline | Passed | Launch/local library/static Explore smoke passed; online hero/card content not fully judgeable in this run | Full-res work is now deduped and tied to explicit preview intent/priority. |
 | 4 | Home hero-first experience | Passed | Home hero visible quickly, apply primary, Local tab smoke passed | Shelves no longer block hero readiness. |
-| 5 | Detail/Studio state split | Pending | Previous/next, clean preview, Studio enter/exit, preset save | Keep existing dark glass/artisan gallery behavior. |
+| 5 | Detail/Studio state split | Passed | Detail card open, Studio enter/exit, preset save, clean preview enter/exit passed; previous/next controls remained visible | Existing dark glass/artisan gallery behavior preserved. |
 | 6 | Explore source capability filters | Pending | Switch every source and reset filters | Inapplicable filters must not persist invisibly after source changes. |
 | 7 | Library management and polish | Pending | Search, all sources, counts, scrollbar, download queue, text | Avoid false draggable scrollbar affordance. |
 
@@ -118,3 +118,21 @@ open Build/DerivedData/Build/Products/Debug/PlumWallPaper.app
   - Shelves below hero showed loading placeholders instead of blocking hero.
   - Opened the Local tab; Library toolbar and empty state rendered without crash.
   - Quit the DerivedData app after smoke.
+
+### Checkpoint 5
+
+- Added `StudioSessionState` to own Studio mode state, filter values, weather/particle settings, render effects, shader pass serialization, preset application, reset, and saved preset loading.
+- Moved `BuiltInPreset` out of the detail view shell so Studio preset data is shared by the state object and panel.
+- Changed `DetailPreviewCanvas` to accept a single `WallpaperRenderEffects` value instead of many individual filter/weather/particle parameters.
+- Reduced `WallpaperDetailView` back toward a shell that wires canvas, title HUD, mode controls, action dock, and `DetailStudioPanel`; Studio actions now delegate to `StudioSessionState`.
+- Preserved current visual structure and interaction model; no dark glass/artisan gallery redesign was introduced.
+- Build verification:
+  - `xcodegen generate`: passed.
+  - `xcodebuild -project PlumWallPaper.xcodeproj -scheme PlumWallPaper -configuration Debug -derivedDataPath Build/DerivedData build`: passed.
+- Manual smoke:
+  - Confirmed app launched from `Build/DerivedData/Build/Products/Debug/PlumWallPaper.app/Contents/MacOS/PlumWallPaper`.
+  - Opened a Home card detail sheet via Accessibility; detail rendered title HUD, side navigation affordances, mode controls, and action dock.
+  - Entered Studio mode; `DetailStudioPanel` rendered on the right and applied the `电影` preset, updating intensity and weather/particle effects.
+  - Saved Studio parameters through the panel save control without crash.
+  - Entered and exited pure preview; chrome hid and restored correctly.
+  - Previous/next controls remained visible in Detail after returning from pure preview; no regression was observed in the detail shell.

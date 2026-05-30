@@ -6,34 +6,8 @@ struct DetailPreviewCanvas: View {
     let contentURL: URL?
     let posterURL: URL?
     let isStudioActive: Bool
-    let exposure: Double
-    let contrast: Double
-    let saturation: Double
-    let hue: Double
-    let blur: Double
-    let grain: Double
-    let vignette: Double
-    let grayscale: Double
-    let invert: Double
-    let highlights: Double
-    let shadows: Double
-    let weatherWind: Double
-    let weatherRain: Double
-    let weatherThunder: Double
-    let weatherSnow: Double
+    let effects: WallpaperRenderEffects
     @Binding var lightningFlash: Double
-    let particleStyle: String
-    let particleRate: Double
-    let particleLifetime: Double
-    let particleSize: Double
-    let particleGravity: Double
-    let particleTurbulence: Double
-    let particleSpin: Double
-    let particleThrust: Double
-    let particleAngle: Double
-    let particleSpread: Double
-    let particleFadeIn: Double
-    let particleFadeOut: Double
     let particleColorStart: Color
     let particleColorEnd: Color
 
@@ -43,36 +17,26 @@ struct DetailPreviewCanvas: View {
                 wallpaper: wallpaper,
                 contentURL: contentURL,
                 posterURL: posterURL,
-                blur: blur,
-                grayscale: grayscale,
-                contrast: contrast,
-                saturation: saturation,
-                exposure: exposure,
-                hue: hue,
-                highlights: highlights,
-                shadows: shadows,
-                invert: invert,
-                grain: grain,
-                vignette: vignette
+                effects: effects
             )
 
             weatherLayers
 
-            if isStudioActive && particleRate > 0 {
+            if isStudioActive && effects.particleRate > 0 {
                 ParticleOverlay(
-                    style: particleStyle,
-                    rate: particleRate,
-                    lifetime: particleLifetime,
-                    size: particleSize,
-                    gravity: particleGravity,
-                    turbulence: particleTurbulence,
-                    spin: particleSpin,
-                    thrust: particleThrust,
-                    angle: particleAngle,
-                    spread: particleSpread,
-                    fadeIn: particleFadeIn,
-                    fadeOut: particleFadeOut,
-                    wind: weatherWind,
+                    style: effects.particleStyle,
+                    rate: effects.particleRate,
+                    lifetime: effects.particleLifetime,
+                    size: effects.particleSize,
+                    gravity: effects.particleGravity,
+                    turbulence: effects.particleTurbulence,
+                    spin: effects.particleSpin,
+                    thrust: effects.particleThrust,
+                    angle: effects.particleAngle,
+                    spread: effects.particleSpread,
+                    fadeIn: effects.particleFadeIn,
+                    fadeOut: effects.particleFadeOut,
+                    wind: effects.weatherWind,
                     isRainMode: false,
                     colorStart: particleColorStart,
                     colorEnd: particleColorEnd
@@ -88,14 +52,14 @@ struct DetailPreviewCanvas: View {
 
     @ViewBuilder
     private var weatherLayers: some View {
-        if weatherThunder > 0 {
-            DetailLightningLayer(frequency: weatherThunder, flash: $lightningFlash)
+        if effects.weatherThunder > 0 {
+            DetailLightningLayer(frequency: effects.weatherThunder, flash: $lightningFlash)
         }
-        if weatherSnow > 0 {
-            DetailSnowLayer(intensity: weatherSnow, wind: weatherWind)
+        if effects.weatherSnow > 0 {
+            DetailSnowLayer(intensity: effects.weatherSnow, wind: effects.weatherWind)
         }
-        if weatherRain > 0 {
-            DetailRainLayer(intensity: weatherRain, wind: weatherWind)
+        if effects.weatherRain > 0 {
+            DetailRainLayer(intensity: effects.weatherRain, wind: effects.weatherWind)
         }
     }
 }
@@ -104,17 +68,7 @@ private struct DetailBackgroundLayer: View {
     let wallpaper: Wallpaper
     let contentURL: URL?
     let posterURL: URL?
-    let blur: Double
-    let grayscale: Double
-    let contrast: Double
-    let saturation: Double
-    let exposure: Double
-    let hue: Double
-    let highlights: Double
-    let shadows: Double
-    let invert: Double
-    let grain: Double
-    let vignette: Double
+    let effects: WallpaperRenderEffects
 
     var body: some View {
         ZStack {
@@ -130,29 +84,29 @@ private struct DetailBackgroundLayer: View {
                 DetailSimplePoster(url: posterURL)
             }
 
-            if invert > 50 {
+            if effects.invert > 50 {
                 Color.white.blendMode(.difference)
             }
-            if grain > 0 {
-                GrainTextureOverlay(opacity: grain / 100.0)
+            if effects.grain > 0 {
+                GrainTextureOverlay(opacity: effects.grain / 100.0)
                     .blendMode(.overlay)
             }
-            if vignette > 0 {
+            if effects.vignette > 0 {
                 RadialGradient(
-                    colors: [.clear, .black.opacity(vignette / 100.0)],
+                    colors: [.clear, .black.opacity(effects.vignette / 100.0)],
                     center: .center,
                     startRadius: 300,
                     endRadius: 1000
                 )
             }
         }
-        .blur(radius: CGFloat(blur))
-        .grayscale(grayscale / 100.0)
-        .contrast(contrast / 100.0)
-        .saturation(saturation / 100.0)
-        .brightness((exposure - 100) / 100.0)
-        .hueRotation(.degrees(hue))
-        .colorMultiply(Color(white: highlights / 100.0))
+        .blur(radius: CGFloat(effects.blur))
+        .grayscale(effects.grayscale / 100.0)
+        .contrast(effects.contrast / 100.0)
+        .saturation(effects.saturation / 100.0)
+        .brightness((effects.exposure - 100) / 100.0)
+        .hueRotation(.degrees(effects.hue))
+        .colorMultiply(Color(white: effects.highlights / 100.0))
     }
 }
 
