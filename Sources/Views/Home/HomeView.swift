@@ -31,29 +31,14 @@ struct HomeView: View {
             ZStack(alignment: .top) {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
-                        if viewModel.isLoading && viewModel.latestStills.isEmpty {
+                        if viewModel.isHeroLoading && !viewModel.hasContent {
                             loadingView(size: windowGeo.size)
-                        } else if let errorMessage = viewModel.errorMessage, viewModel.latestStills.isEmpty {
+                        } else if viewModel.hasContent || viewModel.areShelvesLoading {
+                            homeContent(size: windowGeo.size)
+                        } else if let errorMessage = viewModel.errorMessage {
                             errorView(message: errorMessage, size: windowGeo.size)
-                        } else if viewModel.heroItems.isEmpty && viewModel.latestStills.isEmpty && viewModel.popularMotions.isEmpty {
-                            emptyStateView(size: windowGeo.size)
                         } else {
-                            // Hero 轮播（如果有数据）
-                            if !viewModel.heroItems.isEmpty {
-                                artisanFullscreenHero(size: windowGeo.size)
-                            }
-
-                            VStack(alignment: .leading, spacing: 92) {
-                                if !viewModel.latestStills.isEmpty {
-                                    artisanStillsSection()
-                                }
-                                if !viewModel.popularMotions.isEmpty {
-                                    artisanMotionsSection()
-                                }
-                            }
-                            .padding(.top, viewModel.heroItems.isEmpty ? 120 : 92)
-                            .padding(.bottom, 160)
-                            .background(LiquidGlassColors.deepBackground)
+                            emptyStateView(size: windowGeo.size)
                         }
                     }
                 }
@@ -72,6 +57,12 @@ struct HomeView: View {
             }
         }
         .onChange(of: viewModel.heroItems) { _, _ in
+            if viewModel.heroItems.isEmpty {
+                currentHeroIndex = 0
+                readyHeroVideoURL = nil
+            } else if currentHeroIndex >= viewModel.heroItems.count {
+                currentHeroIndex = 0
+            }
             preheatHomeVideos()
         }
         .onChange(of: viewModel.popularMotions) { _, _ in
@@ -130,6 +121,31 @@ struct HomeView: View {
             }
         }
         .toast($toast)
+    }
+
+    private func homeContent(size: CGSize) -> some View {
+        VStack(spacing: 0) {
+            if !viewModel.heroItems.isEmpty {
+                artisanFullscreenHero(size: size)
+            }
+
+            VStack(alignment: .leading, spacing: 92) {
+                if !viewModel.latestStills.isEmpty {
+                    artisanStillsSection()
+                } else if viewModel.areShelvesLoading {
+                    shelfLoadingSection(kicker: "STATIC WALLPAPERS", titleWidth: 170, subtitleWidth: 190)
+                }
+
+                if !viewModel.popularMotions.isEmpty {
+                    artisanMotionsSection()
+                } else if viewModel.areShelvesLoading {
+                    shelfLoadingSection(kicker: "MOTION WALLPAPERS", titleWidth: 180, subtitleWidth: 210)
+                }
+            }
+            .padding(.top, viewModel.heroItems.isEmpty ? 120 : 92)
+            .padding(.bottom, 160)
+            .background(LiquidGlassColors.deepBackground)
+        }
     }
 
     private func preheatHomeVideos() {
@@ -250,6 +266,49 @@ struct HomeView: View {
             .frame(width: width, height: height)
             .opacity(0.6)
             .shimmering()
+    }
+
+    private func shelfLoadingSection(kicker: String, titleWidth: CGFloat, subtitleWidth: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(kicker)
+                    .font(.system(size: 10, weight: .bold))
+                    .kerning(3)
+                    .foregroundStyle(LiquidGlassColors.primaryPink.opacity(0.65))
+
+                HStack(alignment: .firstTextBaseline) {
+                    skeletonShimmer(width: titleWidth, height: 28)
+                    skeletonShimmer(width: subtitleWidth, height: 13)
+                        .padding(.leading, 14)
+                    Spacer()
+                }
+            }
+            .padding(.horizontal, mainPadding)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 30) {
+                    ForEach(0..<4, id: \.self) { _ in
+                        VStack(spacing: 0) {
+                            skeletonShimmer(width: 226, height: 150, cornerRadius: 0)
+                            VStack(alignment: .leading, spacing: 8) {
+                                skeletonShimmer(width: 150, height: 14)
+                                skeletonShimmer(width: 84, height: 10)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 15)
+                        }
+                        .frame(width: 226)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill(LiquidGlassColors.surfaceBackground.opacity(0.5))
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    }
+                }
+                .padding(.horizontal, mainPadding)
+                .padding(.bottom, 24)
+            }
+        }
     }
 
     private func errorView(message: String, size: CGSize) -> some View {
@@ -387,13 +446,9 @@ struct HomeView: View {
 
                     HStack(spacing: 10) {
                         artisanHeroMetaChip(text: bestHeroResolutionLabel(for: item), icon: "rectangle.expand.vertical")
-                        if let duration = item.durationSeconds {
-                            artisanHeroMetaChip(text: formatHeroDuration(duration), icon: "clock")
+                        if isMotionHero(item) {
+                            artisanHeroMetaChip(text: "动态", icon: "play.rectangle.fill")
                         }
-                        if item.hasAudioTrack == true {
-                            artisanHeroMetaChip(text: "AUDIO", icon: "waveform")
-                        }
-                        artisanHeroMetaChip(text: "ORIGINAL", icon: "sparkles")
                     }
 
                     HStack(spacing: 14) {
@@ -476,12 +531,8 @@ struct HomeView: View {
         .frame(height: heroHeight)
     }
 
-    private func formatHeroDuration(_ seconds: Double) -> String {
-        let formatter = DateComponentsFormatter()
-        formatter.allowedUnits = [.minute, .second]
-        formatter.unitsStyle = .positional
-        formatter.zeroFormattingBehavior = .pad
-        return formatter.string(from: seconds) ?? "0:00"
+    private func isMotionHero(_ item: MediaItem) -> Bool {
+        item.previewVideoURL != nil || item.fullVideoURL != nil
     }
 
     private func artisanHeroMetaChip(text: String, icon: String) -> some View {

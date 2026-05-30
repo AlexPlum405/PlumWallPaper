@@ -16,6 +16,7 @@ final class MediaRepository: ObservableObject {
     private var heroCache: (data: [MediaItem], timestamp: Date)?
     private var popularCache: (data: [MediaItem], timestamp: Date)?
     private let cacheExpiration: TimeInterval = 6 * 3600  // 6 hours
+    private let heroFirstTimeoutNanoseconds: UInt64 = 5_000_000_000
 
     private init() {}
 
@@ -31,28 +32,20 @@ final class MediaRepository: ObservableObject {
             return cache.data
         }
 
-        async let motionBGCandidates = fetchMotionBGCandidates()
-        async let pexelsCandidates = fetchPexelsHeroCandidates()
-        async let pixabayCandidates = fetchPixabayHeroCandidates()
-        async let desktopCandidates = fetchDesktopHutHeroCandidates()
-
-        let sources = try await [
-            (motionBGCandidates, 0.35),
-            (pexelsCandidates, 0.25),
-            (pixabayCandidates, 0.25),
-            (desktopCandidates, 0.15)
-        ]
-
-        let allCandidates = sources.flatMap { items, weight in
-            items.map { item in
-                (item, calculateQualityScore(item, sourceWeight: weight))
-            }
+        let fastCandidates = await fetchFirstAvailableHeroCandidates()
+        guard !fastCandidates.isEmpty else {
+            NSLog("[MediaRepository] Hero 首屏候选超时或为空")
+            throw NetworkError.invalidResponse
         }
 
-        let sorted = allCandidates.sorted { $0.1 > $1.1 }
+        let sorted = fastCandidates
+            .map { item in
+                (item, calculateQualityScore(item, sourceWeight: 1.0))
+            }
+            .sorted { $0.1 > $1.1 }
         let final = applyDiversityRules(sorted, count: 8)
 
-        NSLog("[MediaRepository] 最终返回 \(final.count) 个 Hero 项")
+        NSLog("[MediaRepository] 首屏返回 \(final.count) 个 Hero 项")
         heroCache = (final, Date())
         return final
     }
@@ -114,6 +107,52 @@ final class MediaRepository: ObservableObject {
     }
 
     // MARK: - Private Helpers
+
+    private enum HeroCandidateFetchResult {
+        case items([MediaItem])
+        case timeout
+    }
+
+    private func fetchFirstAvailableHeroCandidates() async -> [MediaItem] {
+        await withTaskGroup(of: HeroCandidateFetchResult.self, returning: [MediaItem].self) { group in
+            group.addTask { [heroFirstTimeoutNanoseconds] in
+                try? await Task.sleep(nanoseconds: heroFirstTimeoutNanoseconds)
+                return .timeout
+            }
+            group.addTask {
+                .items((try? await self.fetchMotionBGCandidates()) ?? [])
+            }
+            group.addTask {
+                .items((try? await self.fetchPexelsHeroCandidates()) ?? [])
+            }
+            group.addTask {
+                .items((try? await self.fetchPixabayHeroCandidates()) ?? [])
+            }
+            group.addTask {
+                .items((try? await self.fetchDesktopHutHeroCandidates()) ?? [])
+            }
+
+            var emptyResponses = 0
+            for await result in group {
+                switch result {
+                case .items(let items) where !items.isEmpty:
+                    group.cancelAll()
+                    return items
+                case .timeout:
+                    group.cancelAll()
+                    return []
+                case .items:
+                    emptyResponses += 1
+                    if emptyResponses >= 4 {
+                        group.cancelAll()
+                        return []
+                    }
+                }
+            }
+
+            return []
+        }
+    }
 
     private func fetchMotionBGCandidates() async throws -> [MediaItem] {
         let items = try await mediaService.fetchHomePage()
