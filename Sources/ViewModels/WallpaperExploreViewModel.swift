@@ -5,6 +5,28 @@ import Combine
 
 @MainActor
 final class WallpaperExploreViewModel: ObservableObject {
+    struct SourceCapability: Equatable {
+        let supportsSearch: Bool
+        let supportsPagination: Bool
+        let supportsCategory: Bool
+        let supportsSorting: Bool
+        let supportsResolution: Bool
+        let supportsExactResolution: Bool
+        let supportsRatio: Bool
+        let supportsColor: Bool
+        let supportsPurity: Bool
+        let apiKeyService: APIKeyManager.Service?
+        let note: String
+
+        var requiresAPIKey: Bool { apiKeyService != nil }
+    }
+
+    struct ActiveFilter: Identifiable, Equatable {
+        let id: String
+        let label: String
+        let icon: String
+    }
+
     // MARK: - Published State
     @Published var wallpapers: [RemoteWallpaper] = []
     @Published var isLoading = false
@@ -43,32 +65,120 @@ final class WallpaperExploreViewModel: ObservableObject {
         var displayName: String { rawValue }
 
         var requiresAPIKey: Bool {
-            switch self {
-            case .pexels, .unsplash, .pixabay: return true
-            default: return false
-            }
+            capability.requiresAPIKey
         }
 
         var apiKeyService: APIKeyManager.Service? {
-            switch self {
-            case .pexels: return .pexels
-            case .unsplash: return .unsplash
-            case .pixabay: return .pixabay
-            default: return nil
-            }
+            capability.apiKeyService
         }
 
         var supportsSearch: Bool {
-            self != .bingDaily
+            capability.supportsSearch
         }
 
         var supportsPagination: Bool {
-            true
+            capability.supportsPagination
+        }
+
+        var capability: SourceCapability {
+            switch self {
+            case .wallhaven:
+                return SourceCapability(
+                    supportsSearch: true,
+                    supportsPagination: true,
+                    supportsCategory: true,
+                    supportsSorting: true,
+                    supportsResolution: true,
+                    supportsExactResolution: true,
+                    supportsRatio: true,
+                    supportsColor: true,
+                    supportsPurity: true,
+                    apiKeyService: nil,
+                    note: "支持关键词、分类、纯度、排序、精确分辨率、比例和颜色筛选"
+                )
+            case .bingDaily:
+                return SourceCapability(
+                    supportsSearch: false,
+                    supportsPagination: true,
+                    supportsCategory: true,
+                    supportsSorting: false,
+                    supportsResolution: true,
+                    supportsExactResolution: false,
+                    supportsRatio: false,
+                    supportsColor: false,
+                    supportsPurity: false,
+                    apiKeyService: nil,
+                    note: "按市场浏览 Bing 每日壁纸，可选择图片尺寸"
+                )
+            case .pexels:
+                return SourceCapability(
+                    supportsSearch: true,
+                    supportsPagination: true,
+                    supportsCategory: true,
+                    supportsSorting: false,
+                    supportsResolution: true,
+                    supportsExactResolution: false,
+                    supportsRatio: false,
+                    supportsColor: false,
+                    supportsPurity: false,
+                    apiKeyService: .pexels,
+                    note: "支持关键词和主题分类，分辨率在本地做轻量过滤"
+                )
+            case .unsplash:
+                return SourceCapability(
+                    supportsSearch: true,
+                    supportsPagination: true,
+                    supportsCategory: true,
+                    supportsSorting: true,
+                    supportsResolution: true,
+                    supportsExactResolution: false,
+                    supportsRatio: false,
+                    supportsColor: false,
+                    supportsPurity: false,
+                    apiKeyService: .unsplash,
+                    note: "支持关键词、主题、排序和本地分辨率过滤"
+                )
+            case .pixabay:
+                return SourceCapability(
+                    supportsSearch: true,
+                    supportsPagination: true,
+                    supportsCategory: true,
+                    supportsSorting: true,
+                    supportsResolution: true,
+                    supportsExactResolution: false,
+                    supportsRatio: false,
+                    supportsColor: false,
+                    supportsPurity: false,
+                    apiKeyService: .pixabay,
+                    note: "支持关键词、分类、排序和最小尺寸筛选"
+                )
+            }
         }
     }
 
-    var showWallhavenFilters: Bool {
-        selectedSource == .wallhaven
+    var currentCapabilities: SourceCapability {
+        selectedSource.capability
+    }
+
+    var sourceCapabilitySummary: String {
+        var features: [String] = []
+        if currentCapabilities.supportsSearch { features.append("搜索") }
+        if currentCapabilities.supportsPagination { features.append("分页") }
+        if currentCapabilities.supportsCategory { features.append("分类") }
+        if currentCapabilities.supportsSorting { features.append("排序") }
+        if currentCapabilities.supportsResolution { features.append("分辨率") }
+        if currentCapabilities.supportsRatio { features.append("比例") }
+        if currentCapabilities.supportsColor { features.append("颜色") }
+        if currentCapabilities.supportsPurity { features.append("纯度") }
+
+        let apiStatus: String
+        if let service = currentCapabilities.apiKeyService {
+            apiStatus = APIKeyManager.shared.hasKey(for: service) ? "API Key 已配置" : "需要 API Key"
+        } else {
+            apiStatus = "无需 API Key"
+        }
+
+        return "\(selectedSource.displayName) · \(features.joined(separator: " / ")) · \(apiStatus)"
     }
 
     var sortingOptionsForCurrentSource: [String] {
@@ -93,7 +203,7 @@ final class WallpaperExploreViewModel: ObservableObject {
         case .pexels, .unsplash, .pixabay:
             return ["全部", "大尺寸", "中等", "小尺寸"]
         case .bingDaily:
-            return ["UHD"]
+            return ["UHD", "1920x1080", "1366x768"]
         }
     }
 
@@ -108,25 +218,99 @@ final class WallpaperExploreViewModel: ObservableObject {
         case .pixabay:
             return [("全部", "全部"), ("自然", "nature wallpaper"), ("背景", "background"), ("抽象", "abstract"), ("动物", "animals"), ("科技", "technology"), ("空间", "space")]
         case .bingDaily:
-            return [("全部", "全部")]
+            return [("中国", "zh-CN"), ("美国", "en-US"), ("日本", "ja-JP"), ("英国", "en-GB"), ("德国", "de-DE")]
         }
+    }
+
+    var activeFilters: [ActiveFilter] {
+        var filters: [ActiveFilter] = []
+        let trimmedSearch = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        if currentCapabilities.supportsSearch && !trimmedSearch.isEmpty {
+            filters.append(ActiveFilter(id: "search", label: "搜索: \(trimmedSearch)", icon: "magnifyingglass"))
+        }
+
+        if currentCapabilities.supportsCategory,
+           selectedCategory != defaultCategoryValue,
+           let label = categoryFilterOptions.first(where: { $0.value == selectedCategory })?.label {
+            filters.append(ActiveFilter(id: "category", label: "分类: \(label)", icon: "folder"))
+        }
+
+        if currentCapabilities.supportsPurity,
+           selectedPurity != defaultPurityValue,
+           let label = purityLabel(for: selectedPurity) {
+            filters.append(ActiveFilter(id: "purity", label: "纯度: \(label)", icon: "shield"))
+        }
+
+        if currentCapabilities.supportsSorting,
+           selectedSorting != defaultSortingValue {
+            filters.append(ActiveFilter(id: "sorting", label: "排序: \(selectedSorting)", icon: "arrow.up.arrow.down"))
+        }
+
+        if currentCapabilities.supportsExactResolution {
+            for resolution in selectedResolutions {
+                filters.append(ActiveFilter(id: "resolution:\(resolution)", label: "分辨率: \(resolution)", icon: "rectangle.expand.vertical"))
+            }
+        } else if currentCapabilities.supportsResolution,
+                  selectedResolutionFilter != defaultResolutionValue {
+            filters.append(ActiveFilter(id: "resolution-filter", label: "分辨率: \(selectedResolutionFilter)", icon: "rectangle.expand.vertical"))
+        }
+
+        if currentCapabilities.supportsRatio {
+            for ratio in selectedRatios {
+                filters.append(ActiveFilter(id: "ratio:\(ratio)", label: "比例: \(ratioLabel(for: ratio))", icon: "aspectratio"))
+            }
+        }
+
+        if currentCapabilities.supportsColor {
+            for color in selectedColors {
+                filters.append(ActiveFilter(id: "color:\(color)", label: "颜色: \(colorLabel(for: color))", icon: "paintpalette"))
+            }
+        }
+
+        return filters
     }
 
     func selectSource(_ source: WallpaperSource) {
         selectedSource = source
-        let options = sortingOptionsForCurrentSource
-        if !options.contains(selectedSorting) {
-            selectedSorting = options.first ?? "最新"
+        normalizeFiltersForCurrentSource()
+    }
+
+    func resetFiltersForCurrentSource() {
+        searchQuery = ""
+        selectedCategory = defaultCategoryValue
+        selectedPurity = defaultPurityValue
+        selectedSorting = defaultSortingValue
+        selectedOrder = "desc"
+        selectedTopRange = nil
+        selectedResolutionFilter = defaultResolutionValue
+        selectedResolutions = []
+        selectedRatios = []
+        selectedColors = []
+        normalizeFiltersForCurrentSource()
+    }
+
+    func clearActiveFilter(_ id: String) {
+        if id == "search" {
+            searchQuery = ""
+        } else if id == "category" {
+            selectedCategory = defaultCategoryValue
+        } else if id == "purity" {
+            selectedPurity = defaultPurityValue
+        } else if id == "sorting" {
+            selectedSorting = defaultSortingValue
+        } else if id == "resolution-filter" {
+            selectedResolutionFilter = defaultResolutionValue
+        } else if id.hasPrefix("resolution:") {
+            let value = String(id.dropFirst("resolution:".count))
+            selectedResolutions.removeAll { $0 == value }
+        } else if id.hasPrefix("ratio:") {
+            let value = String(id.dropFirst("ratio:".count))
+            selectedRatios.removeAll { $0 == value }
+        } else if id.hasPrefix("color:") {
+            let value = String(id.dropFirst("color:".count))
+            selectedColors.removeAll { $0 == value }
         }
-        selectedCategory = categoryFilterOptions.first?.value ?? "全部"
-        if source != .wallhaven {
-            selectedPurity = "100"
-            selectedTopRange = nil
-            selectedResolutionFilter = "全部"
-            selectedResolutions = []
-            selectedRatios = []
-            selectedColors = []
-        }
+        normalizeFiltersForCurrentSource()
     }
 
     // MARK: - Public Methods
@@ -182,10 +366,115 @@ final class WallpaperExploreViewModel: ObservableObject {
     }
 
     func applyFilters() async {
+        normalizeFiltersForCurrentSource()
         await loadInitialData()
     }
 
     // MARK: - Private
+
+    private var defaultCategoryValue: String {
+        categoryFilterOptions.first?.value ?? "全部"
+    }
+
+    private var defaultSortingValue: String {
+        sortingOptionsForCurrentSource.first ?? "最新"
+    }
+
+    private var defaultResolutionValue: String {
+        resolutionFilterOptions.first ?? "全部"
+    }
+
+    private var defaultPurityValue: String {
+        "100"
+    }
+
+    private func normalizeFiltersForCurrentSource() {
+        let capabilities = currentCapabilities
+
+        if !capabilities.supportsSearch {
+            searchQuery = ""
+        }
+
+        let categoryValues = Set(categoryFilterOptions.map(\.value))
+        if !capabilities.supportsCategory || !categoryValues.contains(selectedCategory) {
+            selectedCategory = defaultCategoryValue
+        }
+
+        let sortingOptions = sortingOptionsForCurrentSource
+        if !sortingOptions.contains(selectedSorting) {
+            selectedSorting = defaultSortingValue
+        }
+
+        if !capabilities.supportsPurity {
+            selectedPurity = defaultPurityValue
+        }
+
+        if !capabilities.supportsExactResolution {
+            selectedResolutions = []
+        }
+
+        if !capabilities.supportsResolution || !resolutionFilterOptions.contains(selectedResolutionFilter) {
+            selectedResolutionFilter = defaultResolutionValue
+        }
+
+        if !capabilities.supportsRatio {
+            selectedRatios = []
+        } else {
+            let validRatios = Set(Self.ratioOptions.map(\.value))
+            selectedRatios = selectedRatios.filter { validRatios.contains($0) }
+        }
+
+        if !capabilities.supportsColor {
+            selectedColors = []
+        } else {
+            let validColors = Set(Self.colorOptions.map(\.value))
+            selectedColors = selectedColors.filter { validColors.contains($0) }
+        }
+
+        if selectedSource != .wallhaven {
+            selectedTopRange = nil
+        }
+    }
+
+    private func purityLabel(for value: String) -> String? {
+        Self.purityOptions.first { $0.value == value }?.label
+    }
+
+    private func ratioLabel(for value: String) -> String {
+        Self.ratioOptions.first { $0.value == value }?.label ?? value
+    }
+
+    private func colorLabel(for value: String) -> String {
+        Self.colorOptions.first { $0.value == value }?.label ?? value
+    }
+
+    private static let purityOptions: [(label: String, value: String)] = [
+        ("SFW", "100"),
+        ("Sketchy", "010")
+    ]
+
+    private static let ratioOptions: [(label: String, value: String)] = [
+        ("16:9", "16x9"),
+        ("16:10", "16x10"),
+        ("21:9", "21x9"),
+        ("32:9", "32x9"),
+        ("9:16", "9x16")
+    ]
+
+    private static let colorOptions: [(label: String, value: String)] = [
+        ("红", "660000"),
+        ("橙", "cc6600"),
+        ("黄", "ffcc00"),
+        ("绿", "009900"),
+        ("青", "00cccc"),
+        ("蓝", "0066cc"),
+        ("紫", "9900cc"),
+        ("粉", "ff66cc"),
+        ("黑", "000000"),
+        ("白", "ffffff"),
+        ("灰", "999999"),
+        ("棕", "996633")
+    ]
 
     private func fetchBySource() async throws -> [RemoteWallpaper] {
         switch selectedSource {
