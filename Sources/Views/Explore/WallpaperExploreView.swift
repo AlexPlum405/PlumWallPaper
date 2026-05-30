@@ -355,7 +355,7 @@ struct WallpaperExploreView: View {
             ForEach(viewModel.wallpapers) { wallpaper in
                 RemoteWallpaperCard(wallpaper: wallpaper) {
                     Task {
-                        await PreviewResourcePipeline.shared.prefetchFullResolution(for: wallpaper)
+                        await PreviewResourcePipeline.shared.prefetchFullResolution(for: wallpaper, intent: .detailFullResolution)
                     }
                     detailItem = WallpaperPreviewItem(remote: wallpaper)
                 }

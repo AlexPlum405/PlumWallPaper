@@ -70,8 +70,8 @@ final class HomeFeedViewModel: ObservableObject {
 
     private func preheatHeroVideos() {
         Task {
-            for item in heroItems {
-                PreviewResourcePipeline.shared.preloadVideo(for: item, preferFullResolution: false)
+            for item in heroItems.prefix(3) {
+                PreviewResourcePipeline.shared.preloadVideo(for: item, preferFullResolution: false, intent: .heroImmediate)
                 try? await Task.sleep(nanoseconds: 200_000_000)
             }
         }

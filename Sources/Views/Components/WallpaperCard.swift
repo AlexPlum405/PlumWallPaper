@@ -61,7 +61,9 @@ struct WallpaperCard: View {
         .onHover { hovering in
             isHovered = hovering
             if hovering {
-                prefetchFullResolutionPreview()
+                preheatHoverPreview()
+            } else {
+                PreviewResourcePipeline.shared.cancelPreview(for: item)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .plumDownloadCompleted)) { notification in
@@ -335,9 +337,10 @@ struct WallpaperCard: View {
         return String(format: "%.0fMB", mb)
     }
 
-    private func prefetchFullResolutionPreview() {
+    private func preheatHoverPreview() {
         Task {
-            await PreviewResourcePipeline.shared.prefetchFullResolution(for: item)
+            await PreviewResourcePipeline.shared.prefetchFullResolution(for: item, intent: .hoverIntent)
+            PreviewResourcePipeline.shared.preheatPreview(for: item, intent: .hoverIntent)
         }
     }
 

@@ -43,7 +43,9 @@ struct RemoteWallpaperCard: View {
         .onHover { hovering in
             isHovered = hovering
             if hovering {
-                prefetchFullResolutionPreview()
+                preheatHoverPreview()
+            } else {
+                PreviewResourcePipeline.shared.cancelPreview(for: wallpaper)
             }
         }
     }
@@ -188,9 +190,9 @@ struct RemoteWallpaperCard: View {
         return String(format: "%.0fMB", mb)
     }
 
-    private func prefetchFullResolutionPreview() {
+    private func preheatHoverPreview() {
         Task {
-            await PreviewResourcePipeline.shared.prefetchFullResolution(for: wallpaper)
+            await PreviewResourcePipeline.shared.prefetchFullResolution(for: wallpaper, intent: .hoverIntent)
         }
     }
 }

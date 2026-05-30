@@ -46,7 +46,7 @@ final class WallpaperDetailViewModel: ObservableObject {
         guard let remoteURL = Self.url(from: wallpaper.filePath), remoteURL.isFileURL == false else {
             fullResolutionContentURL = nil
             if wallpaper.type == .video, let videoURL = contentURL(for: wallpaper) {
-                PreviewResourcePipeline.shared.preloadVideo(url: videoURL)
+                PreviewResourcePipeline.shared.preloadVideo(url: videoURL, intent: .detailFullResolution)
             }
             return
         }
@@ -55,21 +55,21 @@ final class WallpaperDetailViewModel: ObservableObject {
             guard isActive(taskID) else { return }
             fullResolutionContentURL = cached
             if wallpaper.type == .video {
-                PreviewResourcePipeline.shared.preloadVideo(url: cached)
+                PreviewResourcePipeline.shared.preloadVideo(url: cached, intent: .detailFullResolution)
             }
             return
         }
 
         if wallpaper.type == .video {
-            PreviewResourcePipeline.shared.preloadVideo(url: remoteURL)
+            PreviewResourcePipeline.shared.preloadVideo(url: remoteURL, intent: .detailFullResolution)
         }
 
         do {
-            let cached = try await PreviewResourcePipeline.shared.prepareFullResolutionURL(for: remoteURL)
+            let cached = try await PreviewResourcePipeline.shared.prepareFullResolutionURL(for: remoteURL, intent: .detailFullResolution)
             guard isActive(taskID) else { return }
             fullResolutionContentURL = cached
             if wallpaper.type == .video {
-                PreviewResourcePipeline.shared.preloadVideo(url: cached)
+                PreviewResourcePipeline.shared.preloadVideo(url: cached, intent: .detailFullResolution)
             }
             NSLog("[WallpaperDetailViewModel] ✅ 高清预览缓存就绪: \(cached.lastPathComponent)")
         } catch {

@@ -77,12 +77,60 @@ actor CacheService {
     }
 }
 
+enum PreviewIntent: String, Sendable {
+    case heroImmediate
+    case visibleCard
+    case hoverIntent
+    case detailFullResolution
+
+    var priority: Int {
+        switch self {
+        case .heroImmediate: return 4
+        case .detailFullResolution: return 3
+        case .visibleCard: return 2
+        case .hoverIntent: return 1
+        }
+    }
+
+    var allowsFullResolutionDownload: Bool {
+        switch self {
+        case .detailFullResolution:
+            return true
+        case .heroImmediate, .visibleCard, .hoverIntent:
+            return false
+        }
+    }
+
+    var isCancellable: Bool {
+        switch self {
+        case .hoverIntent, .visibleCard:
+            return true
+        case .heroImmediate, .detailFullResolution:
+            return false
+        }
+    }
+
+    var videoPreloadLimit: Int {
+        switch self {
+        case .heroImmediate:
+            return 3
+        case .detailFullResolution:
+            return 2
+        case .visibleCard:
+            return 6
+        case .hoverIntent:
+            return 1
+        }
+    }
+}
+
 actor FullResolutionPreviewCache {
     static let shared = FullResolutionPreviewCache()
 
     private let fileManager = FileManager.default
     private let cacheDirectory: URL
     private var activeTasks: [URL: Task<URL, Error>] = [:]
+    private var activeTaskIntents: [URL: PreviewIntent] = [:]
     private let maxCacheBytes: Int64 = 5 * 1024 * 1024 * 1024
     private let maxCacheAge: TimeInterval = 7 * 24 * 60 * 60
 
@@ -101,7 +149,7 @@ actor FullResolutionPreviewCache {
         return fileURL
     }
 
-    func localURL(for remoteURL: URL) async throws -> URL {
+    func localURL(for remoteURL: URL, intent: PreviewIntent = .detailFullResolution) async throws -> URL {
         if let cached = cachedURL(for: remoteURL) {
             return cached
         }
@@ -111,53 +159,67 @@ actor FullResolutionPreviewCache {
         }
 
         let destinationURL = cacheURL(for: remoteURL)
-        let task = Task { [cacheDirectory, fileManager] in
-            let tempURL = cacheDirectory.appendingPathComponent("\(UUID().uuidString).download")
-
-            var request = URLRequest(url: remoteURL)
-            request.timeoutInterval = 30
-            request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
-            request.setValue(Self.acceptHeader(for: remoteURL), forHTTPHeaderField: "Accept")
-            if let referer = Self.referer(for: remoteURL) {
-                request.setValue(referer, forHTTPHeaderField: "Referer")
-            }
-
-            let config = URLSessionConfiguration.default
-            config.timeoutIntervalForRequest = 30
-            config.timeoutIntervalForResource = 15 * 60
-            config.waitsForConnectivity = true
-            config.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
-            let session = URLSession(configuration: config)
-
-            let (downloadedURL, response) = try await session.download(for: request)
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
-                throw URLError(.badServerResponse)
-            }
-
-            try? fileManager.removeItem(at: tempURL)
-            try fileManager.moveItem(at: downloadedURL, to: tempURL)
-            try? fileManager.removeItem(at: destinationURL)
-            try fileManager.moveItem(at: tempURL, to: destinationURL)
-            await self.cleanupIfNeeded()
-            return destinationURL
-        }
+        let task = downloadTask(remoteURL: remoteURL, destinationURL: destinationURL)
 
         activeTasks[remoteURL] = task
+        activeTaskIntents[remoteURL] = intent
         do {
             let url = try await task.value
-            activeTasks[remoteURL] = nil
+            await clearFinishedTask(for: remoteURL)
             return url
         } catch {
-            activeTasks[remoteURL] = nil
+            await clearFinishedTask(for: remoteURL)
             throw error
         }
     }
 
-    func prefetch(remoteURL: URL) {
+    func prefetch(remoteURL: URL, intent: PreviewIntent = .detailFullResolution) {
+        guard intent.allowsFullResolutionDownload else {
+            _ = cachedURL(for: remoteURL)
+            return
+        }
         guard cachedURL(for: remoteURL) == nil, activeTasks[remoteURL] == nil else { return }
         let destinationURL = cacheURL(for: remoteURL)
-        activeTasks[remoteURL] = Task { [cacheDirectory, fileManager] in
+        activeTasks[remoteURL] = downloadTask(remoteURL: remoteURL, destinationURL: destinationURL)
+        activeTaskIntents[remoteURL] = intent
+    }
+
+    func cancel(remoteURL: URL) {
+        guard let intent = activeTaskIntents[remoteURL], intent.isCancellable else { return }
+        activeTasks[remoteURL]?.cancel()
+        activeTasks[remoteURL] = nil
+        activeTaskIntents[remoteURL] = nil
+    }
+
+    func clearCache() async throws {
+        for task in activeTasks.values {
+            task.cancel()
+        }
+        activeTasks.removeAll()
+        activeTaskIntents.removeAll()
+
+        guard fileManager.fileExists(atPath: cacheDirectory.path) else { return }
+        let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil)
+        for file in files {
+            try? fileManager.removeItem(at: file)
+        }
+    }
+
+    var cacheSize: Int64 {
+        let files = (try? fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: [.fileSizeKey])) ?? []
+        return files.reduce(Int64(0)) { total, file in
+            let size = Int64((try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+            return total + size
+        }
+    }
+
+    private func clearFinishedTask(for remoteURL: URL) async {
+        activeTasks[remoteURL] = nil
+        activeTaskIntents[remoteURL] = nil
+    }
+
+    private func downloadTask(remoteURL: URL, destinationURL: URL) -> Task<URL, Error> {
+        Task { [cacheDirectory, fileManager] in
             defer { Task { await self.clearFinishedTask(for: remoteURL) } }
 
             let tempURL = cacheDirectory.appendingPathComponent("\(UUID().uuidString).download")
@@ -178,6 +240,7 @@ actor FullResolutionPreviewCache {
             let session = URLSession(configuration: config)
 
             let (downloadedURL, response) = try await session.download(for: request)
+            try Task.checkCancellation()
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode) else {
                 throw URLError(.badServerResponse)
@@ -190,31 +253,6 @@ actor FullResolutionPreviewCache {
             await self.cleanupIfNeeded()
             return destinationURL
         }
-    }
-
-    func clearCache() async throws {
-        for task in activeTasks.values {
-            task.cancel()
-        }
-        activeTasks.removeAll()
-
-        guard fileManager.fileExists(atPath: cacheDirectory.path) else { return }
-        let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil)
-        for file in files {
-            try? fileManager.removeItem(at: file)
-        }
-    }
-
-    var cacheSize: Int64 {
-        let files = (try? fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: [.fileSizeKey])) ?? []
-        return files.reduce(Int64(0)) { total, file in
-            let size = Int64((try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
-            return total + size
-        }
-    }
-
-    private func clearFinishedTask(for remoteURL: URL) async {
-        activeTasks[remoteURL] = nil
     }
 
     private func cacheURL(for remoteURL: URL) -> URL {
@@ -324,50 +362,100 @@ final class PreviewResourcePipeline {
         await FullResolutionPreviewCache.shared.cachedURL(for: remoteURL)
     }
 
-    func prepareFullResolutionURL(for remoteURL: URL) async throws -> URL {
-        try await FullResolutionPreviewCache.shared.localURL(for: remoteURL)
+    func prepareFullResolutionURL(for remoteURL: URL, intent: PreviewIntent = .detailFullResolution) async throws -> URL {
+        try await FullResolutionPreviewCache.shared.localURL(for: remoteURL, intent: intent)
     }
 
-    func prefetchFullResolution(url remoteURL: URL) async {
-        await FullResolutionPreviewCache.shared.prefetch(remoteURL: remoteURL)
+    func prefetchFullResolution(url remoteURL: URL, intent: PreviewIntent = .detailFullResolution) async {
+        await FullResolutionPreviewCache.shared.prefetch(remoteURL: remoteURL, intent: intent)
     }
 
-    func prefetchFullResolution(for item: WallpaperPreviewItem) async {
+    func prefetchFullResolution(for item: WallpaperPreviewItem, intent: PreviewIntent = .detailFullResolution) async {
         guard let url = fullResolutionURL(for: item) else { return }
-        await prefetchFullResolution(url: url)
+        await prefetchFullResolution(url: url, intent: intent)
     }
 
-    func prefetchFullResolution(for item: MediaItem) async {
+    func prefetchFullResolution(for item: MediaItem, intent: PreviewIntent = .detailFullResolution) async {
         guard let url = fullResolutionURL(for: item) else { return }
-        await prefetchFullResolution(url: url)
+        await prefetchFullResolution(url: url, intent: intent)
     }
 
-    func prefetchFullResolution(for wallpaper: RemoteWallpaper) async {
+    func prefetchFullResolution(for wallpaper: RemoteWallpaper, intent: PreviewIntent = .detailFullResolution) async {
         guard let url = fullResolutionURL(for: wallpaper) else { return }
-        await prefetchFullResolution(url: url)
+        await prefetchFullResolution(url: url, intent: intent)
     }
 
-    func preloadVideo(url: URL) {
-        VideoPreloader.shared.preload(url: url)
+    func preheatPreview(for item: WallpaperPreviewItem, intent: PreviewIntent = .visibleCard) {
+        guard item.type == .video, let url = item.contentURL else { return }
+        if intent == .hoverIntent,
+           !url.isFileURL,
+           item.downloadQuality == url.absoluteString {
+            return
+        }
+        preloadVideo(url: url, intent: intent)
     }
 
-    func preloadVideo(for item: MediaItem, preferFullResolution: Bool = false) {
+    func preheatPreview(for item: MediaItem, intent: PreviewIntent = .visibleCard) {
+        preloadVideo(for: item, preferFullResolution: false, intent: intent)
+    }
+
+    func cancelPreview(url: URL) {
+        VideoPreloader.shared.cancelPreload(url: url)
+        Task {
+            await FullResolutionPreviewCache.shared.cancel(remoteURL: url)
+        }
+    }
+
+    func cancelPreview(for item: WallpaperPreviewItem) {
+        if let url = item.contentURL {
+            cancelPreview(url: url)
+        }
+        if let url = fullResolutionURL(for: item), url != item.contentURL {
+            cancelPreview(url: url)
+        }
+    }
+
+    func cancelPreview(for item: MediaItem) {
+        if let url = previewVideoURL(for: item) {
+            cancelPreview(url: url)
+        }
+        if let url = fullResolutionURL(for: item), url != previewVideoURL(for: item) {
+            cancelPreview(url: url)
+        }
+    }
+
+    func cancelPreview(for wallpaper: RemoteWallpaper) {
+        guard let url = fullResolutionURL(for: wallpaper) else { return }
+        cancelPreview(url: url)
+    }
+
+    func preloadVideo(url: URL, intent: PreviewIntent = .visibleCard) {
+        VideoPreloader.shared.preload(url: url, priority: intent.priority)
+    }
+
+    func preloadVideo(for item: MediaItem, preferFullResolution: Bool = false, intent: PreviewIntent = .visibleCard) {
         let url = preferFullResolution ? fullResolutionURL(for: item) : previewVideoURL(for: item)
         guard let url else { return }
-        preloadVideo(url: url)
+        preloadVideo(url: url, intent: intent)
     }
 
-    func preloadVideo(for item: WallpaperPreviewItem) {
-        guard item.type == .video, let url = fullResolutionURL(for: item) else { return }
-        preloadVideo(url: url)
+    func preloadVideo(for item: WallpaperPreviewItem, intent: PreviewIntent = .visibleCard) {
+        let candidateURL = intent == .detailFullResolution ? fullResolutionURL(for: item) : item.contentURL
+        guard item.type == .video, let url = candidateURL else { return }
+        if intent == .hoverIntent,
+           !url.isFileURL,
+           item.downloadQuality == url.absoluteString {
+            return
+        }
+        preloadVideo(url: url, intent: intent)
     }
 
-    func preloadVideos(urls: [URL], limit: Int) {
-        VideoPreloader.shared.preload(urls: urls, limit: limit)
+    func preloadVideos(urls: [URL], limit: Int, intent: PreviewIntent = .visibleCard) {
+        VideoPreloader.shared.preload(urls: urls, limit: min(limit, intent.videoPreloadLimit), priority: intent.priority)
     }
 
-    func preloadPreviewVideos(for items: [MediaItem], limit: Int) {
-        preloadVideos(urls: items.compactMap(previewVideoURL(for:)), limit: limit)
+    func preloadPreviewVideos(for items: [MediaItem], limit: Int, intent: PreviewIntent = .visibleCard) {
+        preloadVideos(urls: items.compactMap(previewVideoURL(for:)), limit: limit, intent: intent)
     }
 
     func clearPreviewCache() async throws {

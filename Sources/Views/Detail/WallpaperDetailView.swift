@@ -344,7 +344,7 @@ struct WallpaperDetailView: View {
                 self.viewModel.syncFavoriteDisplayState(for: newWallpaper, in: self.modelContext)
             }
             if newWallpaper.type == .video, let videoURL = WallpaperDetailViewModel.url(from: newWallpaper.filePath) {
-                PreviewResourcePipeline.shared.preloadVideo(url: videoURL)
+                PreviewResourcePipeline.shared.preloadVideo(url: videoURL, intent: .detailFullResolution)
             }
             // 稍作延迟，防止连续疯狂点击导致的逻辑混乱
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {

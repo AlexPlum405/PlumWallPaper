@@ -43,7 +43,9 @@ struct MediaCard: View {
         .onHover { hovering in
             isHovered = hovering
             if hovering {
-                prefetchFullResolutionPreview()
+                preheatHoverPreview()
+            } else {
+                PreviewResourcePipeline.shared.cancelPreview(for: mediaItem)
             }
         }
     }
@@ -184,9 +186,10 @@ struct MediaCard: View {
         return String(format: "%.0fMB", mb)
     }
 
-    private func prefetchFullResolutionPreview() {
+    private func preheatHoverPreview() {
         Task {
-            await PreviewResourcePipeline.shared.prefetchFullResolution(for: mediaItem)
+            await PreviewResourcePipeline.shared.prefetchFullResolution(for: mediaItem, intent: .hoverIntent)
+            PreviewResourcePipeline.shared.preheatPreview(for: mediaItem, intent: .hoverIntent)
         }
     }
 }

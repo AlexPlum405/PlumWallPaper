@@ -63,7 +63,7 @@ struct MediaExploreView: View {
     }
 
     private func preheatVisibleMediaVideos() {
-        PreviewResourcePipeline.shared.preloadPreviewVideos(for: viewModel.mediaItems, limit: 8)
+        PreviewResourcePipeline.shared.preloadPreviewVideos(for: viewModel.mediaItems, limit: 8, intent: .visibleCard)
     }
 
     // MARK: - Navigation Logic

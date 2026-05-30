@@ -134,7 +134,7 @@ struct HomeView: View {
 
     private func preheatHomeVideos() {
         preheatHeroVideos()
-        PreviewResourcePipeline.shared.preloadPreviewVideos(for: viewModel.popularMotions, limit: 6)
+        PreviewResourcePipeline.shared.preloadPreviewVideos(for: viewModel.popularMotions, limit: 6, intent: .visibleCard)
     }
 
     private func preheatHeroVideos() {
@@ -151,7 +151,7 @@ struct HomeView: View {
             .map { viewModel.heroItems[$0] }
             .compactMap(PreviewResourcePipeline.shared.previewVideoURL(for:))
 
-        PreviewResourcePipeline.shared.preloadVideos(urls: urls, limit: 3)
+        PreviewResourcePipeline.shared.preloadVideos(urls: urls, limit: 3, intent: .heroImmediate)
     }
 
     // MARK: - Loading & Error States
@@ -602,10 +602,11 @@ struct HomeView: View {
                             case .active:
                                 Task {
                                     try? await Task.sleep(nanoseconds: 400_000_000)
-                                    await PreviewResourcePipeline.shared.prefetchFullResolution(for: item)
+                                    await PreviewResourcePipeline.shared.prefetchFullResolution(for: item, intent: .hoverIntent)
+                                    PreviewResourcePipeline.shared.preheatPreview(for: item, intent: .hoverIntent)
                                 }
                             case .ended:
-                                break
+                                PreviewResourcePipeline.shared.cancelPreview(for: item)
                             }
                         }
                     }
@@ -657,11 +658,10 @@ struct HomeView: View {
                             case .active:
                                 Task {
                                     try? await Task.sleep(nanoseconds: 400_000_000)
-                                    await PreviewResourcePipeline.shared.prefetchFullResolution(for: mediaItem)
-                                    PreviewResourcePipeline.shared.preloadVideo(for: mediaItem, preferFullResolution: true)
+                                    PreviewResourcePipeline.shared.preheatPreview(for: mediaItem, intent: .hoverIntent)
                                 }
                             case .ended:
-                                break
+                                PreviewResourcePipeline.shared.cancelPreview(for: mediaItem)
                             }
                         }
                     }

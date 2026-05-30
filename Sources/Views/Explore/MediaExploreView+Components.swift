@@ -124,12 +124,12 @@ extension MediaExploreView {
             ForEach(viewModel.mediaItems) { item in
                 MediaCard(mediaItem: item) {
                     Task {
-                        await PreviewResourcePipeline.shared.prefetchFullResolution(for: item)
+                        await PreviewResourcePipeline.shared.prefetchFullResolution(for: item, intent: .detailFullResolution)
                     }
                     detailItem = WallpaperPreviewItem(media: item)
                 }
                 .onAppear {
-                    PreviewResourcePipeline.shared.preloadVideo(for: item, preferFullResolution: true)
+                    PreviewResourcePipeline.shared.preloadVideo(for: item, preferFullResolution: false, intent: .visibleCard)
                 }
             }
             

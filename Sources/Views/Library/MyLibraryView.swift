@@ -48,7 +48,7 @@ struct MyLibraryView: View {
                                         if wallpaper.type == .video {
                                             let url = wallpaper.filePath.hasPrefix("http") ? URL(string: wallpaper.filePath) : URL(fileURLWithPath: wallpaper.filePath)
                                             if let url = url {
-                                                PreviewResourcePipeline.shared.preloadVideo(url: url)
+                                                PreviewResourcePipeline.shared.preloadVideo(url: url, intent: .detailFullResolution)
                                             }
                                         }
                                         detailWallpaper = wallpaper
@@ -59,10 +59,14 @@ struct MyLibraryView: View {
                                 .background(cardFrameReader(for: wallpaper.id))
                                 .onHover { isHovering in
                                     // hover 时预加载视频
-                                    if isHovering && wallpaper.type == .video {
+                                    if wallpaper.type == .video {
                                         let url = wallpaper.filePath.hasPrefix("http") ? URL(string: wallpaper.filePath) : URL(fileURLWithPath: wallpaper.filePath)
-                                        if let url = url {
-                                            PreviewResourcePipeline.shared.preloadVideo(url: url)
+                                        if let url {
+                                            if isHovering {
+                                                PreviewResourcePipeline.shared.preloadVideo(url: url, intent: .hoverIntent)
+                                            } else {
+                                                PreviewResourcePipeline.shared.cancelPreview(url: url)
+                                            }
                                         }
                                     }
                                 }
@@ -411,7 +415,7 @@ struct MyLibraryView: View {
 
         if !urls.isEmpty {
             NSLog("[MyLibraryView] 预加载 \(urls.count) 个视频")
-            PreviewResourcePipeline.shared.preloadVideos(urls: urls, limit: 12)
+            PreviewResourcePipeline.shared.preloadVideos(urls: urls, limit: 12, intent: .visibleCard)
         }
     }
 
