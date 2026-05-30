@@ -38,7 +38,7 @@ open Build/DerivedData/Build/Products/Debug/PlumWallPaper.app
 | 4 | Home hero-first experience | Passed | Home hero visible quickly, apply primary, Local tab smoke passed | Shelves no longer block hero readiness. |
 | 5 | Detail/Studio state split | Passed | Detail card open, Studio enter/exit, preset save, clean preview enter/exit passed; previous/next controls remained visible | Existing dark glass/artisan gallery behavior preserved. |
 | 6 | Explore source capability filters | Passed | Static tab render smoke passed; source switch behavior verified by capability model/build, with direct live clicking blocked by loginwindow overlay | Inapplicable filters are normalized through `selectSource(_:)` and `applyFilters()`. |
-| 7 | Library management and polish | Pending | Search, all sources, counts, scrollbar, download queue, text | Avoid false draggable scrollbar affordance. |
+| 7 | Library management and polish | Passed | Local tab screenshot smoke passed; download/scrollbar polish verified by build and code path | Local library now starts from all sources and exposes search/counts. |
 
 ## Checkpoint Results
 
@@ -152,3 +152,22 @@ open Build/DerivedData/Build/Products/Debug/PlumWallPaper.app
   - Opened the Static tab through the existing `.plumSwitchMainTab` notification and captured the DerivedData app window.
   - Wallhaven rendered the search bar, source chips, capability summary, unified category/purity/sort/resolution/ratio/color filter surface, and no API key banner.
   - Direct source-chip clicking could not be completed in this run because `loginwindow` was the topmost on-screen owner and intercepted live mouse hit-testing; source switching behavior was therefore checked against the ViewModel normalization code and the successful Debug build rather than overstated as a full click smoke.
+
+### Checkpoint 7
+
+- Changed the Library source model to include `全部来源` and made it the default, so downloaded/imported/online-favorite resources are no longer hidden behind the favorites-only default.
+- Added the main Library search field backed by the existing `searchText`, matching name, resolution, local/remote source, and author.
+- Added count feedback to type filters, source filters, tag filters, and the Library search row.
+- Updated Library empty-state copy so an empty library and an empty filtered result explain different recovery paths.
+- Weakened `ArtisanVerticalScrollView` from a full fake track/thumb affordance into a narrow non-interactive scroll indicator.
+- Polished download feedback: waiting tasks show queue position, waiting downloads can be cancelled from the overlay, failed/cancelled rows can be dismissed, and user-visible download errors are more specific.
+- Moved high-frequency Library and DownloadManager diagnostics behind DEBUG-only logging; progress updates no longer emit a log line for every progress tick.
+- Replaced the remaining English Explore loading copy touched in this pass with Chinese text.
+- Build verification:
+  - `xcodegen generate`: passed.
+  - `xcodebuild -project PlumWallPaper.xcodeproj -scheme PlumWallPaper -configuration Debug -derivedDataPath Build/DerivedData build`: passed after fixing one local opaque-return compile issue in the empty state.
+- Manual smoke:
+  - Confirmed app process path: `Build/DerivedData/Build/Products/Debug/PlumWallPaper.app/Contents/MacOS/PlumWallPaper`.
+  - Opened the Local tab through the existing `.plumSwitchMainTab` notification and captured the DerivedData app window.
+  - Local tab rendered type counts, the search box, `全部来源 / 收藏 / 下载 / 导入` source counts, management actions, import action, and the updated empty state.
+  - The current machine screen remained covered by `loginwindow`, so direct click/drag smoke for search typing, scrollbar motion, and live download queue controls could not be completed without user unlock; these paths were verified by build and code inspection instead of overstating live interaction coverage.

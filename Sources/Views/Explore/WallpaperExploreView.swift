@@ -467,7 +467,7 @@ struct WallpaperExploreView: View {
     private var artisanLoadingIndicator: some View {
         VStack(spacing: 16) {
             CustomProgressView(tint: LiquidGlassColors.primaryPink, scale: 1.2)
-            Text("Fetching inspirations...")
+            Text("正在加载灵感...")
                 .font(.custom("Georgia", size: 12).italic())
                 .foregroundStyle(LiquidGlassColors.textQuaternary)
         }

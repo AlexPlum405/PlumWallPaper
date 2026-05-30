@@ -4,6 +4,9 @@ import SwiftUI
 /// 下载进度显示
 struct DownloadProgressView: View {
     let task: DownloadTask
+    var queuePosition: Int?
+    var onCancel: (() -> Void)?
+    var onDismiss: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -29,10 +32,34 @@ struct DownloadProgressView: View {
 
                 Spacer()
 
-                Text("\(Int((task.progress * 100).rounded()))%")
-                    .font(.system(size: 12, weight: .black, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.82))
-                    .frame(width: 42, alignment: .trailing)
+                HStack(spacing: 8) {
+                    Text(progressText)
+                        .font(.system(size: 12, weight: .black, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.82))
+                        .frame(width: 42, alignment: .trailing)
+
+                    if task.status == .waiting, let onCancel {
+                        Button(action: onCancel) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 10, weight: .black))
+                                .foregroundStyle(.white.opacity(0.78))
+                                .frame(width: 24, height: 24)
+                                .background(Circle().fill(Color.white.opacity(0.08)))
+                        }
+                        .buttonStyle(.plain)
+                        .help("取消排队")
+                    } else if (task.status == .failed || task.status == .cancelled), let onDismiss {
+                        Button(action: onDismiss) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 10, weight: .black))
+                                .foregroundStyle(.white.opacity(0.78))
+                                .frame(width: 24, height: 24)
+                                .background(Circle().fill(Color.white.opacity(0.08)))
+                        }
+                        .buttonStyle(.plain)
+                        .help("关闭提示")
+                    }
+                }
             }
 
             GeometryReader { proxy in
@@ -108,15 +135,27 @@ struct DownloadProgressView: View {
     private var statusText: String {
         switch task.status {
         case .waiting:
-            return "等待中..."
+            if let queuePosition {
+                return "排队中 · 第 \(queuePosition) 位"
+            }
+            return "排队中"
         case .downloading:
-            return "下载中..."
+            return "下载中"
         case .completed:
             return "已完成"
         case .failed:
             return task.error ?? "下载失败"
         case .cancelled:
             return "已取消"
+        }
+    }
+
+    private var progressText: String {
+        switch task.status {
+        case .waiting:
+            return "--"
+        default:
+            return "\(Int((task.progress * 100).rounded()))%"
         }
     }
 }
@@ -128,7 +167,16 @@ struct DownloadProgressOverlay: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             ForEach(downloadManager.activeDownloads.values.sorted(by: { $0.createdAt < $1.createdAt }), id: \.id) { task in
-                DownloadProgressView(task: task)
+                DownloadProgressView(
+                    task: task,
+                    queuePosition: downloadManager.queuePosition(taskId: task.id),
+                    onCancel: {
+                        downloadManager.cancelWaitingDownload(taskId: task.id)
+                    },
+                    onDismiss: {
+                        downloadManager.dismissDownload(taskId: task.id)
+                    }
+                )
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
@@ -136,6 +184,6 @@ struct DownloadProgressOverlay: View {
         .padding(.bottom, 26)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: downloadManager.activeDownloads.count)
-        .allowsHitTesting(false)
+        .allowsHitTesting(true)
     }
 }

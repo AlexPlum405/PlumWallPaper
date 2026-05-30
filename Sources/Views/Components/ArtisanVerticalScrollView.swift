@@ -82,39 +82,27 @@ struct ArtisanVerticalScrollView<Content: View>: View {
             let progress = min(max(scrollOffset / overflow, 0), 1)
             let thumbHeight = min(trackHeight, max(48, trackHeight * viewportHeight / max(contentHeight, viewportHeight)))
             let thumbOffset = (trackHeight - thumbHeight) * progress
-            let trackWidth: CGFloat = isActive ? 10 : 7
-            let visibleOpacity: Double = isActive ? 1 : 0.86
+            let thumbWidth: CGFloat = isActive ? 4 : 3
+            let visibleOpacity: Double = isActive ? 0.82 : 0.48
 
             VStack(spacing: 0) {
                 ZStack(alignment: .top) {
                     Capsule(style: .continuous)
-                        .fill(Color.white.opacity(isActive ? 0.10 : 0.065))
-                        .overlay {
-                            Capsule(style: .continuous)
-                                .stroke(Color.white.opacity(isActive ? 0.18 : 0.10), lineWidth: 0.5)
-                        }
-                        .frame(width: trackWidth, height: trackHeight)
-
-                    Capsule(style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    Color.white.opacity(isActive ? 0.76 : 0.58),
-                                    LiquidGlassColors.primaryPink.opacity(isActive ? 0.82 : 0.64)
+                                    Color.white.opacity(isActive ? 0.42 : 0.28),
+                                    LiquidGlassColors.primaryPink.opacity(isActive ? 0.48 : 0.30)
                                 ],
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
                         )
-                        .overlay {
-                            Capsule(style: .continuous)
-                                .stroke(Color.white.opacity(isActive ? 0.28 : 0.18), lineWidth: 0.5)
-                        }
-                        .frame(width: trackWidth, height: thumbHeight)
+                        .frame(width: thumbWidth, height: thumbHeight)
                         .offset(y: thumbOffset)
-                        .shadow(color: LiquidGlassColors.primaryPink.opacity(isActive ? 0.28 : 0.14), radius: 12, y: 5)
+                        .shadow(color: LiquidGlassColors.primaryPink.opacity(isActive ? 0.12 : 0.06), radius: 7, y: 3)
                 }
-                .frame(width: 24, height: trackHeight, alignment: .top)
+                .frame(width: 10, height: trackHeight, alignment: .top)
 
                 Spacer(minLength: 0)
             }

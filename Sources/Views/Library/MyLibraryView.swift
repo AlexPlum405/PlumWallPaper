@@ -97,17 +97,16 @@ struct MyLibraryView: View {
             preloadVisibleVideos()
             regenerateMissingThumbnailsIfNeeded()
 
-            // 调试日志
-            NSLog("[MyLibraryView] onAppear - 总壁纸数: \(allWallpapers.count)")
+            debugLog("onAppear - 总壁纸数: \(allWallpapers.count)")
             let favoriteCount = allWallpapers.filter { $0.isFavorite }.count
             let onlineCount = allWallpapers.filter { $0.source == .online }.count
             let onlineFavoriteCount = allWallpapers.filter { $0.source == .online && $0.isFavorite }.count
-            NSLog("[MyLibraryView] 收藏数: \(favoriteCount), 在线数: \(onlineCount), 在线收藏数: \(onlineFavoriteCount)")
-            NSLog("[MyLibraryView] 当前筛选: typeFilter=\(viewModel.typeFilter.rawValue), sourceFilter=\(viewModel.sourceFilter.rawValue)")
-            NSLog("[MyLibraryView] 筛选后壁纸数: \(filteredWallpapers.count)")
+            debugLog("收藏数: \(favoriteCount), 在线数: \(onlineCount), 在线收藏数: \(onlineFavoriteCount)")
+            debugLog("当前筛选: typeFilter=\(viewModel.typeFilter.rawValue), sourceFilter=\(viewModel.sourceFilter.rawValue)")
+            debugLog("筛选后壁纸数: \(filteredWallpapers.count)")
         }
         .onChange(of: allWallpapers) { oldValue, newValue in
-            NSLog("[MyLibraryView] allWallpapers 变化: \(oldValue.count) -> \(newValue.count)")
+            debugLog("allWallpapers 变化: \(oldValue.count) -> \(newValue.count)")
             regenerateMissingThumbnailsIfNeeded()
         }
         .onChange(of: filteredWallpapers) { _, _ in
@@ -136,10 +135,9 @@ struct MyLibraryView: View {
         .toast($toast)
     }
 
-    // MARK: - Two-Layer Toolbar
+    // MARK: - Library Toolbar
     private var artisanLibraryToolbar: some View {
         VStack(alignment: .leading, spacing: 20) {
-            // Layer 1: Type Filter (Top Segment)
             HStack(spacing: 0) {
                 ForEach(LibraryViewModel.WallpaperTypeFilter.allCases, id: \.self) { filter in
                     Button {
@@ -149,11 +147,16 @@ struct MyLibraryView: View {
                             selectedIDs.removeAll()
                         }
                     } label: {
-                        Text(filter.rawValue)
-                            .font(.system(size: 13, weight: .semibold))
+                        VStack(spacing: 2) {
+                            Text(filter.rawValue)
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("\(countForTypeFilter(filter))")
+                                .font(.system(size: 10, weight: .black, design: .monospaced))
+                                .foregroundStyle(viewModel.typeFilter == filter ? .white.opacity(0.78) : LiquidGlassColors.textQuaternary)
+                        }
                             .foregroundStyle(viewModel.typeFilter == filter ? .white : LiquidGlassColors.textSecondary)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 36)
+                            .frame(height: 42)
                             .background(
                                 viewModel.typeFilter == filter
                                     ? LiquidGlassColors.primaryPink
@@ -170,12 +173,12 @@ struct MyLibraryView: View {
             )
             .frame(maxWidth: 400)
 
-            // Layer 2: Source Filter + Actions
+            librarySearchRow
+
             HStack(alignment: .center) {
-                // Source Filter Chips
                 HStack(spacing: 12) {
                     ForEach(LibraryViewModel.WallpaperSourceFilter.allCases, id: \.self) { filter in
-                        FilterChip(title: filter.rawValue, isSelected: viewModel.sourceFilter == filter) {
+                        FilterChip(title: "\(filter.rawValue) \(countForSourceFilter(filter))", isSelected: viewModel.sourceFilter == filter) {
                             withAnimation(.gallerySpring) {
                                 viewModel.sourceFilter = filter
                                 isEditMode = false
@@ -291,17 +294,16 @@ struct MyLibraryView: View {
                 }
             }
 
-            // Layer 3: Tag Filter (Only show when there are tags and source is imported)
-            if !existingTags.isEmpty && viewModel.sourceFilter == .imported {
+            if !existingTags.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
-                        FilterChip(title: "全部", isSelected: viewModel.selectedTagFilter == nil) {
+                        FilterChip(title: "全部索引 \(countForTag(nil))", isSelected: viewModel.selectedTagFilter == nil) {
                             withAnimation(.gallerySpring) {
                                 viewModel.selectedTagFilter = nil
                             }
                         }
                         ForEach(existingTags) { tag in
-                            FilterChip(title: tag.name, isSelected: viewModel.selectedTagFilter == tag.name) {
+                            FilterChip(title: "\(tag.name) \(countForTag(tag.name))", isSelected: viewModel.selectedTagFilter == tag.name) {
                                 withAnimation(.gallerySpring) {
                                     viewModel.selectedTagFilter = tag.name
                                 }
@@ -311,6 +313,49 @@ struct MyLibraryView: View {
                 }
                 .padding(.top, 4)
             }
+        }
+    }
+
+    private var librarySearchRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(LiquidGlassColors.textSecondary)
+
+            TextField("搜索名称、分辨率或来源...", text: $viewModel.searchText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(LiquidGlassColors.textPrimary)
+
+            if !viewModel.searchText.isEmpty {
+                Button {
+                    viewModel.searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(LiquidGlassColors.textSecondary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            Divider()
+                .frame(height: 18)
+                .overlay(Color.white.opacity(0.12))
+
+            Text("显示 \(filteredWallpapers.count) / \(allWallpapers.count)")
+                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                .foregroundStyle(LiquidGlassColors.textTertiary)
+        }
+        .padding(.horizontal, 18)
+        .frame(height: 42)
+        .background {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(LiquidGlassColors.surfaceBackground.opacity(0.58))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(LiquidGlassColors.glassBorder, lineWidth: 0.5)
         }
     }
     
@@ -332,16 +377,20 @@ struct MyLibraryView: View {
     
     // MARK: - Empty State
     private var artisanEmptyState: some View {
-        VStack(spacing: 24) {
+        let hasActiveFilters = viewModel.typeFilter != .all
+            || viewModel.sourceFilter != .all
+            || !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || viewModel.selectedTagFilter != nil
+
+        return VStack(spacing: 24) {
             Spacer().frame(height: 100)
-            Image(systemName: "sparkle.magnifyingglass")
+            Image(systemName: allWallpapers.isEmpty ? "tray" : "sparkle.magnifyingglass")
                 .font(.system(size: 48, weight: .ultraLight))
                 .foregroundStyle(LiquidGlassColors.textQuaternary)
-            Text("暂无本地资源")
+            Text(allWallpapers.isEmpty ? "本地库为空" : "未找到匹配资源")
                 .font(.custom("Georgia", size: 20).bold())
-            Text("此处尚无艺术品陈列。")
+            Text(hasActiveFilters ? "调整搜索词或筛选条件后再试。" : "导入、下载或收藏后会显示在这里。")
                 .font(.system(size: 13))
-                .italic()
                 .foregroundStyle(LiquidGlassColors.textQuaternary)
         }
         .frame(maxWidth: .infinity)
@@ -349,10 +398,51 @@ struct MyLibraryView: View {
 
     // MARK: - Computed Properties
     private var filteredWallpapers: [Wallpaper] {
+        libraryItems(
+            typeFilter: viewModel.typeFilter,
+            sourceFilter: viewModel.sourceFilter,
+            searchText: viewModel.searchText,
+            tagFilter: viewModel.selectedTagFilter
+        )
+    }
+
+    private func countForTypeFilter(_ filter: LibraryViewModel.WallpaperTypeFilter) -> Int {
+        libraryItems(
+            typeFilter: filter,
+            sourceFilter: viewModel.sourceFilter,
+            searchText: viewModel.searchText,
+            tagFilter: viewModel.selectedTagFilter
+        ).count
+    }
+
+    private func countForSourceFilter(_ filter: LibraryViewModel.WallpaperSourceFilter) -> Int {
+        libraryItems(
+            typeFilter: viewModel.typeFilter,
+            sourceFilter: filter,
+            searchText: viewModel.searchText,
+            tagFilter: viewModel.selectedTagFilter
+        ).count
+    }
+
+    private func countForTag(_ tag: String?) -> Int {
+        libraryItems(
+            typeFilter: viewModel.typeFilter,
+            sourceFilter: viewModel.sourceFilter,
+            searchText: viewModel.searchText,
+            tagFilter: tag
+        ).count
+    }
+
+    private func libraryItems(
+        typeFilter: LibraryViewModel.WallpaperTypeFilter,
+        sourceFilter: LibraryViewModel.WallpaperSourceFilter,
+        searchText: String,
+        tagFilter: String?
+    ) -> [Wallpaper] {
         var result = allWallpapers
 
         // 1. Apply type filter
-        switch viewModel.typeFilter {
+        switch typeFilter {
         case .all:
             break
         case .image:
@@ -362,7 +452,9 @@ struct MyLibraryView: View {
         }
 
         // 2. Apply source filter
-        switch viewModel.sourceFilter {
+        switch sourceFilter {
+        case .all:
+            break
         case .favorites:
             result = result.filter {
                 WallpaperLibraryStateService.state(for: $0, in: modelContext).isFavorite
@@ -376,12 +468,19 @@ struct MyLibraryView: View {
         }
 
         // 3. Apply search filter
-        if !viewModel.searchText.isEmpty {
-            result = result.filter { $0.name.localizedCaseInsensitiveContains(viewModel.searchText) }
+        let trimmedSearch = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedSearch.isEmpty {
+            result = result.filter { wallpaper in
+                wallpaper.name.localizedCaseInsensitiveContains(trimmedSearch)
+                    || (wallpaper.resolution?.localizedCaseInsensitiveContains(trimmedSearch) ?? false)
+                    || wallpaper.source.rawValue.localizedCaseInsensitiveContains(trimmedSearch)
+                    || (wallpaper.remoteSource?.rawValue.localizedCaseInsensitiveContains(trimmedSearch) ?? false)
+                    || (wallpaper.remoteMetadata?.author?.localizedCaseInsensitiveContains(trimmedSearch) ?? false)
+            }
         }
 
         // 4. Apply tag filter
-        if let tagFilter = viewModel.selectedTagFilter {
+        if let tagFilter {
             result = result.filter { wallpaper in
                 wallpaper.tags.contains { $0.name == tagFilter }
             }
@@ -414,7 +513,7 @@ struct MyLibraryView: View {
         }
 
         if !urls.isEmpty {
-            NSLog("[MyLibraryView] 预加载 \(urls.count) 个视频")
+            debugLog("预加载 \(urls.count) 个视频")
             PreviewResourcePipeline.shared.preloadVideos(urls: urls, limit: 12, intent: .visibleCard)
         }
     }
@@ -443,7 +542,7 @@ struct MyLibraryView: View {
         guard !candidates.isEmpty else { return }
 
         thumbnailRepairAttemptedIDs.formUnion(candidates.map(\.id))
-        NSLog("[MyLibraryView] 发现 \(candidates.count) 个缺失或失效缩略图，开始重建")
+        debugLog("发现 \(candidates.count) 个缺失或失效缩略图，开始重建")
 
         Task(priority: .utility) {
             var repaired: [(id: UUID, path: String)] = []
@@ -466,9 +565,15 @@ struct MyLibraryView: View {
                     wallpaper.thumbnailPath = item.path
                 }
                 try? modelContext.save()
-                NSLog("[MyLibraryView] 已重建 \(repaired.count) 个本地缩略图")
+                debugLog("已重建 \(repaired.count) 个本地缩略图")
             }
         }
+    }
+
+    private func debugLog(_ message: String) {
+        #if DEBUG
+        NSLog("[MyLibraryView] \(message)")
+        #endif
     }
 
     private func isRemotePath(_ path: String) -> Bool {

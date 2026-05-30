@@ -37,7 +37,7 @@ final class DownloadManager: ObservableObject {
         context: ModelContext
     ) async throws -> Wallpaper {
         let remoteId = extractRemoteId(from: item)
-        NSLog("[DownloadManager] 开始下载: \(item.title), 当前运行数: \(runningDownloads.count), remoteId=\(remoteId)")
+        debugLog("开始下载: \(item.title), 当前运行数: \(runningDownloads.count), remoteId=\(remoteId)")
 
         let taskId = UUID().uuidString
 
@@ -54,10 +54,10 @@ final class DownloadManager: ObservableObject {
         )
 
         activeDownloads[taskId] = task
-        NSLog("[DownloadManager] 任务已创建: \(taskId), status=\(task.status), 运行数: \(runningDownloads.count)")
+        debugLog("任务已创建: \(taskId), status=\(task.status), 运行数: \(runningDownloads.count)")
 
         if runningDownloads.count >= maxConcurrentDownloads {
-            NSLog("[DownloadManager] 进入等待队列: \(taskId)")
+            debugLog("进入等待队列: \(taskId)")
             await waitForDownloadSlot(taskId)
         }
 
@@ -70,11 +70,11 @@ final class DownloadManager: ObservableObject {
         updateTask(taskId) { task in
             task.status = .downloading
         }
-        NSLog("[DownloadManager] 任务开始执行: \(taskId), 运行数: \(runningDownloads.count)")
+        debugLog("任务开始执行: \(taskId), 运行数: \(runningDownloads.count)")
 
         defer {
             runningDownloads.remove(taskId)
-            NSLog("[DownloadManager] 任务已移除: \(taskId), 剩余运行数: \(runningDownloads.count)")
+            debugLog("任务已移除: \(taskId), 剩余运行数: \(runningDownloads.count)")
             resumeNextWaitingDownload()
         }
 
@@ -82,7 +82,7 @@ final class DownloadManager: ObservableObject {
             // 生成文件名
             let filename = generateFilename(for: item, quality: quality)
             let destinationURL = downloadsDirectory.appendingPathComponent(filename)
-            NSLog("[DownloadManager] 下载到: \(destinationURL.path)")
+            debugLog("下载到: \(destinationURL.path)")
 
             // 下载文件（启用重试和断点续传）
             try await networkService.downloadFile(
@@ -97,7 +97,7 @@ final class DownloadManager: ObservableObject {
                 }
             )
 
-            NSLog("[DownloadManager] 下载完成，开始导入到 SwiftData")
+            debugLog("下载完成，开始导入到 SwiftData")
 
             // 更新任务状态
             updateTask(taskId) { task in
@@ -113,7 +113,7 @@ final class DownloadManager: ObservableObject {
                 context: context
             )
 
-            NSLog("[DownloadManager] 导入成功: \(wallpaper.name), source=\(wallpaper.source)")
+            debugLog("导入成功: \(wallpaper.name), source=\(wallpaper.source)")
 
             scheduleRemoval(for: taskId)
 
@@ -121,13 +121,21 @@ final class DownloadManager: ObservableObject {
 
             return wallpaper
         } catch {
-            NSLog("[DownloadManager] 下载失败: \(error.localizedDescription)")
+            let message = userFacingDownloadError(error)
+            debugLog("下载失败: \(error.localizedDescription)")
             updateTask(taskId) { task in
                 task.status = .failed
-                task.error = error.localizedDescription
+                task.error = message
             }
             scheduleRemoval(for: taskId, delay: 6)
-            throw error
+            throw NSError(
+                domain: "DownloadManager",
+                code: (error as NSError).code,
+                userInfo: [
+                    NSLocalizedDescriptionKey: message,
+                    NSUnderlyingErrorKey: error
+                ]
+            )
         }
     }
 
@@ -155,6 +163,17 @@ final class DownloadManager: ObservableObject {
 
     func activeTask(taskId: String) -> DownloadTask? {
         activeDownloads[taskId]
+    }
+
+    func queuePosition(taskId: String) -> Int? {
+        guard let index = waitingQueue.firstIndex(of: taskId) else { return nil }
+        return index + 1
+    }
+
+    func dismissDownload(taskId: String) {
+        waitingQueue.removeAll { $0 == taskId }
+        waitingContinuations.removeValue(forKey: taskId)?.resume()
+        activeDownloads.removeValue(forKey: taskId)
     }
 
     func cancelWaitingDownload(taskId: String) {
@@ -325,23 +344,22 @@ final class DownloadManager: ObservableObject {
 
     private func updateTask(_ taskId: String, mutate: (inout DownloadTask) -> Void) {
         guard var task = activeDownloads[taskId] else {
-            NSLog("[DownloadManager] updateTask 失败: 任务不存在 \(taskId)")
+            debugLog("updateTask 失败: 任务不存在 \(taskId)")
             return
         }
-        let oldProgress = task.progress
         let oldStatus = task.status
         mutate(&task)
         activeDownloads[taskId] = task
-        if task.progress != oldProgress || task.status != oldStatus {
-            NSLog("[DownloadManager] updateTask: \(taskId), progress: \(oldProgress) -> \(task.progress), status: \(oldStatus) -> \(task.status)")
+        if task.status != oldStatus {
+            debugLog("任务状态变化: \(taskId), \(oldStatus) -> \(task.status)")
         }
     }
 
     private func scheduleRemoval(for taskId: String, delay: TimeInterval = 3.5) {
-        NSLog("[DownloadManager] scheduleRemoval: \(taskId), delay: \(delay)s")
+        debugLog("scheduleRemoval: \(taskId), delay: \(delay)s")
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-            NSLog("[DownloadManager] 移除任务: \(taskId)")
+            debugLog("移除任务: \(taskId)")
             activeDownloads.removeValue(forKey: taskId)
         }
     }
@@ -364,10 +382,41 @@ final class DownloadManager: ObservableObject {
                 continuation.resume()
                 continue
             }
-            NSLog("[DownloadManager] 唤醒等待任务: \(nextTaskId)")
+            debugLog("唤醒等待任务: \(nextTaskId)")
             continuation.resume()
             break
         }
+    }
+
+    private func userFacingDownloadError(_ error: Error) -> String {
+        if error is CancellationError {
+            return "下载已取消"
+        }
+
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain {
+            switch nsError.code {
+            case NSURLErrorTimedOut:
+                return "下载超时，请检查网络后重试"
+            case NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost:
+                return "网络连接中断，下载未完成"
+            case NSURLErrorCannotFindHost, NSURLErrorCannotConnectToHost, NSURLErrorDNSLookupFailed:
+                return "无法连接到资源服务器"
+            case NSURLErrorCancelled:
+                return "下载已取消"
+            default:
+                break
+            }
+        }
+
+        let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        return message.isEmpty ? "下载失败，请稍后重试" : message
+    }
+
+    private func debugLog(_ message: String) {
+        #if DEBUG
+        NSLog("[DownloadManager] \(message)")
+        #endif
     }
 }
 

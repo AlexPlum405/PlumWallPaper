@@ -15,6 +15,7 @@ final class LibraryViewModel {
     }
 
     enum WallpaperSourceFilter: String, CaseIterable {
+        case all = "全部来源"
         case favorites = "收藏"
         case downloaded = "下载"
         case imported = "导入"
@@ -31,7 +32,7 @@ final class LibraryViewModel {
 
     var selectedTab: LibraryTab = .favorites
     var typeFilter: WallpaperTypeFilter = .all
-    var sourceFilter: WallpaperSourceFilter = .favorites
+    var sourceFilter: WallpaperSourceFilter = .all
     var wallpapers: [Wallpaper] = []
     var selectedWallpaper: Wallpaper?
     var searchText: String = ""
@@ -129,6 +130,8 @@ final class LibraryViewModel {
 
         // 2. Apply source filter
         switch sourceFilter {
+        case .all:
+            break
         case .favorites:
             result = result.filter { wallpaper in
                 guard let modelContext = store?.modelContext else { return wallpaper.isFavorite }
@@ -144,8 +147,15 @@ final class LibraryViewModel {
         }
 
         // 3. Apply search filter
-        if !searchText.isEmpty {
-            result = result.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        let trimmedSearch = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedSearch.isEmpty {
+            result = result.filter { wallpaper in
+                wallpaper.name.localizedCaseInsensitiveContains(trimmedSearch)
+                    || (wallpaper.resolution?.localizedCaseInsensitiveContains(trimmedSearch) ?? false)
+                    || wallpaper.source.rawValue.localizedCaseInsensitiveContains(trimmedSearch)
+                    || (wallpaper.remoteSource?.rawValue.localizedCaseInsensitiveContains(trimmedSearch) ?? false)
+                    || (wallpaper.remoteMetadata?.author?.localizedCaseInsensitiveContains(trimmedSearch) ?? false)
+            }
         }
 
         // 4. Apply tag filter
