@@ -81,9 +81,9 @@ final class LibraryViewModel {
     }
 
     func toggleFavorite(_ wallpaper: Wallpaper) {
-        wallpaper.isFavorite.toggle()
         do {
-            try store?.modelContext.save()
+            guard let modelContext = store?.modelContext else { return }
+            _ = try WallpaperLibraryStateService.toggleFavorite(for: wallpaper, in: modelContext)
             loadWallpapers()
         } catch {
             errorMessage = error.localizedDescription
@@ -130,9 +130,15 @@ final class LibraryViewModel {
         // 2. Apply source filter
         switch sourceFilter {
         case .favorites:
-            result = result.filter { $0.isFavorite }
+            result = result.filter { wallpaper in
+                guard let modelContext = store?.modelContext else { return wallpaper.isFavorite }
+                return WallpaperLibraryStateService.state(for: wallpaper, in: modelContext).isFavorite
+            }
         case .downloaded:
-            result = result.filter { $0.source == .downloaded }
+            result = result.filter { wallpaper in
+                guard let modelContext = store?.modelContext else { return wallpaper.source == .downloaded }
+                return WallpaperLibraryStateService.state(for: wallpaper, in: modelContext).isDownloaded
+            }
         case .imported:
             result = result.filter { $0.source == .imported }
         }

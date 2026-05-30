@@ -732,16 +732,16 @@ struct HomeView: View {
     }
 
     private func isHeroFavorite(_ item: MediaItem) -> Bool {
-        savedWallpapers.contains { $0.remoteId == item.id && $0.isFavorite }
+        heroLibraryState(for: item).isFavorite
     }
 
     private func isHeroDownloaded(_ item: MediaItem) -> Bool {
-        savedWallpapers.contains { wallpaper in
-            wallpaper.remoteId == item.id
-                && wallpaper.source == .downloaded
-                && !isRemotePath(wallpaper.filePath)
-                && FileManager.default.fileExists(atPath: wallpaper.filePath)
-        }
+        heroLibraryState(for: item).isDownloaded
+    }
+
+    private func heroLibraryState(for item: MediaItem) -> WallpaperLibraryState {
+        _ = savedWallpapers.count
+        return WallpaperLibraryStateService.state(for: makeOnlineHeroWallpaper(from: item), in: modelContext)
     }
 
     private func toggleHeroFavorite(_ item: MediaItem) async {
@@ -750,16 +750,10 @@ struct HomeView: View {
         defer { isHeroFavoriteUpdating = false }
 
         do {
-            if let existing = try fetchSavedHeroWallpaper(remoteID: item.id) {
-                if existing.isFavorite && existing.source == .online {
-                    modelContext.delete(existing)
-                    toast = ToastConfig(message: "已取消收藏", type: .info)
-                } else {
-                    existing.isFavorite.toggle()
-                    toast = ToastConfig(message: existing.isFavorite ? "已加入收藏" : "已取消收藏", type: .success)
-                }
-            } else {
-                let wallpaper = makeOnlineHeroWallpaper(from: item)
+            let wallpaper = makeOnlineHeroWallpaper(from: item)
+            let existingState = WallpaperLibraryStateService.state(for: wallpaper, in: modelContext)
+
+            if existingState.persistedWallpaper == nil {
                 NSLog("[HomeView] 创建在线收藏壁纸: \(wallpaper.name), type: \(wallpaper.type), source: \(wallpaper.source), isFavorite: \(wallpaper.isFavorite)")
 
                 // 下载缩略图到本地
@@ -772,21 +766,11 @@ struct HomeView: View {
                         NSLog("[HomeView] ⚠️ 缩略图下载失败，使用远程 URL")
                     }
                 }
-
-                modelContext.insert(wallpaper)
-                NSLog("[HomeView] 壁纸已插入 modelContext")
-                toast = ToastConfig(message: "已加入收藏", type: .success)
             }
 
-            try modelContext.save()
-            NSLog("[HomeView] ✅ modelContext 已保存")
-
-            // 验证保存是否成功
-            if let saved = try fetchSavedHeroWallpaper(remoteID: item.id) {
-                NSLog("[HomeView] ✅ 验证成功，已保存壁纸: \(saved.name), isFavorite: \(saved.isFavorite), source: \(saved.source)")
-            } else {
-                NSLog("[HomeView] ❌ 验证失败，未找到保存的壁纸")
-            }
+            let result = try WallpaperLibraryStateService.toggleFavorite(for: wallpaper, in: modelContext)
+            toast = ToastConfig(message: result.isFavorite ? "已加入收藏" : "已取消收藏", type: result.isFavorite ? .success : .info)
+            NSLog("[HomeView] ✅ 收藏状态已更新: \(item.title), isFavorite=\(result.isFavorite)")
 
             SlideshowScheduler.shared.rebuildPlaylist()
         } catch {
@@ -801,13 +785,9 @@ struct HomeView: View {
             return
         }
 
-        if let existing = DownloadManager.shared.isAlreadyDownloaded(remoteId: item.id, context: modelContext) {
+        if let existing = WallpaperLibraryStateService.downloadedWallpaper(for: makeOnlineHeroWallpaper(from: item), in: modelContext) {
             NSLog("[HomeView] downloadHero 壁纸已存在: \(existing.name)")
-            if existing.isFavorite {
-                toast = ToastConfig(message: "这张壁纸已在本地库中", type: .info)
-            } else {
-                toast = ToastConfig(message: "下载完成，已在本地库中", type: .info)
-            }
+            toast = ToastConfig(message: existing.isFavorite ? "这张壁纸已在本地库中" : "下载完成，已在本地库中", type: .info)
             return
         }
 
@@ -830,7 +810,8 @@ struct HomeView: View {
     }
 
     private func downloadHeroIfNeeded(_ item: MediaItem) async throws -> Wallpaper {
-        if let existing = DownloadManager.shared.isAlreadyDownloaded(remoteId: item.id, context: modelContext) {
+        let wallpaper = makeOnlineHeroWallpaper(from: item)
+        if let existing = WallpaperLibraryStateService.downloadedWallpaper(for: wallpaper, in: modelContext) {
             return existing
         }
 
@@ -838,12 +819,18 @@ struct HomeView: View {
             throw HomeHeroActionError.missingDownloadURL
         }
 
-        return try await DownloadManager.shared.downloadWallpaper(
+        switch try await WallpaperLibraryStateService.downloadWallpaper(
             item: .media(item),
             quality: bestHeroQualityLabel(for: item),
             downloadURL: downloadURL,
             context: modelContext
-        )
+        ) {
+        case .alreadyLocal(let existing):
+            guard let existing else { throw HomeHeroActionError.missingDownloadURL }
+            return existing
+        case .downloaded(let downloaded):
+            return downloaded
+        }
     }
 
     private func downloadRemoteFromCard(_ wallpaper: RemoteWallpaper) async {
@@ -852,13 +839,14 @@ struct HomeView: View {
             return
         }
 
-        if DownloadManager.shared.isAlreadyDownloaded(remoteId: wallpaper.id, context: modelContext) != nil {
+        if let existing = WallpaperLibraryStateService.downloadedWallpaper(for: WallpaperPreviewItem(remote: wallpaper).makeWallpaper(), in: modelContext) {
+            NSLog("[HomeView] 远程壁纸已下载: \(existing.name)")
             toast = ToastConfig(message: "这张壁纸已在本地库中", type: .info)
             return
         }
 
         do {
-            _ = try await DownloadManager.shared.downloadWallpaper(
+            _ = try await WallpaperLibraryStateService.downloadWallpaper(
                 item: .remote(wallpaper),
                 quality: wallpaper.resolution,
                 downloadURL: url,
@@ -872,7 +860,8 @@ struct HomeView: View {
     }
 
     private func downloadMediaFromCard(_ item: MediaItem) async {
-        if DownloadManager.shared.isAlreadyDownloaded(remoteId: item.id, context: modelContext) != nil {
+        if let existing = WallpaperLibraryStateService.downloadedWallpaper(for: makeOnlineHeroWallpaper(from: item), in: modelContext) {
+            NSLog("[HomeView] 动态壁纸已下载: \(existing.name)")
             toast = ToastConfig(message: "这张壁纸已在本地库中", type: .info)
             return
         }
@@ -883,7 +872,7 @@ struct HomeView: View {
         }
 
         do {
-            _ = try await DownloadManager.shared.downloadWallpaper(
+            _ = try await WallpaperLibraryStateService.downloadWallpaper(
                 item: .media(item),
                 quality: bestHeroQualityLabel(for: item),
                 downloadURL: downloadURL,
@@ -894,16 +883,6 @@ struct HomeView: View {
         } catch {
             toast = ToastConfig(message: "下载失败: \(error.localizedDescription)", type: .error)
         }
-    }
-
-    private func fetchSavedHeroWallpaper(remoteID: String) throws -> Wallpaper? {
-        let descriptor = FetchDescriptor<Wallpaper>(
-            predicate: #Predicate { wallpaper in
-                wallpaper.remoteId == remoteID
-            },
-            sortBy: [SortDescriptor(\.importDate, order: .reverse)]
-        )
-        return try modelContext.fetch(descriptor).first
     }
 
     private func makeOnlineHeroWallpaper(from item: MediaItem) -> Wallpaper {
@@ -936,13 +915,6 @@ struct HomeView: View {
                 originalURL: item.pageURL.absoluteString
             )
         )
-    }
-
-    private func isRemotePath(_ path: String) -> Bool {
-        guard let url = URL(string: path), let scheme = url.scheme?.lowercased() else {
-            return false
-        }
-        return scheme == "http" || scheme == "https"
     }
 
     /// 下载远程缩略图到本地缓存
@@ -1010,21 +982,12 @@ struct HomeView: View {
     }
 
     private func applyDownloadedWallpaper(_ wallpaper: Wallpaper, targetScreenId: String?) async throws -> String {
-        let settings = try PreferencesStore(modelContext: modelContext).fetchSettings()
-        let message = try await WallpaperTopologyCoordinator.shared.apply(
-            wallpaper: wallpaper,
+        let message = try await WallpaperLibraryStateService.applyLocalWallpaper(
+            wallpaper,
             effects: nil,
-            settings: settings,
-            targetScreenId: targetScreenId
+            targetScreenId: targetScreenId,
+            in: modelContext
         )
-        RestoreManager.shared.saveSession(
-            mapping: WallpaperTopologyCoordinator.shared.sessionMapping(
-                for: wallpaper.id,
-                settings: settings,
-                targetScreenId: targetScreenId
-            )
-        )
-        SlideshowScheduler.shared.onWallpaperChanged(wallpaper.id)
         return wallpaper.source == .downloaded ? "已下载并\(message)" : message
     }
 

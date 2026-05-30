@@ -82,7 +82,8 @@ final class WallpaperDetailViewModel: ObservableObject {
     }
 
     func toggleFavorite(for wallpaper: Wallpaper, in modelContext: ModelContext) throws -> Bool {
-        let newFavoriteState = try FavoriteService.toggleFavorite(for: wallpaper, in: modelContext)
+        let result = try WallpaperLibraryStateService.toggleFavorite(for: wallpaper, in: modelContext)
+        let newFavoriteState = result.isFavorite
         wallpaper.isFavorite = newFavoriteState
         isFavoriteDisplayed = newFavoriteState
         NSLog("[WallpaperDetailViewModel] ✅ 收藏状态已保存: \(wallpaper.isFavorite), remoteId: \(wallpaper.remoteId ?? "nil")")
@@ -90,39 +91,30 @@ final class WallpaperDetailViewModel: ObservableObject {
     }
 
     func syncFavoriteDisplayState(for wallpaper: Wallpaper, in modelContext: ModelContext) {
-        do {
-            if let persisted = try FavoriteService.persistedWallpaper(for: wallpaper, in: modelContext) {
-                isFavoriteDisplayed = persisted.isFavorite
-                wallpaper.isFavorite = persisted.isFavorite
-            } else {
-                isFavoriteDisplayed = wallpaper.isFavorite
-            }
-        } catch {
-            isFavoriteDisplayed = wallpaper.isFavorite
-            NSLog("[WallpaperDetailViewModel] ⚠️ 收藏状态同步失败: \(error.localizedDescription)")
-        }
+        let state = WallpaperLibraryStateService.state(for: wallpaper, in: modelContext)
+        isFavoriteDisplayed = state.isFavorite
+        wallpaper.isFavorite = state.isFavorite
     }
 
     func downloadWallpaper(_ wallpaper: Wallpaper, in modelContext: ModelContext) async throws -> DetailDownloadResult {
-        guard let remoteURL = Self.downloadURL(from: wallpaper.filePath) else {
-            return .alreadyLocal
-        }
-
-        if let remoteId = wallpaper.remoteId,
-           DownloadManager.shared.isAlreadyDownloaded(remoteId: remoteId, context: modelContext) != nil {
+        guard let remoteURL = WallpaperLibraryStateService.remoteDownloadURLForApply(wallpaper) else {
             return .alreadyLocal
         }
 
         isDownloading = true
         defer { isDownloading = false }
 
-        let downloaded = try await DownloadManager.shared.downloadWallpaper(
+        switch try await WallpaperLibraryStateService.downloadWallpaper(
             item: .local(wallpaper),
             quality: wallpaper.resolution ?? "Original",
             downloadURL: remoteURL,
             context: modelContext
-        )
-        return .downloaded(downloaded)
+        ) {
+        case .alreadyLocal:
+            return .alreadyLocal
+        case .downloaded(let downloaded):
+            return .downloaded(downloaded)
+        }
     }
 
     func applyWallpaper(
@@ -134,11 +126,8 @@ final class WallpaperDetailViewModel: ObservableObject {
         isApplying = true
         defer { isApplying = false }
 
-        let localResult = try await ensureLocalWallpaperForApply(wallpaper, in: modelContext)
+        let localResult = try await WallpaperLibraryStateService.ensureLocalWallpaperForApply(wallpaper, in: modelContext)
         let localWallpaper = localResult.wallpaper
-
-        let preferencesStore = PreferencesStore(modelContext: modelContext)
-        let settings = try preferencesStore.fetchSettings()
 
         let renderedURL: URL
         if localWallpaper.type == .image || localWallpaper.type == .heic {
@@ -150,22 +139,13 @@ final class WallpaperDetailViewModel: ObservableObject {
 
         NSLog("[WallpaperDetailViewModel] 应用壁纸，targetScreenId=\(targetScreenId ?? "nil")")
 
-        let message = try await WallpaperTopologyCoordinator.shared.apply(
-            wallpaper: localWallpaper,
+        let message = try await WallpaperLibraryStateService.applyLocalWallpaper(
+            localWallpaper,
             renderedURL: renderedURL,
             effects: effects,
-            settings: settings,
-            targetScreenId: targetScreenId
+            targetScreenId: targetScreenId,
+            in: modelContext
         )
-
-        RestoreManager.shared.saveSession(
-            mapping: WallpaperTopologyCoordinator.shared.sessionMapping(
-                for: localWallpaper.id,
-                settings: settings,
-                targetScreenId: targetScreenId
-            )
-        )
-        SlideshowScheduler.shared.onWallpaperChanged(localWallpaper.id)
 
         return DetailApplyResult(
             wallpaper: localWallpaper,
@@ -174,52 +154,6 @@ final class WallpaperDetailViewModel: ObservableObject {
         )
     }
 
-    private func ensureLocalWallpaperForApply(_ wallpaper: Wallpaper, in modelContext: ModelContext) async throws -> DetailLocalWallpaperResult {
-        if !Self.isRemotePath(wallpaper.filePath), FileManager.default.fileExists(atPath: wallpaper.filePath) {
-            return DetailLocalWallpaperResult(wallpaper: wallpaper, downloadedWallpaper: nil)
-        }
-
-        if let remoteId = wallpaper.remoteId,
-           let downloaded = DownloadManager.shared.isAlreadyDownloaded(remoteId: remoteId, context: modelContext) {
-            return DetailLocalWallpaperResult(wallpaper: downloaded, downloadedWallpaper: nil)
-        }
-
-        guard let remoteURL = Self.remoteDownloadURLForApply(wallpaper) else {
-            throw NSError(domain: "PlumWallPaper", code: 1, userInfo: [NSLocalizedDescriptionKey: "找不到可下载的远程地址"])
-        }
-
-        let downloaded = try await DownloadManager.shared.downloadWallpaper(
-            item: .local(wallpaper),
-            quality: wallpaper.resolution ?? "Original",
-            downloadURL: remoteURL,
-            context: modelContext
-        )
-        return DetailLocalWallpaperResult(wallpaper: downloaded, downloadedWallpaper: downloaded)
-    }
-
-    private static func remoteDownloadURLForApply(_ wallpaper: Wallpaper) -> URL? {
-        let preferredPath = highQualityVideoPathForApply(wallpaper) ?? wallpaper.filePath
-        guard isRemotePath(preferredPath) else { return nil }
-        return URL(string: preferredPath)
-    }
-
-    private static func highQualityVideoPathForApply(_ wallpaper: Wallpaper) -> String? {
-        guard wallpaper.type == .video,
-              let quality = wallpaper.downloadQuality,
-              isRemotePath(quality)
-        else { return nil }
-        return quality
-    }
-
-    private static func downloadURL(from path: String) -> URL? {
-        guard let url = URL(string: path), url.scheme != nil else { return nil }
-        return url
-    }
-
-    private static func isRemotePath(_ path: String) -> Bool {
-        guard let url = URL(string: path), let scheme = url.scheme?.lowercased() else { return false }
-        return scheme == "http" || scheme == "https"
-    }
 }
 
 enum DetailDownloadResult {
@@ -231,9 +165,4 @@ struct DetailApplyResult {
     let wallpaper: Wallpaper
     let downloadedWallpaper: Wallpaper?
     let message: String
-}
-
-private struct DetailLocalWallpaperResult {
-    let wallpaper: Wallpaper
-    let downloadedWallpaper: Wallpaper?
 }

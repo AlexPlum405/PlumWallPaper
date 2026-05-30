@@ -360,9 +360,13 @@ struct MyLibraryView: View {
         // 2. Apply source filter
         switch viewModel.sourceFilter {
         case .favorites:
-            result = result.filter { $0.isFavorite }
+            result = result.filter {
+                WallpaperLibraryStateService.state(for: $0, in: modelContext).isFavorite
+            }
         case .downloaded:
-            result = result.filter { $0.source == .downloaded }
+            result = result.filter {
+                WallpaperLibraryStateService.state(for: $0, in: modelContext).isDownloaded
+            }
         case .imported:
             result = result.filter { $0.source == .imported }
         }
@@ -603,7 +607,7 @@ struct MyLibraryView: View {
     private func batchRemoveFavorites() {
         let wallpapersToUpdate = viewModel.wallpapers.filter { selectedIDs.contains($0.id) }
         for wallpaper in wallpapersToUpdate {
-            if wallpaper.isFavorite {
+            if WallpaperLibraryStateService.state(for: wallpaper, in: modelContext).isFavorite {
                 viewModel.toggleFavorite(wallpaper)
             }
         }

@@ -36,6 +36,7 @@
 		308D3F40A13F062CD98499FA /* ToastConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081B839D96AF14B55C73861C /* ToastConfig.swift */; };
 		30BF26C9C9ED63340EBCD5EA /* DisplayTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39AD564A5A466B536DB52D44 /* DisplayTab.swift */; };
 		32D1F0EB6ABF6E8C0C0D553F /* DetailStudioPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EF0D6AE164443C0A44FF053 /* DetailStudioPanel.swift */; };
+		33F6BB6A11E2A63979CA9FA8 /* WallpaperLibraryStateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9D6BB3BC6C36C58E17B030 /* WallpaperLibraryStateService.swift */; };
 		347EFB61A9E4F100371435A9 /* VideoPreloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0469843B0E6F66AC2BCDE65 /* VideoPreloader.swift */; };
 		36B75CA9ED81F7E12C8F6192 /* VideoEnhancementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5965C1B298C8ED0DC02B2F /* VideoEnhancementService.swift */; };
 		374315EC6C08D27710FF0034 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23B0315556C33A01E96549F0 /* NetworkMonitor.swift */; };
@@ -239,6 +240,7 @@
 		B8297452AB90904450BEEC5A /* WallhavenAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallhavenAPI.swift; sourceTree = "<group>"; };
 		B8484AB07B11B77102176EFD /* ShaderEditorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShaderEditorViewModel.swift; sourceTree = "<group>"; };
 		B8D1BF5BD4C0DD734EB906AE /* DetailPreviewCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailPreviewCanvas.swift; sourceTree = "<group>"; };
+		BA9D6BB3BC6C36C58E17B030 /* WallpaperLibraryStateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperLibraryStateService.swift; sourceTree = "<group>"; };
 		BBE5FA06BA9E7ED726E742D2 /* ThumbnailGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailGenerator.swift; sourceTree = "<group>"; };
 		BE95751F513A84047599EEB8 /* HomeFeedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeFeedViewModel.swift; sourceTree = "<group>"; };
 		BF0004BC9A5095910856C311 /* WallhavenService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallhavenService.swift; sourceTree = "<group>"; };
@@ -575,6 +577,7 @@
 				3CF4A64034B657B80550F814 /* VideoCacheManager.swift */,
 				1F5965C1B298C8ED0DC02B2F /* VideoEnhancementService.swift */,
 				C0469843B0E6F66AC2BCDE65 /* VideoPreloader.swift */,
+				BA9D6BB3BC6C36C58E17B030 /* WallpaperLibraryStateService.swift */,
 				1CB6CD0FA8F444B530729322 /* WallpaperSetter.swift */,
 			);
 			path = Services;
@@ -831,6 +834,7 @@
 				E165E112EB3B39F21AE86D85 /* WallpaperDisplayItem.swift in Sources */,
 				57407784ADD7C2D72970B8D0 /* WallpaperExploreView.swift in Sources */,
 				E6187A271617062249685C5B /* WallpaperExploreViewModel.swift in Sources */,
+				33F6BB6A11E2A63979CA9FA8 /* WallpaperLibraryStateService.swift in Sources */,
 				86DEE792862E43B6BE263B5F /* WallpaperPreviewItem.swift in Sources */,
 				00FF35F57B5642A85AE18431 /* WallpaperRepository.swift in Sources */,
 				4079067352F1802C1FA00485 /* WallpaperSetter.swift in Sources */,

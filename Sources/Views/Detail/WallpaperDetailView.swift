@@ -120,6 +120,15 @@ struct WallpaperDetailView: View {
             viewModel.syncFavoriteDisplayState(for: wallpaper, in: modelContext)
             loadSavedStudioPreset()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .plumLibraryStateChanged)) { notification in
+            guard let stateId = notification.object as? String else {
+                viewModel.syncFavoriteDisplayState(for: wallpaper, in: modelContext)
+                return
+            }
+            if stateId == wallpaper.remoteId || stateId == wallpaper.id.uuidString {
+                viewModel.syncFavoriteDisplayState(for: wallpaper, in: modelContext)
+            }
+        }
         .confirmationDialog("选择要应用的屏幕", isPresented: $isChoosingApplyScreen, titleVisibility: .visible) {
             ForEach(DisplayManager.shared.availableScreens) { screen in
                 Button("\(screen.name) · \(screen.resolution)") {

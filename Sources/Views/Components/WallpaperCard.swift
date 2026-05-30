@@ -68,6 +68,15 @@ struct WallpaperCard: View {
                 downloadStatusVersion += 1
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .plumLibraryStateChanged)) { notification in
+            guard let stateId = notification.object as? String else {
+                downloadStatusVersion += 1
+                return
+            }
+            if stateId == item.remoteId || stateId == item.id {
+                downloadStatusVersion += 1
+            }
+        }
     }
     
     // MARK: - 图片区域 (Gallery Canvas)
@@ -88,7 +97,7 @@ struct WallpaperCard: View {
                     stateChip(text: "动态", icon: "play.fill", color: LiquidGlassColors.primaryPink)
                 }
 
-                if item.source == .downloaded {
+                if libraryState.isDownloaded {
                     stateChip(text: "本地", icon: "internaldrive", color: LiquidGlassColors.onlineGreen)
                 }
             }
@@ -106,7 +115,7 @@ struct WallpaperCard: View {
                             .background(.ultraThinMaterial, in: Circle())
                     }
 
-                    if item.isFavorite {
+                    if libraryState.isFavorite {
                         Image(systemName: "heart.fill")
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundStyle(LiquidGlassColors.primaryPink)
@@ -195,10 +204,12 @@ struct WallpaperCard: View {
     }
 
     private var isDownloaded: Bool {
-        guard let remoteId = item.remoteId else {
-            return item.source == .downloaded
-        }
-        return DownloadManager.shared.isAlreadyDownloaded(remoteId: remoteId, context: modelContext) != nil || item.source == .downloaded
+        libraryState.isDownloaded
+    }
+
+    private var libraryState: WallpaperLibraryState {
+        _ = downloadStatusVersion
+        return WallpaperLibraryStateService.state(for: item, in: modelContext)
     }
 
     private var sourceLabel: String {
