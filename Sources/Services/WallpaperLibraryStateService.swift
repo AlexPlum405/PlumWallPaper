@@ -4,9 +4,14 @@ import SwiftData
 struct WallpaperLibraryState {
     let persistedWallpaper: Wallpaper?
     let downloadedWallpaper: Wallpaper?
+    let downloadTask: DownloadTask?
     let isFavorite: Bool
     let isDownloaded: Bool
     let isLocal: Bool
+
+    var isDownloadActive: Bool {
+        downloadTask?.status == .waiting || downloadTask?.status == .downloading
+    }
 }
 
 struct WallpaperFavoriteActionResult {
@@ -16,6 +21,7 @@ struct WallpaperFavoriteActionResult {
 
 enum WallpaperDownloadActionResult {
     case alreadyLocal(Wallpaper?)
+    case alreadyQueued(DownloadTask)
     case downloaded(Wallpaper)
 }
 
@@ -34,11 +40,13 @@ enum WallpaperLibraryStateService {
         let persisted = try? FavoriteService.persistedWallpaper(for: wallpaper, in: modelContext)
         let favorite = try? favoriteWallpaper(for: wallpaper, in: modelContext)
         let downloaded = downloadedWallpaper(for: wallpaper, in: modelContext)
+        let downloadTask = DownloadManager.shared.activeTask(remoteId: wallpaper.remoteId)
         let local = isLocalWallpaper(wallpaper) || downloaded != nil
 
         return WallpaperLibraryState(
             persistedWallpaper: persisted,
             downloadedWallpaper: downloaded,
+            downloadTask: downloadTask,
             isFavorite: favorite != nil || persisted?.isFavorite == true || wallpaper.isFavorite,
             isDownloaded: downloaded != nil || wallpaper.source == .downloaded && isLocalWallpaper(wallpaper),
             isLocal: local
@@ -68,6 +76,9 @@ enum WallpaperLibraryStateService {
         if let remoteId = remoteId(for: item),
            let existing = DownloadManager.shared.isAlreadyDownloaded(remoteId: remoteId, context: context) {
             return .alreadyLocal(existing)
+        }
+        if let activeTask = DownloadManager.shared.activeTask(remoteId: remoteId(for: item)) {
+            return .alreadyQueued(activeTask)
         }
 
         let downloaded = try await DownloadManager.shared.downloadWallpaper(
@@ -108,6 +119,8 @@ enum WallpaperLibraryStateService {
                 throw NSError(domain: "PlumWallPaper", code: 2, userInfo: [NSLocalizedDescriptionKey: "本地壁纸状态异常"])
             }
             return WallpaperLocalResolutionResult(wallpaper: existing, downloadedWallpaper: nil)
+        case .alreadyQueued:
+            throw DownloadError.alreadyInProgress
         case .downloaded(let downloaded):
             return WallpaperLocalResolutionResult(wallpaper: downloaded, downloadedWallpaper: downloaded)
         }

@@ -10,6 +10,7 @@ struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Wallpaper.importDate, order: .reverse) private var savedWallpapers: [Wallpaper]
     @StateObject var viewModel = HomeFeedViewModel()
+    @StateObject private var downloadManager = DownloadManager.shared
     @State var currentHeroIndex = 0
     @State private var timer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
     @State private var isApplying = false
@@ -422,13 +423,13 @@ struct HomeView: View {
 
                         Button(action: { Task { await downloadHero(item) } }) {
                             HStack(spacing: 6) {
-                                if isHeroDownloading {
+                                if isHeroDownloadBusy(item) {
                                     CustomProgressView(tint: LiquidGlassColors.textSecondary, scale: 0.55)
                                 } else {
-                                    Image(systemName: isHeroDownloaded(item) ? "checkmark" : "arrow.down.to.line.compact")
+                                    Image(systemName: heroDownloadIcon(for: item))
                                         .font(.system(size: 11, weight: .semibold))
                                 }
-                                Text(isHeroDownloaded(item) ? "已下载" : "下载原片")
+                                Text(heroDownloadTitle(for: item))
                                     .font(.system(size: 12, weight: .medium))
                             }
                             .foregroundStyle(.white.opacity(0.7))
@@ -437,7 +438,7 @@ struct HomeView: View {
                             .background(Capsule().fill(Color.black.opacity(0.18)))
                         }
                         .buttonStyle(.plain)
-                        .disabled(isHeroDownloading)
+                        .disabled(isHeroDownloadBusy(item))
 
                         heroActionIconButton(
                             icon: isHeroFavorite(item) ? "heart.fill" : "heart",
@@ -739,8 +740,29 @@ struct HomeView: View {
         heroLibraryState(for: item).isDownloaded
     }
 
+    private func isHeroDownloadBusy(_ item: MediaItem) -> Bool {
+        isHeroDownloading || heroLibraryState(for: item).isDownloadActive
+    }
+
+    private func heroDownloadTitle(for item: MediaItem) -> String {
+        let state = heroLibraryState(for: item)
+        switch state.downloadTask?.status {
+        case .waiting:
+            return "等待下载"
+        case .downloading:
+            return "下载中"
+        default:
+            return state.isDownloaded ? "已下载" : "下载原片"
+        }
+    }
+
+    private func heroDownloadIcon(for item: MediaItem) -> String {
+        heroLibraryState(for: item).isDownloaded ? "checkmark" : "arrow.down.to.line.compact"
+    }
+
     private func heroLibraryState(for item: MediaItem) -> WallpaperLibraryState {
         _ = savedWallpapers.count
+        _ = downloadManager.activeDownloads.count
         return WallpaperLibraryStateService.state(for: makeOnlineHeroWallpaper(from: item), in: modelContext)
     }
 
@@ -828,6 +850,8 @@ struct HomeView: View {
         case .alreadyLocal(let existing):
             guard let existing else { throw HomeHeroActionError.missingDownloadURL }
             return existing
+        case .alreadyQueued:
+            throw DownloadError.alreadyInProgress
         case .downloaded(let downloaded):
             return downloaded
         }

@@ -112,6 +112,8 @@ final class WallpaperDetailViewModel: ObservableObject {
         ) {
         case .alreadyLocal:
             return .alreadyLocal
+        case .alreadyQueued:
+            throw DownloadError.alreadyInProgress
         case .downloaded(let downloaded):
             return .downloaded(downloaded)
         }

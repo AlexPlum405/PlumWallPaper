@@ -9,6 +9,7 @@ struct WallpaperCard: View {
     var onDownload: (() -> Void)? = nil
 
     @Environment(\.modelContext) private var modelContext
+    @ObservedObject private var downloadManager = DownloadManager.shared
     @State private var isHovered = false
     @State private var downloadStatusVersion = 0
     private let cardCornerRadius: CGFloat = 20
@@ -141,13 +142,15 @@ struct WallpaperCard: View {
                 VStack {
                     HStack {
                         Button(action: { onDownload?() }) {
-                            Image(systemName: isDownloaded ? "checkmark.circle.fill" : "arrow.down.to.line.compact")
+                            Image(systemName: downloadButtonIcon)
                                 .font(.system(size: 14, weight: .bold))
                                 .foregroundStyle(isDownloaded ? LiquidGlassColors.onlineGreen : .white.opacity(0.9))
                                 .frame(width: 30, height: 30)
                                 .background(Circle().fill(Color.black.opacity(0.28)))
                         }
                         .buttonStyle(.plain)
+                        .disabled(libraryState.isDownloadActive || isDownloaded)
+                        .help(downloadButtonHelp)
                         .opacity(isHovered ? 1 : 0)
 
                         Spacer()
@@ -207,8 +210,31 @@ struct WallpaperCard: View {
         libraryState.isDownloaded
     }
 
+    private var downloadButtonIcon: String {
+        switch libraryState.downloadTask?.status {
+        case .waiting:
+            return "clock"
+        case .downloading:
+            return "arrow.down.circle.fill"
+        default:
+            return isDownloaded ? "checkmark.circle.fill" : "arrow.down.to.line.compact"
+        }
+    }
+
+    private var downloadButtonHelp: String {
+        switch libraryState.downloadTask?.status {
+        case .waiting:
+            return "等待下载"
+        case .downloading:
+            return "下载中"
+        default:
+            return isDownloaded ? "已下载" : "下载原片"
+        }
+    }
+
     private var libraryState: WallpaperLibraryState {
         _ = downloadStatusVersion
+        _ = downloadManager.activeDownloads.count
         return WallpaperLibraryStateService.state(for: item, in: modelContext)
     }
 

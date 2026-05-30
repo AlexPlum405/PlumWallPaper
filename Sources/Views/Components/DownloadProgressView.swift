@@ -82,6 +82,10 @@ struct DownloadProgressView: View {
                 Image(systemName: "xmark")
                     .font(.system(size: 15, weight: .black))
                     .foregroundStyle(.red)
+            case .cancelled:
+                Image(systemName: "minus")
+                    .font(.system(size: 15, weight: .black))
+                    .foregroundStyle(.white.opacity(0.62))
             case .waiting:
                 Image(systemName: "clock")
                     .font(.system(size: 15, weight: .bold))
@@ -111,6 +115,8 @@ struct DownloadProgressView: View {
             return "已完成"
         case .failed:
             return task.error ?? "下载失败"
+        case .cancelled:
+            return "已取消"
         }
     }
 }

@@ -33,7 +33,7 @@ open Build/DerivedData/Build/Products/Debug/PlumWallPaper.app
 |---|---|---|---|---|
 | 0 | Baseline and evidence | Passed | Not required | No production code change. |
 | 1 | Unified wallpaper action/library state | Passed | Launch/local library smoke passed | Favorite/download/apply now route through `WallpaperLibraryStateService`. |
-| 2 | Download queue and item feedback | Pending | Multiple downloads queue instead of failing | Cards, hero, and detail dock should show the same per-item status. |
+| 2 | Download queue and item feedback | Passed | Launch/local library smoke passed | Concurrent overflow now waits in queue instead of throwing immediately. |
 | 3 | Preview resource pipeline | Pending | Hero first frame, card hover, detail full-res intent | Full-res work should be deduped and tied to explicit priority/intent. |
 | 4 | Home hero-first experience | Pending | Launch Home, hero visible quickly, apply primary | Shelves must not block hero readiness. |
 | 5 | Detail/Studio state split | Pending | Previous/next, clean preview, Studio enter/exit, preset save | Keep existing dark glass/artisan gallery behavior. |
@@ -63,6 +63,21 @@ open Build/DerivedData/Build/Products/Debug/PlumWallPaper.app
 - Added `WallpaperLibraryStateService` as the compatibility layer for persisted state, favorite state, downloaded state, download execution, local resolution before apply, and apply side effects.
 - Updated Home hero/card downloads, Detail actions, wallpaper cards, and Library favorite/download filtering to consume the unified service instead of each surface directly querying `DownloadManager`, `FavoriteService`, or `WallpaperTopologyCoordinator`.
 - Kept the existing SwiftData model and existing `DownloadManager` implementation unchanged; queue semantics remain for checkpoint 2.
+- Build verification:
+  - `xcodegen generate`: passed.
+  - `xcodebuild -project PlumWallPaper.xcodeproj -scheme PlumWallPaper -configuration Debug -derivedDataPath Build/DerivedData build`: passed.
+- Manual smoke:
+  - Confirmed app launched from `Build/DerivedData/Build/Products/Debug/PlumWallPaper.app/Contents/MacOS/PlumWallPaper`.
+  - Opened the Local tab; Library toolbar and empty state rendered without crash.
+  - Quit the DerivedData app after smoke.
+
+### Checkpoint 2
+
+- Updated `DownloadManager` so requests beyond `maxConcurrentDownloads` enter a waiting queue instead of immediately throwing `tooManyDownloads`.
+- Added `remoteId` to `DownloadTask` and exposed active task lookup by remote id for per-item feedback.
+- Added duplicate in-flight detection through `WallpaperLibraryStateService`: repeated downloads for the same remote item now return the active queued/running task instead of enqueueing another copy.
+- Updated Home hero and wallpaper cards to reflect waiting/downloading state from the shared per-item task state.
+- Added a cancelled state for waiting tasks and kept the existing completed/failed removal behavior.
 - Build verification:
   - `xcodegen generate`: passed.
   - `xcodebuild -project PlumWallPaper.xcodeproj -scheme PlumWallPaper -configuration Debug -derivedDataPath Build/DerivedData build`: passed.

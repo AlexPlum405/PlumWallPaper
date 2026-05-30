@@ -11,6 +11,8 @@ final class DownloadManager: ObservableObject {
 
     let maxConcurrentDownloads = 2
     private var runningDownloads: Set<String> = []
+    private var waitingQueue: [String] = []
+    private var waitingContinuations: [String: CheckedContinuation<Void, Never>] = [:]
 
     private let networkService = NetworkService.shared
     private let fileManager = FileManager.default
@@ -34,34 +36,46 @@ final class DownloadManager: ObservableObject {
         downloadURL: URL,
         context: ModelContext
     ) async throws -> Wallpaper {
-        NSLog("[DownloadManager] 开始下载: \(item.title), 当前运行数: \(runningDownloads.count)")
-
-        // 检查并发限制
-        if runningDownloads.count >= maxConcurrentDownloads {
-            NSLog("[DownloadManager] 达到并发限制: \(runningDownloads.count)/\(maxConcurrentDownloads)")
-            throw DownloadError.tooManyDownloads
-        }
+        let remoteId = extractRemoteId(from: item)
+        NSLog("[DownloadManager] 开始下载: \(item.title), 当前运行数: \(runningDownloads.count), remoteId=\(remoteId)")
 
         let taskId = UUID().uuidString
 
         // 创建下载任务
         let task = DownloadTask(
             id: taskId,
+            remoteId: remoteId,
             title: item.title,
             quality: quality,
             totalSize: 0,
             downloadedSize: 0,
             progress: 0,
-            status: .downloading
+            status: runningDownloads.count >= maxConcurrentDownloads ? .waiting : .downloading
         )
 
         activeDownloads[taskId] = task
+        NSLog("[DownloadManager] 任务已创建: \(taskId), status=\(task.status), 运行数: \(runningDownloads.count)")
+
+        if runningDownloads.count >= maxConcurrentDownloads {
+            NSLog("[DownloadManager] 进入等待队列: \(taskId)")
+            await waitForDownloadSlot(taskId)
+        }
+
+        guard !Task.isCancelled, activeDownloads[taskId]?.status != .cancelled else {
+            cancelWaitingDownload(taskId: taskId)
+            throw CancellationError()
+        }
+
         runningDownloads.insert(taskId)
-        NSLog("[DownloadManager] 任务已创建: \(taskId), 运行数: \(runningDownloads.count)")
+        updateTask(taskId) { task in
+            task.status = .downloading
+        }
+        NSLog("[DownloadManager] 任务开始执行: \(taskId), 运行数: \(runningDownloads.count)")
 
         defer {
             runningDownloads.remove(taskId)
             NSLog("[DownloadManager] 任务已移除: \(taskId), 剩余运行数: \(runningDownloads.count)")
+            resumeNextWaitingDownload()
         }
 
         do {
@@ -129,6 +143,29 @@ final class DownloadManager: ObservableObject {
             wallpaper.source == .downloaded
                 && !Self.isRemotePath(wallpaper.filePath)
                 && fileManager.fileExists(atPath: wallpaper.filePath)
+        }
+    }
+
+    func activeTask(remoteId: String?) -> DownloadTask? {
+        guard let remoteId else { return nil }
+        return activeDownloads.values.first { task in
+            task.remoteId == remoteId && (task.status == .waiting || task.status == .downloading)
+        }
+    }
+
+    func activeTask(taskId: String) -> DownloadTask? {
+        activeDownloads[taskId]
+    }
+
+    func cancelWaitingDownload(taskId: String) {
+        waitingQueue.removeAll { $0 == taskId }
+        if let continuation = waitingContinuations.removeValue(forKey: taskId) {
+            updateTask(taskId) { task in
+                task.status = .cancelled
+                task.error = "已取消"
+            }
+            continuation.resume()
+            scheduleRemoval(for: taskId, delay: 1.2)
         }
     }
 
@@ -308,11 +345,36 @@ final class DownloadManager: ObservableObject {
             activeDownloads.removeValue(forKey: taskId)
         }
     }
+
+    private func waitForDownloadSlot(_ taskId: String) async {
+        guard runningDownloads.count >= maxConcurrentDownloads else { return }
+        waitingQueue.append(taskId)
+        await withCheckedContinuation { continuation in
+            waitingContinuations[taskId] = continuation
+        }
+    }
+
+    private func resumeNextWaitingDownload() {
+        guard runningDownloads.count < maxConcurrentDownloads else { return }
+
+        while !waitingQueue.isEmpty {
+            let nextTaskId = waitingQueue.removeFirst()
+            guard let continuation = waitingContinuations.removeValue(forKey: nextTaskId) else { continue }
+            guard activeDownloads[nextTaskId]?.status == .waiting else {
+                continuation.resume()
+                continue
+            }
+            NSLog("[DownloadManager] 唤醒等待任务: \(nextTaskId)")
+            continuation.resume()
+            break
+        }
+    }
 }
 
 /// 下载任务
 struct DownloadTask: Identifiable {
     let id: String
+    let remoteId: String?
     let title: String
     let quality: String
     let createdAt: Date = Date()
@@ -328,15 +390,19 @@ enum DownloadStatus {
     case downloading
     case completed
     case failed
+    case cancelled
 }
 
 enum DownloadError: LocalizedError {
     case tooManyDownloads
+    case alreadyInProgress
 
     var errorDescription: String? {
         switch self {
         case .tooManyDownloads:
-            return "同时下载数量已达上限（\(DownloadManager.shared.maxConcurrentDownloads)个），请等待当前下载完成"
+            return "同时下载数量已达上限，请等待当前下载完成"
+        case .alreadyInProgress:
+            return "已在下载队列中，请等待当前任务完成"
         }
     }
 }
